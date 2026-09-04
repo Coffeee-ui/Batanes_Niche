@@ -68,7 +68,7 @@ describe('AuthContext', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await act(async () => {
-      await result.current.login('ivatan_coder', 'Secret123!');
+      await result.current.login({ username_or_email: 'ivatan_coder', password: 'Secret123!' });
     });
 
     expect(setAccessToken).toHaveBeenCalledWith('fake-access-token');
