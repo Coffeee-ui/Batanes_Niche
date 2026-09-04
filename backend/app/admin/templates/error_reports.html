@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Logged Error Incidents{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size: 1.1rem;">Logged Error Incidents (500 Diagnostics)</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Timestamp (UTC)</th>
+          <th>Endpoint</th>
+          <th>User</th>
+          <th>Summary Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        <tr>
+          <td>{{ report.id }}</td>
+          <td>{{ report.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td><code>{{ report.endpoint or 'N/A' }}</code></td>
+          <td>{{ report.username or 'Unauthenticated' }}</td>
+          <td>
+            <strong>{{ report.error_message }}</strong>
+            {% if report.stack_trace %}
+            <details style="margin-top: 6px;">
+              <summary style="cursor: pointer; color: var(--admin-accent); font-size: 0.8rem;">View Stack Trace</summary>
+              <pre style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 4px; font-size: 0.75rem; margin-top: 6px; overflow-x: auto;">{{ report.stack_trace }}</pre>
+            </details>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--admin-muted);">No error incidents reported.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

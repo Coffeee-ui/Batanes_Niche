@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size: 1.1rem;">Platform User Directory</h3>
+  </div>
+
+  <form method="GET" action="/admin/users" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+    <input type="text" name="q" value="{{ query or '' }}" placeholder="Search username, email, name..." class="form-control" style="flex: 1; min-width: 200px;">
+    <select name="role" class="form-control" style="width: auto;">
+      <option value="">All Roles</option>
+      <option value="job_seeker" {% if role == 'job_seeker' %}selected{% endif %}>Job Seeker</option>
+      <option value="employer" {% if role == 'employer' %}selected{% endif %}>Employer</option>
+      <option value="admin" {% if role == 'admin' %}selected{% endif %}>Admin</option>
+    </select>
+    <select name="status" class="form-control" style="width: auto;">
+      <option value="">All Statuses</option>
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+      <option value="suspended" {% if status == 'suspended' %}selected{% endif %}>Suspended</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+  </form>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name / Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>
+            <strong>{{ u.full_name }}</strong><br>
+            <span style="font-size: 0.8rem; color: var(--admin-muted);">@{{ u.username }}</span>
+          </td>
+          <td>{{ u.email }}</td>
+          <td><span class="badge badge-active">{{ u.role }}</span></td>
+          <td>{{ u.municipality }}{% if u.barangay %}, {{ u.barangay }}{% endif %}</td>
+          <td>
+            {% if u.account_status == 'active' %}
+            <span class="badge badge-active">Active</span>
+            {% elif u.account_status == 'suspended' %}
+            <span class="badge badge-suspended">Suspended</span>
+            {% else %}
+            <span class="badge badge-pending">{{ u.account_status }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.id != admin_user.id %}
+              {% if u.account_status == 'active' %}
+              <form action="/admin/users/{{ u.id }}/suspend" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to suspend this user? Active sessions will be immediately terminated.');">Suspend</button>
+              </form>
+              {% else %}
+              <form action="/admin/users/{{ u.id }}/restore" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Restore this user account?');">Restore</button>
+              </form>
+              {% endif %}
+            {% else %}
+              <span style="color: var(--admin-muted); font-size: 0.8rem;">Current Account</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--admin-muted);">No users match the criteria.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

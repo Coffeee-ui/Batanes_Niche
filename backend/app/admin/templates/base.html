@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Administration{% endblock %} - Batanes Niche</title>
+  <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+  {% if admin_user %}
+  <header class="admin-header">
+    <a href="/admin/dashboard" class="admin-logo">
+      <span>Batanes Portal Governance</span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/dashboard" class="{% if active_tab == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="/admin/users" class="{% if active_tab == 'users' %}active{% endif %}">Users</a>
+      <a href="/admin/jobs" class="{% if active_tab == 'jobs' %}active{% endif %}">Jobs</a>
+      <a href="/admin/error-reports" class="{% if active_tab == 'errors' %}active{% endif %}">Error Incidents</a>
+      <a href="/admin/audit-logs" class="{% if active_tab == 'audit' %}active{% endif %}">Audit Trail</a>
+      <form action="/admin/logout" method="POST" style="margin: 0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-outline btn-sm">Sign Out</button>
+      </form>
+    </nav>
+  </header>
+  {% endif %}
+
+  <main class="admin-container">
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

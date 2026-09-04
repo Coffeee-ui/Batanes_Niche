@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Administrator Login{% endblock %}
+
+{% block content %}
+<div class="login-box">
+  <h2 style="margin-bottom: 8px; font-size: 1.35rem; color: var(--admin-accent);">Governance Console</h2>
+  <p style="color: var(--admin-muted); font-size: 0.85rem; margin-bottom: 24px;">Please authenticate with your administrator credentials.</p>
+
+  <form action="/admin/login" method="POST">
+    <div class="form-group">
+      <label class="form-label" for="username">Administrator Username or Email</label>
+      <input type="text" id="username" name="username" class="form-control" required autofocus>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label class="form-label" for="password">Password</label>
+      <input type="password" id="password" name="password" class="form-control" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+  </form>
+</div>
+{% endblock %}

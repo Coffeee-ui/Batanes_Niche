@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Job Oversight{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size: 1.1rem;">Job Listings Oversight</h3>
+  </div>
+
+  <form method="GET" action="/admin/jobs" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+    <select name="status" class="form-control" style="width: auto;">
+      <option value="">All Statuses</option>
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+      <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
+      <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+  </form>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title / Employer</th>
+          <th>Location</th>
+          <th>Salary Range</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr>
+          <td>{{ j.id }}</td>
+          <td>
+            <strong>{{ j.title }}</strong><br>
+            <span style="font-size: 0.8rem; color: var(--admin-muted);">Employer: {{ j.employer.full_name }} (ID: {{ j.employer_id }})</span>
+          </td>
+          <td>{{ j.municipality }}{% if j.barangay %}, {{ j.barangay }}{% endif %}</td>
+          <td>₱{{ "{:,.2f}".format(j.salary_min) }} - ₱{{ "{:,.2f}".format(j.salary_max) }}</td>
+          <td>
+            {% if j.status == 'active' and not j.deleted_at %}
+            <span class="badge badge-active">Active</span>
+            {% elif j.status == 'closed' or j.deleted_at %}
+            <span class="badge badge-suspended">Closed / Inactive</span>
+            {% else %}
+            <span class="badge badge-pending">{{ j.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ j.created_at.strftime('%Y-%m-%d') }}</td>
+          <td>
+            {% if j.status == 'active' and not j.deleted_at %}
+            <form action="/admin/jobs/{{ j.id }}/disable" method="POST" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Force disable this job posting?');">Disable</button>
+            </form>
+            {% else %}
+            <form action="/admin/jobs/{{ j.id }}/restore" method="POST" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Re-open and restore this job posting?');">Restore</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--admin-muted);">No job postings found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
