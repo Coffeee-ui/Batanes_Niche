@@ -84,7 +84,9 @@ When an API request returns an `HTTP 401 Unauthorized`:
 
 The UI styling marries **Tailwind CSS** with **CSS Custom Properties (HSL)** defined in `frontend/src/index.css`.
 
-### HSL Color Palette
+All token values are stored as raw HSL components (e.g. `214 89% 52%`) and must be consumed with `hsl(var(--token-name))`.
+
+### Light Mode Tokens (`:root`)
 
 ```css
 :root {
@@ -94,33 +96,107 @@ The UI styling marries **Tailwind CSS** with **CSS Custom Properties (HSL)** def
   --color-secondary: 168 76% 42%;      /* Batanes sea teal */
   --color-accent: 35 95% 58%;          /* golden sunrise */
 
-  /* Surfaces (Light Theme) */
-  --color-bg: 210 20% 98%;
-  --color-surface: 0 0% 100%;
-  --color-border: 214 20% 88%;
-  --color-text: 215 25% 12%;
-  --color-text-muted: 215 15% 45%;
-}
+  /* Surfaces — stepped so cards stand out from the page canvas */
+  --color-bg: 214 22% 97%;             /* page canvas: near-white with blue tint */
+  --color-bg-alt: 214 18% 93%;         /* alternating sections, auth page background */
+  --color-surface: 0 0% 100%;          /* cards and panels: pure white */
+  --color-surface-hover: 214 20% 98%;  /* hover wash on menu items */
+  --color-border: 214 20% 83%;         /* visible card/input borders */
+  --color-border-subtle: 214 20% 89%;  /* soft card boundary */
 
-/* Dark Theme */
-[data-theme='dark'] {
-  --color-bg: 222 27% 9%;
-  --color-surface: 222 25% 14%;
-  --color-border: 222 20% 22%;
-  --color-text: 210 20% 92%;
-  --color-text-muted: 210 12% 60%;
+  /* Text — calibrated for readable contrast hierarchy on white surfaces */
+  --color-text: 215 25% 12%;           /* primary content (~14:1 on white) */
+  --color-text-muted: 215 18% 38%;     /* secondary labels, metadata (~4.6:1) */
+  --color-text-faint: 215 12% 52%;     /* helper text, timestamps (~4.1:1) */
+
+  /* Status */
+  --color-success: 145 63% 42%;
+  --color-warning: 38 95% 55%;
+  --color-warning-text: 35 75% 34%;    /* badge text on pale warning bg */
+  --color-danger: 3 87% 56%;
+  --color-info: 199 89% 48%;
 }
 ```
 
+### Dark Mode Overrides (`[data-theme='dark']`)
+
+```css
+[data-theme='dark'] {
+  --color-bg: 222 27% 9%;
+  --color-bg-alt: 222 25% 12%;
+  --color-surface: 222 25% 14%;
+  --color-surface-hover: 222 25% 17%;
+  --color-border: 222 20% 26%;
+  --color-border-subtle: 222 20% 20%;
+  --color-text: 210 20% 92%;
+  --color-text-muted: 210 14% 64%;
+  --color-text-faint: 210 10% 48%;
+  --color-warning-text: 35 90% 68%;    /* bright amber — readable on dark bg */
+}
+```
+
+> [!IMPORTANT]
+> Brand palette tokens (`--color-primary`, `--color-secondary`, `--color-accent`, and status tokens) are **not overridden** in Dark Mode. Only surface, border, and text tokens change between themes.
+
+### Theme Toggle Mechanism
+
+Theme switching is controlled by `Navbar.tsx` which sets `document.documentElement.setAttribute('data-theme', 'dark' | 'light')`. The entire theme change occurs via CSS cascade — no JavaScript re-rendering is required.
+
+### Tailwind Integration
+
+`tailwind.config.js` extends Tailwind's color palette with semantic aliases that reference the same CSS custom properties:
+
+```js
+colors: {
+  app: 'hsl(var(--color-bg))',
+  surface: { DEFAULT: 'hsl(var(--color-surface))', muted: 'hsl(var(--color-bg-alt))' },
+  brand: { primary: 'hsl(var(--color-primary))', hover: 'hsl(var(--color-primary-dark))' },
+  content: { primary: 'hsl(var(--color-text))', secondary: 'hsl(var(--color-text-muted))', muted: 'hsl(var(--color-text-faint))' },
+  edge: { subtle: 'hsl(var(--color-border-subtle))', strong: 'hsl(var(--color-border))' },
+  feedback: { success, warning, error: '--color-danger', info },
+}
+```
+
+> [!NOTE]
+> The `darkMode` config is set to `['class', '[data-theme="dark"]']`. Tailwind `dark:` variants work correctly but are not required — components use inline `style={{ color: 'hsl(var(--color-*))' }}` to consume tokens directly.
+
 ### Typography
-- **Headings (`h1`, `h2`, `h3`, `h4`)**: `Outfit, sans-serif` (Warm, rounded, modern typography).
-- **Body & Controls**: `Inter, system-ui, sans-serif` (Clean, highly legible interface font).
+- **Headings (`h1`–`h4`)**: `Outfit, sans-serif` (warm, rounded, modern).
+- **Body & Controls**: `Inter, system-ui, sans-serif` (clean, highly legible).
 
 ### Semantic Utility Classes
-- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-outline`: Buttons with hover and active micro-animations.
-- `.badge`, `.badge-primary`, `.badge-success`: Skill tags and status indicators.
-- `.card`: Standard container with border, subtle shadow, and responsive padding.
-- `.input`: Form control with standard focus rings using `var(--color-primary)`.
+- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`: Buttons with hover and active micro-animations.
+- `.badge`, `.badge-primary`, `.badge-success`, `.badge-warning`, `.badge-danger`, `.badge-muted`: Skill tags and status indicators. All badge text uses semantic token colors that adapt to the active theme.
+- `.card`: Standard container with semantic border, shadow, and background via CSS custom properties. Does **not** use hard-coded Tailwind color utilities.
+- `.input`: Form control with focus ring using `var(--color-primary)`.
+- `.label`: Semibold field label.
+- `.skeleton`: Animated loading placeholder.
+- `.glass`: Glassmorphism surface.
+- `.gradient-text`: Brand gradient on text.
+
+---
+
+## 5. Frontend Styling Conventions
+
+These rules apply to all theme-sensitive UI work in this codebase:
+
+1. **Use semantic CSS custom properties for all theme-sensitive values.**
+   Always write `color: hsl(var(--color-text-muted))` — never hardcode hex, RGB, or raw HSL literals for colors that must change between Light and Dark Mode.
+
+2. **Do not add hard-coded Tailwind color utilities to shared component classes.**
+   Classes like `.card`, `.btn`, `.input` must only use semantic tokens. Using `@apply bg-white` or `@apply border-slate-100` inside these classes creates a theme override that cannot be corrected by the token system.
+
+3. **New status/semantic colors belong in `:root` and `[data-theme='dark']`.**
+   If a component needs a color for a new state (e.g. a new badge variant), add the appropriate token pair to both the `:root` block and the `[data-theme='dark']` block in `index.css` before using it.
+
+4. **Tailwind extended color utilities must reference actual CSS variable names.**
+   When adding Tailwind color aliases in `tailwind.config.js`, verify the CSS variable name exists in `index.css` and wrap the value in `hsl()` since tokens are stored as raw HSL components.
+
+5. **Text on gradient/colored backgrounds is intentionally white.**
+   Elements such as the hero section, CTA banner, and dashboard welcome banner use explicit `text-white` — this is correct and should not be changed. The token system applies only to page-level and component-level surfaces.
+
+6. **`--color-warning-text` controls badge-warning and similar amber text.**
+   Do not use a raw HSL literal for warning-colored text. Use `hsl(var(--color-warning-text))`, which resolves correctly in both themes.
 
 ---
 

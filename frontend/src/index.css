@@ -16,29 +16,30 @@
   --color-secondary: 168 76% 42%;      /* Batanes teal/sea */
   --color-accent: 35 95% 58%;          /* golden sunrise */
 
-  /* Surfaces */
-  --color-bg: 210 20% 98%;
-  --color-bg-alt: 210 14% 95%;
-  --color-surface: 0 0% 100%;
-  --color-surface-hover: 210 20% 97%;
-  --color-border: 214 20% 88%;
-  --color-border-subtle: 214 20% 93%;
+  /* Surfaces — stepped clearly so cards stand out from page background */
+  --color-bg: 214 22% 97%;             /* near-white with cool blue tint */
+  --color-bg-alt: 214 18% 93%;         /* clearly distinct step — sections, auth pages */
+  --color-surface: 0 0% 100%;          /* pure white — cards and panels */
+  --color-surface-hover: 214 20% 98%;  /* very slight wash for hover states */
+  --color-border: 214 20% 83%;         /* visible border without being harsh */
+  --color-border-subtle: 214 20% 89%;  /* soft but present card boundary */
 
-  /* Text */
-  --color-text: 215 25% 12%;
-  --color-text-muted: 215 15% 45%;
-  --color-text-faint: 215 10% 68%;
+  /* Text — calibrated for readable contrast hierarchy on white surfaces */
+  --color-text: 215 25% 12%;           /* near-black — primary content */
+  --color-text-muted: 215 18% 38%;     /* medium grey — secondary labels, metadata */
+  --color-text-faint: 215 12% 52%;     /* visible grey — helper text, timestamps */
 
   /* Status */
   --color-success: 145 63% 42%;
   --color-warning: 38 95% 55%;
+  --color-warning-text: 35 75% 34%;    /* readable amber text on pale warning bg */
   --color-danger: 3 87% 56%;
   --color-info: 199 89% 48%;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 4px 16px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.04);
-  --shadow-lg: 0 10px 40px -4px rgb(0 0 0 / 0.10), 0 4px 12px -4px rgb(0 0 0 / 0.06);
+  /* Shadows — slightly stronger for Light Mode card lift */
+  --shadow-sm: 0 1px 4px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 16px -2px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 40px -4px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.07);
   --shadow-glow: 0 0 0 3px hsl(var(--color-primary) / 0.20);
 
   /* Radii */
@@ -59,11 +60,12 @@
   --color-bg-alt: 222 25% 12%;
   --color-surface: 222 25% 14%;
   --color-surface-hover: 222 25% 17%;
-  --color-border: 222 20% 22%;
-  --color-border-subtle: 222 20% 18%;
+  --color-border: 222 20% 26%;         /* slightly stronger — surfaces stay distinct */
+  --color-border-subtle: 222 20% 20%;  /* subtle but present */
   --color-text: 210 20% 92%;
-  --color-text-muted: 210 12% 60%;
-  --color-text-faint: 210 10% 40%;
+  --color-text-muted: 210 14% 64%;     /* slightly brighter for comfortable readability */
+  --color-text-faint: 210 10% 48%;     /* improved from 40% — helper text now readable */
+  --color-warning-text: 35 90% 68%;    /* bright amber — readable on dark warning bg */
 }
 
 /* ----- Base Resets ----- */
@@ -118,9 +120,9 @@ a:hover { color: hsl(var(--color-primary-dark)); }
 @layer components {
   /* Cards */
   .card {
-    @apply rounded-xl bg-white border border-slate-100 shadow-sm transition-all duration-200;
+    @apply rounded-xl transition-all duration-200;
     background-color: hsl(var(--color-surface));
-    border-color: hsl(var(--color-border-subtle));
+    border: 1px solid hsl(var(--color-border-subtle));
     box-shadow: var(--shadow-sm);
   }
   .card:hover {
@@ -217,7 +219,7 @@ a:hover { color: hsl(var(--color-primary-dark)); }
   .badge-warning {
     @apply badge;
     background: hsl(var(--color-warning) / 0.12);
-    color: hsl(35 80% 38%);
+    color: hsl(var(--color-warning-text));
   }
   .badge-danger {
     @apply badge;
