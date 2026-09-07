@@ -108,7 +108,7 @@ export default function PostJobPage() {
             </div>
             <div>
               <label htmlFor="job-employment-type" className="label">Employment Type *</label>
-              <select id="job-employment-type" className="input" value={form.employment_type} onChange={set('employment_type')} required>
+              <select id="job-employment-type" className="input select" value={form.employment_type} onChange={set('employment_type')} required>
                 {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
@@ -126,7 +126,7 @@ export default function PostJobPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="job-municipality" className="label">Municipality *</label>
-              <select id="job-municipality" className="input" value={form.municipality} onChange={set('municipality')} required>
+              <select id="job-municipality" className="input select" value={form.municipality} onChange={set('municipality')} required>
                 <option value="">Select…</option>
                 {MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}
               </select>

@@ -136,7 +136,7 @@ export default function JobsPage() {
             <label className="label text-xs">Municipality</label>
             <select
               id="filter-municipality"
-              className="input text-sm"
+              className="input select text-sm"
               value={municipality}
               onChange={e => setParam('municipality', e.target.value)}
             >
@@ -148,7 +148,7 @@ export default function JobsPage() {
             <label className="label text-xs">Employment Type</label>
             <select
               id="filter-employment-type"
-              className="input text-sm"
+              className="input select text-sm"
               value={employment_type}
               onChange={e => setParam('employment_type', e.target.value)}
             >
@@ -160,7 +160,7 @@ export default function JobsPage() {
             <label className="label text-xs">Minimum Salary (₱/mo)</label>
             <select
               id="filter-min-salary"
-              className="input text-sm"
+              className="input select text-sm"
               value={min_salary?.toString() || ''}
               onChange={e => setParam('min_salary', e.target.value)}
             >

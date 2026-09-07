@@ -8,6 +8,14 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ### Fixed
 
+- **Frontend — Light/Dark Mode: faint browser-native dropdown arrow on all `<select>` elements**
+  - Root cause: No `appearance: none` was set on `<select>` elements, so browsers rendered their own OS-level chevron arrow using system control colors (a muted gray). This made the dropdown icon visually indistinct from the input background — particularly on the hero landing-page municipality selector — causing the control to appear disabled even when active.
+  - Resolution: Added a centralized `.select` utility class to `index.css` that sets `appearance: none`, injects a custom URL-encoded SVG chevron via `background-image` at the semantic muted-text color (`#6b7280` in Light Mode, `#9ca3af` in Dark Mode), and reserves right-padding for the arrow. Applied `className="input select"` to all `<select>` elements across `JobsPage`, `CandidatesPage`, `PostJobPage`, `ProfilePage`, and `RegisterPage`. The hero `LandingPage` municipality selector uses identical inline styles (it has a non-standard white background) and was fixed inline.
+
+- **Frontend — LandingPage hero: Search icon used `--color-text-faint` instead of `--color-text-muted`**
+  - Root cause: The search icon inside the hero search bar was rendered at `hsl(var(--color-text-faint))` — appropriate for secondary metadata text but too pale for a functional control icon on a white input background.
+  - Resolution: Changed the hero search icon color to `hsl(var(--color-text-muted))` for clearly visible but still visually secondary rendering.
+
 - **Frontend — Light/Dark Mode: `.card` leaked hard-coded Tailwind utilities**
   - Root cause: `.card` in `index.css` used `@apply bg-white border border-slate-100`, injecting hard-coded theme-insensitive classes that conflicted with the semantic token properties declared below them.
   - Resolution: Removed `bg-white border border-slate-100` from the `@apply` directive; `background-color` and `border` are now declared exclusively via CSS custom properties, eliminating the latent dark-mode override risk.

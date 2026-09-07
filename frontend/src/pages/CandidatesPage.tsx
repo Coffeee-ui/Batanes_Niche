@@ -67,7 +67,7 @@ export default function CandidatesPage() {
         </form>
         <select
           id="filter-candidates-municipality"
-          className="input sm:w-48"
+          className="input select sm:w-48"
           value={municipality}
           onChange={e => setMunicipality(e.target.value)}
         >

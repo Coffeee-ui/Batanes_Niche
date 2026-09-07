@@ -169,6 +169,7 @@ colors: {
 - `.badge`, `.badge-primary`, `.badge-success`, `.badge-warning`, `.badge-danger`, `.badge-muted`: Skill tags and status indicators. All badge text uses semantic token colors that adapt to the active theme.
 - `.card`: Standard container with semantic border, shadow, and background via CSS custom properties. Does **not** use hard-coded Tailwind color utilities.
 - `.input`: Form control with focus ring using `var(--color-primary)`.
+- `.select`: Extends `.input` for `<select>` elements. Resets the browser-native OS dropdown arrow (`appearance: none`) and injects a custom SVG chevron at the semantic muted-text color — clearly visible in both Light and Dark Mode. **Always combine with `.input` on `<select>` elements:** `className="input select"`.
 - `.label`: Semibold field label.
 - `.skeleton`: Animated loading placeholder.
 - `.glass`: Glassmorphism surface.
@@ -197,6 +198,9 @@ These rules apply to all theme-sensitive UI work in this codebase:
 
 6. **`--color-warning-text` controls badge-warning and similar amber text.**
    Do not use a raw HSL literal for warning-colored text. Use `hsl(var(--color-warning-text))`, which resolves correctly in both themes.
+
+7. **All `<select>` elements must use `className="input select"`.**
+   Browser-native `<select>` widgets render their dropdown arrow using OS system control colors, which are often a muted gray regardless of any `color` or `background` CSS applied. Without `appearance: none`, the arrow appears faint and the control can look disabled. The `.select` class suppresses the native arrow and replaces it with a custom SVG chevron that adapts to the active theme. Do not omit `.select` from any `<select>` element — including those inside hero sections or modal forms.
 
 ---
 

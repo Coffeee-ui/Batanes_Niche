@@ -188,7 +188,7 @@ export default function RegisterPage() {
               <label htmlFor="reg-municipality" className="label">Municipality</label>
               <select
                 id="reg-municipality"
-                className="input"
+                className="input select"
                 value={form.municipality}
                 onChange={set('municipality')}
                 required

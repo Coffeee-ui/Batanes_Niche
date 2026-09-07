@@ -149,7 +149,7 @@ export default function LandingPage() {
               style={{ animationDelay: '240ms' }}
             >
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(var(--color-text-faint))' }} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(var(--color-text-muted))' }} />
                 <input
                   id="hero-search-input"
                   type="text"
@@ -177,6 +177,15 @@ export default function LandingPage() {
                   outline: 'none',
                   color: 'hsl(var(--color-text))',
                   boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  paddingRight: '2.5rem',
+                  // Custom chevron: encoded SVG at a dark readable color
+                  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '1rem 1rem',
+                  cursor: 'pointer',
                 }}
               >
                 <option value="">All Municipalities</option>

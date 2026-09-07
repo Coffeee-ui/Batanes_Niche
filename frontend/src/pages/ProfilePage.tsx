@@ -145,7 +145,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="label text-xs">Municipality</label>
-                    <select id="profile-municipality" className="input text-sm" value={form.municipality} onChange={set('municipality')}>
+                    <select id="profile-municipality" className="input select text-sm" value={form.municipality} onChange={set('municipality')}>
                       {MUNICIPALITIES.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
