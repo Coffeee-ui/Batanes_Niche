@@ -7,11 +7,11 @@ The frontend of the **Batanes Niche Job Portal** is implemented as a modern, hig
 | Tool / Technology | Version | Purpose |
 |---|---|---|
 | **React** | `18.3.x` | Declarative component UI library |
-| **Vite** | `5.3.x` | Development server, HMR, and production bundler |
-| **TypeScript** | `5.5.x` | Static type safety across components and API models |
+| **Vite** | `5.4.x` | Development server, HMR, and production bundler |
+| **TypeScript** | `5.9.x` (installed; `package.json` specifies `^5.4.5`) | Static type safety across components and API models |
 | **Tailwind CSS** | `3.4.x` | Utility-first styling integrated with CSS design tokens |
 | **Axios** | `1.7.x` | HTTP client with request/response interceptors |
-| **React Router** | `6.24.x` | Declarative client-side routing and protected route guards |
+| **React Router** | `6.23.x` | Declarative client-side routing and protected route guards |
 | **Lucide React** | `0.395.x` | Accessible icon library |
 
 ---
@@ -209,24 +209,18 @@ These rules apply to all theme-sensitive UI work in this codebase:
 ```text
 src/
 ├── components/
+│   ├── auth/
+│   │   └── ProtectedRoute.tsx     # Role-aware route guard (authentication + role check)
+│   ├── forms/
+│   │   └── SkillSelector.tsx      # Canonical skill picker with custom-value (Other) support
 │   ├── layout/
-│   │   ├── Layout.tsx          # App shell (Navbar + Content + Footer)
-│   │   ├── Navbar.tsx          # Role-aware navigation bar with theme toggle
-│   │   └── Footer.tsx          # Standard footer with platform information
-│   ├── jobs/
-│   │   ├── JobCard.tsx         # Job vacancy card with badges and bookmarking
-│   │   ├── JobFilterBar.tsx    # Multi-facet filters (location, salary, type)
-│   │   └── JobForm.tsx         # Reusable creation and edit form for vacancies
-│   ├── common/
-│   │   ├── Badge.tsx           # Semantic status and skill chips
-│   │   ├── Card.tsx            # Card wrapper with theme support
-│   │   ├── Modal.tsx           # Accessible dialog backdrop and focus trap
-│   │   └── Spinner.tsx         # Circular loading indicator
-│   ├── feedback/
-│   │   ├── EmptyState.tsx      # Friendly empty illustration and CTA
-│   │   └── LoadingSpinner.tsx  # Full-page and section loading indicator
+│   │   ├── Layout.tsx             # App shell (Navbar + Content + Footer)
+│   │   ├── Navbar.tsx             # Role-aware navigation bar with theme toggle
+│   │   └── Footer.tsx             # Standard footer with platform information
 │   └── ui/
-│       └── Toast.tsx           # Animated toast alerts (success, error, warning)
+│       ├── JobCard.tsx            # Job vacancy card with badges and bookmarking
+│       ├── Toast.tsx              # Animated toast alerts (success, error, warning)
+│       └── index.tsx              # Barrel exports: Spinner, ProgressBar, PageSpinner, Skeletons
 ```
 
 ---

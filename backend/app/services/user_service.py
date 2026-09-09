@@ -12,6 +12,7 @@ from app.schemas.user import (
 )
 from app.repositories.user_repository import UserRepository
 from app.services.geography_service import GeographyService
+from app.services.skill_service import serialize_skill_values
 
 
 class UserService:
@@ -121,7 +122,7 @@ class UserService:
         if update_data.phone_number is not None:
             user.phone_number = update_data.phone_number.strip() if update_data.phone_number else None
         if update_data.skills is not None:
-            user.skills = update_data.skills.strip() if update_data.skills else None
+            user.skills = serialize_skill_values(update_data.skills.split(","))
         if update_data.profile_pic is not None:
             user.profile_pic = update_data.profile_pic.strip() if update_data.profile_pic else None
         if update_data.resume_url is not None:
@@ -168,7 +169,7 @@ class UserService:
                     update_data.company_description.strip() if update_data.company_description else None
                 )
             if update_data.business_type is not None:
-                user.employer_profile.business_type = update_data.business_type.strip()
+                user.employer_profile.business_type = " ".join(update_data.business_type.split())
 
         updated_user = UserRepository.update(db, user)
         return UserService.get_private_profile(updated_user)

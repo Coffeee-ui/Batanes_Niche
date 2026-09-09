@@ -101,6 +101,27 @@ uvicorn app.main:app --reload --port 8000
 - **Jinja2 Admin Portal**: `http://localhost:8000/admin`
 - **Health Check**: `http://localhost:8000/health`
 
+Shorcut if already implemented
+```
+ Set-Location backend
+.\venv\Scripts\Activate.ps1
+python -m app.cli seed-data
+uvicorn app.main:app --reload --port 8000
+```
+or
+
+```
+Powershell
+Set-Location backend
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+
+Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing
+
+Invoke-WebRequest -Uri http://127.0.0.1:8000/admin/login -UseBasicParsing
+
+http://127.0.0.1:8000/admin/login
+```
+
 ---
 
 ### 2.3 Frontend Setup (React 18 + Vite)

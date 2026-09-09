@@ -1,4 +1,4 @@
-from typing import List, Set, Tuple
+from typing import List
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -14,6 +14,7 @@ from app.repositories.job_repository import JobRepository
 from app.services.job_service import JobService
 from app.services.user_service import UserService
 from app.services.geography_service import GeographyService
+from app.services.skill_service import normalize_skill_values, skills_match, split_skills
 
 
 class RecommendationService:
@@ -26,16 +27,13 @@ class RecommendationService:
         3. Trim leading and trailing whitespace
         4. Filter out empty tokens
         """
-        if not raw_skills:
-            return []
-        tokens = [token.strip().lower() for token in raw_skills.split(",") if token.strip()]
-        return tokens
+        return [value.casefold() for value in normalize_skill_values(split_skills(raw_skills or ""))]
 
     @staticmethod
     def calculate_skill_score(needed_skills_raw: str, candidate_skills_raw: str) -> float:
         """
-        Calculates skill match score (0.0 to 70.0 pts) using bidirectional substring matching:
-        A needed keyword k matches candidate skill c if (k in c or c in k).
+        Calculates skill match score (0.0 to 70.0 pts) using deterministic exact matching.
+        Canonical and custom values are compared by normalized value; literal Other is ignored.
         skill_score = round((len(matched_needed_keywords) / len(total_needed_keywords)) * 70.0, 2)
         """
         needed_tokens = RecommendationService.tokenize_skills(needed_skills_raw)
@@ -46,12 +44,7 @@ class RecommendationService:
         if not candidate_tokens:
             return 0.0
 
-        matched_needed: Set[str] = set()
-        for k in needed_tokens:
-            for c in candidate_tokens:
-                if k in c or c in k:
-                    matched_needed.add(k)
-                    break
+        matched_needed = skills_match(needed_tokens, candidate_tokens)
 
         score = round((len(matched_needed) / len(needed_tokens)) * 70.0, 2)
         return score

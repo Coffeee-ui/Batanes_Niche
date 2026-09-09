@@ -1,8 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Heart, Github, Mail } from 'lucide-react';
+import { MapPin, Heart, Mail } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Footer() {
+  const { user } = useAuth();
+  const seekerLinks = [
+    { to: '/jobs', label: 'Browse Jobs' },
+    ...(!user ? [{ to: '/register', label: 'Create Account' }] : []),
+    ...(user?.role === 'job_seeker' ? [
+      { to: '/applications', label: 'My Applications' },
+      { to: '/saved-jobs', label: 'Saved Jobs' },
+    ] : []),
+  ];
+  const employerLinks = [
+    ...(user?.role === 'employer' ? [
+      { to: '/jobs/post', label: 'Post a Job' },
+      { to: '/candidates', label: 'Find Candidates' },
+      { to: '/jobs/my', label: 'Manage Jobs' },
+    ] : []),
+    ...(!user ? [{ to: '/register', label: 'Sign Up Free' }] : []),
+  ];
+
   return (
     <footer
       className="mt-auto border-t"
@@ -43,12 +62,7 @@ export default function Footer() {
               For Job Seekers
             </h3>
             <ul className="flex flex-col gap-2.5">
-              {[
-                { to: '/jobs', label: 'Browse Jobs' },
-                { to: '/register', label: 'Create Account' },
-                { to: '/applications', label: 'My Applications' },
-                { to: '/saved-jobs', label: 'Saved Jobs' },
-              ].map(link => (
+              {seekerLinks.map(link => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
@@ -70,12 +84,7 @@ export default function Footer() {
               For Employers
             </h3>
             <ul className="flex flex-col gap-2.5">
-              {[
-                { to: '/jobs/post', label: 'Post a Job' },
-                { to: '/candidates', label: 'Find Candidates' },
-                { to: '/jobs/my', label: 'Manage Jobs' },
-                { to: '/register', label: 'Sign Up Free' },
-              ].map(link => (
+              {employerLinks.map(link => (
                 <li key={link.to}>
                   <Link
                     to={link.to}

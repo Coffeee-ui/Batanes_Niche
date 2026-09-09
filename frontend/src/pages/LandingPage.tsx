@@ -4,7 +4,7 @@ import {
   Search, MapPin, Briefcase, Users, TrendingUp, ArrowRight,
   Star, ChevronRight, Waves, Mountain, Wind
 } from 'lucide-react';
-import { jobsApi, metaApi } from '../api/client';
+import { jobsApi } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import type { Job } from '../types';
 import JobCard from '../components/ui/JobCard';
@@ -41,7 +41,7 @@ const stats = [
 ];
 
 export default function LandingPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [searchQ, setSearchQ] = useState('');
   const [searchMuni, setSearchMuni] = useState('');
@@ -72,7 +72,7 @@ export default function LandingPage() {
     <div>
       {/* Hero Section */}
       <section
-        className="relative overflow-hidden"
+        className="relative overflow-visible"
         style={{
           background: 'linear-gradient(135deg, hsl(214 89% 12%) 0%, hsl(200 80% 18%) 50%, hsl(168 76% 15%) 100%)',
           minHeight: '85vh',

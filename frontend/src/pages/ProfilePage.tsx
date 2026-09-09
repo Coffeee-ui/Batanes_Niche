@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  User, Briefcase, MapPin, Phone, Mail, Edit3, Save, X,
-  BookOpen, Star, Globe, Building2, CheckCircle
+  MapPin, Phone, Mail, Edit3, Save, X,
+  BookOpen, Star, Building2, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersApi, extractError } from '../api/client';
+import { usersApi, metaApi, extractError } from '../api/client';
 import { Spinner, ProgressBar } from '../components/ui';
 import { toastSuccess, toastError } from '../components/ui/Toast';
+import SkillSelector from '../components/forms/SkillSelector';
 
 const MUNICIPALITIES = ['Basco', 'Itbayat', 'Ivana', 'Mahatao', 'Sabtang', 'Uyugan'];
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(user?.skills?.split(',').map(skill => skill.trim()).filter(Boolean) || []);
+  const [businessTypes, setBusinessTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    metaApi.options().then(options => setBusinessTypes(options.business_types || [])).catch(() => setBusinessTypes([]));
+  }, []);
 
   const [form, setForm] = useState({
     full_name: user?.full_name || '',
@@ -48,8 +53,8 @@ export default function ProfilePage() {
         bio: form.bio || undefined,
       };
       if (user?.role === 'job_seeker') {
-        payload.skills = form.skills || undefined;
-        payload.experience_years = form.experience_years ? parseInt(form.experience_years) : 0;
+        payload.skills = selectedSkills.join(', ') || undefined;
+        payload.experience_years = form.experience_years ? Number.parseInt(form.experience_years, 10) : 0;
         payload.education = form.education || undefined;
       } else if (user?.role === 'employer') {
         payload.company_name = form.company_name;
@@ -70,6 +75,12 @@ export default function ProfilePage() {
 
   const isSeeker = user?.role === 'job_seeker';
   const isEmployer = user?.role === 'employer';
+  let selectedBusinessType = '';
+  if (businessTypes.includes(form.business_type)) {
+    selectedBusinessType = form.business_type;
+  } else if (form.business_type) {
+    selectedBusinessType = 'Other';
+  }
 
   return (
     <div className="container-page py-8 max-w-3xl">
@@ -199,8 +210,13 @@ export default function ProfilePage() {
           {editing ? (
             <div className="space-y-4">
               <div>
-                <label className="label text-xs">Skills <span style={{ color: 'hsl(var(--color-text-faint))' }}>(comma-separated)</span></label>
-                <input id="profile-skills" type="text" className="input text-sm" value={form.skills} onChange={set('skills')} placeholder="Tourism, English, Fishing, IT…" />
+                <SkillSelector
+                  id="profile-skills"
+                  label="Skills"
+                  values={selectedSkills}
+                  onChange={setSelectedSkills}
+                  optional
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -264,7 +280,27 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label text-xs">Business / Enterprise Type</label>
-                  <input id="profile-business-type" type="text" className="input text-sm" value={form.business_type} onChange={set('business_type')} placeholder="e.g. Tourism, Fisheries…" />
+                    <select
+                      id="profile-business-type"
+                      className="input select text-sm"
+                      value={selectedBusinessType}
+                      onChange={event => setForm(current => ({ ...current, business_type: event.target.value === 'Other' ? '' : event.target.value }))}
+                    >
+                      <option value="">Select a business type…</option>
+                      {businessTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                      <option value="Other">Other</option>
+                    </select>
+                    {(!businessTypes.includes(form.business_type) || form.business_type === '') && (
+                      <input
+                        id="profile-business-type-custom"
+                        type="text"
+                        className="input text-sm mt-2"
+                        value={form.business_type}
+                        onChange={set('business_type')}
+                        placeholder="Enter a business type"
+                        maxLength={50}
+                      />
+                    )}
                 </div>
                 <div>
                   <label className="label text-xs">Company Address</label>

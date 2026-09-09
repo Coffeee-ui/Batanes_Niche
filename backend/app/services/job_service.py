@@ -10,6 +10,7 @@ from app.schemas.job import JobCreate, JobUpdate, JobOut, SavedJobOut
 from app.repositories.job_repository import JobRepository
 from app.repositories.saved_job_repository import SavedJobRepository
 from app.services.geography_service import GeographyService
+from app.services.skill_service import serialize_skill_values
 
 
 class JobService:
@@ -66,6 +67,13 @@ class JobService:
                 detail=f"Invalid Batanes location: '{job_data.municipality}', '{job_data.barangay}'.",
             )
 
+        normalized_skills = serialize_skill_values(job_data.required_skills.split(","))
+        if job_data.required_skills.strip() and not normalized_skills:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A custom value is required when selecting Other as a skill.",
+            )
+
         job = Job(
             employer_id=employer.id,
             title=job_data.title.strip(),
@@ -75,7 +83,7 @@ class JobService:
             salary_min=job_data.salary_min,
             salary_max=job_data.salary_max,
             employment_type=job_data.employment_type.strip(),
-            required_skills=job_data.required_skills.strip(),
+            required_skills=normalized_skills or "",
             status="active",
         )
         created = JobRepository.create(db, job)
@@ -122,7 +130,13 @@ class JobService:
         if update_data.employment_type is not None:
             job.employment_type = update_data.employment_type.strip()
         if update_data.required_skills is not None:
-            job.required_skills = update_data.required_skills.strip()
+            normalized_skills = serialize_skill_values(update_data.required_skills.split(","))
+            if update_data.required_skills.strip() and not normalized_skills:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A custom value is required when selecting Other as a skill.",
+                )
+            job.required_skills = normalized_skills or ""
 
         # Salary checks
         new_min = update_data.salary_min if update_data.salary_min is not None else job.salary_min

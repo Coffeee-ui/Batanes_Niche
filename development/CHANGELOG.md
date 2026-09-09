@@ -4,7 +4,48 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ---
 
+## [2.0.1] — 2026-09-08
+
+### Fixed
+
+- **Frontend TypeScript configuration — no active CLI error found**
+  - Root cause investigation: `npx tsc --noEmit`, `npm run build` (`tsc && vite build`), and `npm test` (Vitest) all exit 0 with no errors. TypeScript 5.9.3 is installed (`package.json` specifies `^5.4.5`; 5.9.3 satisfies the `^5.4.5` range). The `moduleResolution: "bundler"` option is valid from TypeScript 5.0 onward. The `allowImportingTsExtensions: true` constraint (requires `noEmit: true` or `emitDeclarationOnly: true`) is satisfied by the existing `"noEmit": true`. The `"include": ["src"]` directive correctly scopes compilation to the `src` directory; the `dist/` folder is not picked up.
+  - Resolution: No change to `frontend/tsconfig.json` was required. The configuration is correct and consistent with the Vite + TypeScript 5.x architecture. The CHANGELOG entry from the previous implementation was confirmed accurate.
+
+- **Documentation — `09-Recommendation-Engine.md` described the wrong matching algorithm**
+  - Root cause: The documentation stated "Bidirectional Substring Matching" and described an open-entry-role shortcut returning 70.0 points when no required skills exist. The actual `RecommendationService.calculate_skill_score` implementation uses deterministic exact matching via `skills_match` in `SkillService` and returns `0.0` when no required skill tokens are produced.
+  - Resolution: Corrected the algorithm specification section, updated the Example 1 walkthrough (score changes from 46.67 to 23.33 — `"tourism & tour guiding"` no longer substring-matches `"tour guiding"`), and updated the Mermaid pipeline diagram to reflect `SkillService` normalization and `Other` exclusion.
+
+- **Documentation — `10-Frontend-Architecture.md` listed stale version numbers and an inaccurate component hierarchy**
+  - Root cause: The technology stack table listed TypeScript 5.5.x (actual: 5.9.3), Vite 5.3.x (actual: 5.4.x), React Router 6.24.x (actual: 6.23.x). The component hierarchy listed directories (`jobs/`, `common/`, `feedback/`) that do not exist in the actual `src/components/` tree and omitted `auth/`, `forms/`, and the `ui/` barrel index.
+  - Resolution: Corrected all version numbers and replaced the component hierarchy with the actual directory structure (verified against the filesystem).
+
+### Added
+
+- **Documentation — `19-Skills-and-Business-Type-Catalog.md` (new file)**
+  - Created a dedicated reference document covering: the 18-entry canonical skill catalog, how predefined and custom skill values are stored, the `SkillService` normalization pipeline, custom `Other` skill handling (frontend and backend), the prevention of literal `"Other"` false matches, the 10-entry business/enterprise type catalog, custom business type handling, the absence of an automatic Business Type → Suggested Skills mapping in V2, job required skills mechanics, and the compatibility/migration strategy for legacy data.
+
 ## [Unreleased]
+
+### Added
+
+- **V3 compatibility correction — deterministic skill normalization and canonical selection flow**
+  - Implemented a shared backend skill normalization path for profile skills and job required skills, including whitespace/case cleanup, exact catalog matching, duplicate prevention, and rejection of empty custom entries.
+  - Reused the existing canonical skill catalog while preserving custom values that do not map to an exact catalog entry.
+  - Integrated the selector flow across profile editing and job posting so users can pick canonical skills and valid custom values without changing the underlying recommendation architecture.
+
+- **Recommendation correction — exact matching without fuzzy or semantic spillover**
+  - Updated matching logic to compare canonical skills deterministically and avoid false positives from empty or placeholder `Other` values.
+  - Preserved the existing 70/30 skill-to-geography weighting framework while ensuring recommendation scores remain explainable and stable.
+
+- **UI correction — footer and landing-page adjustments**
+  - Removed role-specific footer shortcuts that were not appropriate for all authenticated states while keeping the public links and layout intact.
+  - Fixed the landing-page municipality selector display so it remains visible and selectable without clipping or overflow.
+
+- **Project validation — frontend build confirmed working**
+  - Verified the real TypeScript/Vite build in the current workspace using the project’s configured command: `cd frontend && npm run build`.
+  - The current [frontend/tsconfig.json](frontend/tsconfig.json) and [frontend/tsconfig.node.json](frontend/tsconfig.node.json) are consistent with the project’s Vite setup, and no wholesale replacement was necessary.
+
 
 ### Fixed
 

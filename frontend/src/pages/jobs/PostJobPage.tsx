@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, MapPin, Banknote, FileText, ChevronRight } from 'lucide-react';
-import { jobsApi, metaApi, extractError } from '../../api/client';
+import { Briefcase, MapPin, Banknote, FileText } from 'lucide-react';
+import { jobsApi, extractError } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import type { JobCreate } from '../../types';
 import { Spinner } from '../../components/ui';
 import { toastSuccess, toastError } from '../../components/ui/Toast';
+import SkillSelector from '../../components/forms/SkillSelector';
 
 const MUNICIPALITIES = ['Basco', 'Itbayat', 'Ivana', 'Mahatao', 'Sabtang', 'Uyugan'];
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Seasonal', 'Freelance'];
@@ -14,6 +15,7 @@ export default function PostJobPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [form, setForm] = useState<JobCreate>({
     title: '',
     description: '',
@@ -43,7 +45,7 @@ export default function PostJobPage() {
         salary_min: form.salary_min ? Number(form.salary_min) : undefined,
         salary_max: form.salary_max ? Number(form.salary_max) : undefined,
         barangay: form.barangay || undefined,
-        required_skills: form.required_skills || undefined,
+        required_skills: selectedSkills.join(', ') || undefined,
       };
       const job = await jobsApi.create(payload);
       toastSuccess('Job posted successfully!');
@@ -185,29 +187,16 @@ export default function PostJobPage() {
               />
             </div>
           </div>
-          <div>
-            <label htmlFor="job-skills" className="label">
-              Required Skills <span style={{ color: 'hsl(var(--color-text-faint))' }}>(comma-separated, optional)</span>
-            </label>
-            <input
-              id="job-skills"
-              type="text"
-              className="input"
-              placeholder="e.g. Tourism, English, Boat Operation, First Aid"
-              value={form.required_skills || ''}
-              onChange={set('required_skills')}
-            />
-          </div>
+          <SkillSelector
+            id="job-skills"
+            label="Required Skills"
+            values={selectedSkills}
+            onChange={setSelectedSkills}
+            optional
+          />
         </div>
 
         {/* Preview of skills chips */}
-        {form.required_skills && (
-          <div className="flex flex-wrap gap-2">
-            {form.required_skills.split(',').map(s => s.trim()).filter(Boolean).map(skill => (
-              <span key={skill} className="badge badge-primary text-sm">{skill}</span>
-            ))}
-          </div>
-        )}
 
         <hr className="divider" />
 

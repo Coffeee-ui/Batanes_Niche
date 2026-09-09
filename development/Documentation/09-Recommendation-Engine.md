@@ -30,15 +30,20 @@ The skill matching algorithm (`RecommendationService.calculate_skill_score`) eva
 ### Algorithm Specifications
 1. **Tokenization & Normalization**:
    - Both strings (`job.required_skills` and `candidate.skills`) are split by commas (`,`).
-   - Each token is stripped of leading/trailing whitespace and converted to lowercase.
+   - Each token is stripped of leading/trailing whitespace and all internal runs of whitespace are collapsed to a single space (`re.sub(r"\s+", " ", ...)`).
+   - Each token is converted to lowercase via `str.casefold()`.
    - Empty tokens are discarded.
+   - Canonical skill values are resolved through `normalize_skill_values` before comparison (see `SkillService`).
+   - The literal value `"other"` (case-insensitive) is **silently excluded** from both required and candidate token sets before comparison, preventing false positive matches.
 2. **Edge Cases**:
-   - If the job listing lists **no required skills**: Returns `70.0` points (open entry role).
+   - If the job listing lists **no required skills** (empty token set after normalization): Returns `0.0` points.
    - If the candidate profile lists **no skills**: Returns `0.0` points.
-3. **Bidirectional Substring Matching**:
-   - A required skill is considered satisfied if any candidate skill is a substring of the required skill, **or** if the required skill is a substring of the candidate skill.
-   - Example: Required `"driving"` matches candidate `"professional driving"`.
-   - Example: Required `"culinary arts & cooking"` matches candidate `"cooking"`.
+3. **Deterministic Exact Matching**:
+   - A required skill token is considered satisfied if and only if its normalized form appears **exactly** in the candidate's normalized token set.
+   - Matching is exact — no substring logic, fuzzy matching, semantic similarity, or embeddings are used.
+   - Example: Required `"customer service"` matches candidate `"Customer Service"` (normalized to same value).
+   - Example: Required `"tourism & tour guiding"` does **not** match candidate `"tour guiding"` — the tokens must normalize identically.
+   - Custom values are compared by their exact normalized text; they match only if the candidate stored the identical custom value.
 4. **Proportional Scoring Formula**:
    $$\text{Skill Score} = \text{round}\left( \frac{\text{Count of Matched Required Skills}}{\text{Total Count of Required Skills}} \times 70.0, \, 2 \right)$$
 
@@ -94,14 +99,14 @@ After scoring, candidates or jobs are partitioned into **Two Distinct Tiers**:
 - **Skills**: `"Tour Guiding, Customer Service, Arc Welding"`
 
 #### Step 1: Skill Score Calculation
-- Required tokens: `["tourism & tour guiding", "customer service", "first aid"]` (3 skills)
-- Candidate tokens: `["tour guiding", "customer service", "arc welding"]`
-- Matches:
-  1. `"tourism & tour guiding"` matches `"tour guiding"` (substring match) -> **Matched**
-  2. `"customer service"` matches `"customer service"` (exact match) -> **Matched**
-  3. `"first aid"` -> No match
-- Overlap count: 2 out of 3 skills
-- Skill Score = $\text{round}((2 / 3) \times 70.0, 2) = \text{round}(46.666..., 2) =$ **46.67 points**.
+- Required tokens (normalized): `["tourism & tour guiding", "customer service", "first aid"]` (3 skills)
+- Candidate tokens (normalized): `["tour guiding", "customer service", "arc welding"]`
+- Deterministic exact matching:
+  1. `"tourism & tour guiding"` vs. candidate set → `"tour guiding"` is **not** an exact match → **No match**
+  2. `"customer service"` vs. candidate set → exact match → **Matched**
+  3. `"first aid"` vs. candidate set → **No match**
+- Overlap count: 1 out of 3 skills
+- Skill Score = $\text{round}((1 / 3) \times 70.0, 2) = \text{round}(23.333..., 2) =$ **23.33 points**.
 
 #### Step 2: Geographic Score Calculation
 - Job Location: Basco / Kayvaluganan (Batan Island)
@@ -110,7 +115,7 @@ After scoring, candidates or jobs are partitioned into **Two Distinct Tiers**:
 - Geographic Score = **25.0 points**.
 
 #### Step 3: Total Score & Tier Placement
-- Total Score = $46.67 + 25.0 =$ **71.67 points**.
+- Total Score = $23.33 + 25.0 =$ **48.33 points**.
 - Tier Placement: **Tier 1** (Score > 0).
 
 ---
@@ -154,9 +159,10 @@ flowchart TD
     subgraph ScoringLoop["Deterministic Scoring Iteration"]
         FetchInputs --> NextCandidate[Evaluate Next Entity in Pool]
         
-        NextCandidate --> TokenizeReq[Tokenize & Clean Required Skills]
-        TokenizeReq --> TokenizeCand[Tokenize & Clean Candidate Skills]
-        TokenizeCand --> CheckMatch{Bidirectional Substring Matches?}
+        NextCandidate --> TokenizeReq["Normalize Required Skills via SkillService"]
+        TokenizeReq --> TokenizeCand["Normalize Candidate Skills via SkillService"]
+        TokenizeCand --> FilterOther["Exclude literal 'Other' from both sets"]
+        FilterOther --> CheckMatch{Deterministic Exact Matches?}
         
         CheckMatch --> CalcSkill[Skill Score = round matched / total * 70, 2]
         
