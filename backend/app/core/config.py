@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Batanes Niche Job Portal"
     BASE_URL: str = "http://localhost:8000"
 
+    # Development Demo Mode (Strictly prohibited in production)
+    DEMO_MODE: bool = False
+
     # Database Configuration
     DATABASE_URL: str = "sqlite:///./batanes_niche.db"
 
@@ -56,6 +59,18 @@ class Settings(BaseSettings):
             except Exception:
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
+
+    @property
+    def is_demo_mode_active(self) -> bool:
+        """
+        Demo mode is strictly available ONLY when:
+        1. Environment is explicitly development/dev/local/test (never production/staging), AND
+        2. DEMO_MODE setting is explicitly True.
+        
+        Even if DEMO_MODE=True is configured, any non-development environment rejects Demo Mode.
+        """
+        is_dev = self.ENVIRONMENT.lower() in ("development", "dev", "local", "test", "testing")
+        return is_dev and bool(self.DEMO_MODE)
 
 
 settings = Settings()

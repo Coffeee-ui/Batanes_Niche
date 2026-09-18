@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from app.core.config import settings
 
 from app.core.security import (
     verify_password,
@@ -124,6 +125,69 @@ class AuthService:
 
         token = AuthService._issue_tokens(db, user)
         return user, token
+
+    @staticmethod
+    def demo_authenticate(db: Session, role: str) -> Token:
+        """
+        Authenticates a canonical development demo user by role.
+        Strictly prohibited in production environments or when DEMO_MODE is False.
+        """
+        if not settings.is_demo_mode_active:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Demo login is unavailable in this environment.",
+            )
+
+        role_clean = role.strip().lower()
+        if role_clean not in ("job_seeker", "employer", "admin"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid demo role requested. Allowed roles: 'job_seeker', 'employer', 'admin'.",
+            )
+
+        canonical_usernames = {
+            "admin": "admin",
+            "employer": "batanes_inn",
+            "job_seeker": "ivatan_guide",
+        }
+
+        target_username = canonical_usernames.get(role_clean)
+        user = UserRepository.get_by_username(db, target_username) if target_username else None
+
+        # Fallback to any active account with the requested role if the canonical account was modified/removed in dev
+        if not user:
+            user = (
+                db.query(User)
+                .filter(User.role == role_clean, User.account_status == "active")
+                .first()
+            )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No active demo account found for role '{role_clean}'. Please seed development data.",
+            )
+
+        if user.account_status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The requested demo account is inactive or suspended.",
+            )
+
+        token = AuthService._issue_tokens(db, user)
+
+        AuditService.log_event(
+            db=db,
+            action="DEMO_LOGIN",
+            actor_role=user.role,
+            actor_id=user.id,
+            target_type="user",
+            target_id=user.id,
+            details={"demo_role": role_clean, "username": user.username},
+        )
+        db.commit()
+
+        return token
 
     @staticmethod
     def rotate_refresh_token(db: Session, raw_refresh_token: str) -> Token:

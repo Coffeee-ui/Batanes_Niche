@@ -197,7 +197,49 @@ npm run build
 
 ---
 
-## 6. Common Pitfalls & Developer Gotchas
+## 6. Development-Only Demo Mode
+
+To accelerate local feature development, interactive demonstrations, and UI reviews, the platform includes a **Demo Mode**.
+
+> [!CAUTION]
+> **Strictly Development-Only Feature**: Demo Mode is designed exclusively for development and demo environments. It must **never** be enabled or deployed to production. The backend explicitly refuses to activate Demo Mode whenever `ENVIRONMENT` is set to `production`, even if `DEMO_MODE=True` is provided in environment variables.
+
+### 6.1 Enabling Demo Mode in Local Development
+
+In `backend/.env`:
+```env
+# Ensure environment is set to development
+ENVIRONMENT=development
+
+# Enable Demo Mode
+DEMO_MODE=True
+```
+
+To disable Demo Mode (default):
+```env
+DEMO_MODE=False
+```
+
+### 6.2 Available Demo Roles & Canonical Accounts
+
+When active, Demo Mode provides one-click authentication on the login page for existing system roles without manual credential entry:
+
+| Role | Label | Canonical Demo Account | Capabilities |
+|---|---|---|---|
+| `job_seeker` | **Job Seeker** | `ivatan_guide` (Juan Abad) | Browse full job listings, submit applications, manage saved jobs, edit profile. |
+| `employer` | **Employer** | `batanes_inn` (Batanes Seaside Inn & Tours) | Post vacancies, manage listings, review applicants, evaluate recommendations. |
+| `admin` | **Administrator** | `admin` (Platform Administrator) | System administration, user moderation, and audit log inspection. |
+
+### 6.3 Security & Production Safeguards
+1. **Authoritative Backend Control**: The frontend never determines whether Demo Mode is available. It queries `GET /api/v1/auth/demo-status` on mount; if the backend reports disabled or in production, demo controls are omitted.
+2. **Production Invariant**: If `ENVIRONMENT` is `production`, `is_demo_mode_active` is always `False`. Any attempt to call `POST /api/v1/auth/demo-login` returns `HTTP 404 Not Found`.
+3. **Zero Frontend Credential Exposure**: No usernames, passwords, or hashes exist in frontend code or API responses. The client sends only `{ "role": "<role>" }`.
+4. **Standard Session Output**: Successful demo authentication produces standard JWT access and refresh tokens via `AuthService._issue_tokens()`, ensuring normal session management remains intact.
+5. **Audit Logging**: All demo logins are recorded in `audit_logs` under the `DEMO_LOGIN` action.
+
+---
+
+## 7. Common Pitfalls & Developer Gotchas
 
 1. **Do NOT Invent New Endpoints for Chat**: Version 2 does **not** support real-time chat or WebSockets. Communication relies on the application state machine, persistent in-app notifications, and authorized phone/email.
 2. **Do NOT Hardcode Geography**: Never hardcode Batanes municipalities or barangays in strings. Always reference `backend/app/core/geography.py` or fetch from `/api/v1/meta/options`.
@@ -206,7 +248,7 @@ npm run build
 
 ---
 
-## 7. Next Steps
+## 8. Next Steps
 
 - To review the 14 Architecture Decision Records (ADRs), see [**18-Architecture-Decisions.md**](./18-Architecture-Decisions.md).
 - To examine API contracts, see [**05-API-Architecture.md**](./05-API-Architecture.md).

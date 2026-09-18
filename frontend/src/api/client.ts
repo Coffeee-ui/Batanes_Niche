@@ -4,7 +4,7 @@ import type {
   PaginatedResponse, Token, RegisterPayload,
   LoginPayload, JobCreate, JobFilters, Candidate,
   CandidateRankingResponse, JobRankingResponse,
-  MetadataOptions, GeoMeta, ApiError
+  MetadataOptions, GeoMeta, ApiError, DemoStatusResponse
 } from '../types';
 
 // ============================================================
@@ -198,6 +198,12 @@ export const authApi = {
       otp_code: otp,
       new_password,
     }).then(r => r.data),
+
+  getDemoStatus: () =>
+    api.get<DemoStatusResponse>('/auth/demo-status').then(r => r.data),
+
+  demoLogin: (role: string) =>
+    api.post<Token>('/auth/demo-login', { role }).then(r => r.data),
 };
 
 // ============================================================

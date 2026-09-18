@@ -56,6 +56,20 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ### Added
 
+- **Development-Only Demo Mode — backend-controlled one-click demo access for local development and demonstration**
+  - Added a secure, development-stage **Demo Mode** to simplify local development, testing, and stakeholder demonstrations without manual credential entry.
+  - **Backend-Controlled Configuration**: Controlled exclusively by backend configuration (`DEMO_MODE: bool = False` in `Settings` and `backend/.env`). Disabled by default. The frontend cannot independently activate Demo Mode via local storage, URL params, or client state.
+  - **Production Protection Guarantee**: Strictly locked to development environments (`ENVIRONMENT in ("development", "dev", "local", "test", "testing")`). If `ENVIRONMENT="production"`, Demo Mode remains permanently inactive even if `DEMO_MODE=True` is configured. Direct API invocations in production reject with `HTTP 404 Not Found`, behaving as though Demo Mode does not exist.
+  - **Zero Credential Exposure**: No demo usernames, passwords, or authentication secrets exist in frontend source code or API responses. The client requests authentication conceptually by role (`role: "job_seeker" | "employer" | "admin"`), and the backend resolves the canonical account.
+  - **Available Development Demo Roles**:
+    - `job_seeker`: Authenticates canonical Job Seeker account (Juan Abad — `ivatan_guide`).
+    - `employer`: Authenticates canonical Employer account (Batanes Seaside Inn & Tours — `batanes_inn`).
+    - `admin`: Authenticates canonical Administrator account (Platform Administrator — `admin`).
+  - **Reuse of Normal Authentication Architecture**: Demo login directly invokes `AuthService._issue_tokens()` to produce standard JWT access and refresh tokens, seamlessly populating `AuthContext` via `GET /api/v1/auth/me`. Normal username/password login, registration, and RBAC authorization remain completely untouched.
+  - **Audit Logging**: Successful demo authentications are recorded in the append-only `audit_logs` table under action `DEMO_LOGIN`.
+  - **Frontend Integration**: Added `authApi.getDemoStatus()` and `authApi.demoLogin()` in `client.ts`. Updated `LoginPage.tsx` to dynamically query demo status on mount. When active, a clean "Demo Access" section appears below the sign-in form with dedicated one-click buttons (`btn-demo-job_seeker`, `btn-demo-employer`, `btn-demo-admin`). If disabled or running in production, Demo Mode controls are completely hidden.
+  - **Automated Test Coverage**: Added backend suite `backend/tests/test_demo_mode.py` (7 tests covering default disabled state, production safeguard, role authentication, token claims, and invalid role rejection) and frontend suite `frontend/src/test/DemoMode.test.tsx` (testing conditional UI rendering, disabled state hiding, and demo login trigger).
+
 - **Landing page optimization — restricted public job preview with enforced authentication boundary**
   - Public landing page now displays only a controlled preview of each job: **Job Title**, **Required Skills**, and **Salary** (min–max). No company name, description, location (municipality/barangay/island), employment type, employer ID, application count, or timestamps are exposed to unauthenticated visitors.
   - Introduced `JobPreviewOut` backend schema (`backend/app/schemas/job.py`) containing only `id`, `title`, `salary_min`, `salary_max`, and `required_skills`.

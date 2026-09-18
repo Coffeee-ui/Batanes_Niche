@@ -145,6 +145,17 @@ export interface LoginResponse extends Token {
   user?: User;
 }
 
+export interface DemoRoleInfo {
+  role: UserRole;
+  label: string;
+  description: string;
+}
+
+export interface DemoStatusResponse {
+  enabled: boolean;
+  roles: DemoRoleInfo[];
+}
+
 export interface RegisterPayload {
   username: string;
   email: string;

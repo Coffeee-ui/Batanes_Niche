@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
@@ -85,3 +85,27 @@ class ResetPasswordRequest(BaseModel):
         if not re.search(r"[0-9\W_]", v):
             raise ValueError("Password must contain at least one number or special character.")
         return v
+
+
+class DemoLoginRequest(BaseModel):
+    role: str = Field(..., description="Role to authenticate as ('job_seeker', 'employer', 'admin')")
+
+    @field_validator("role")
+    @classmethod
+    def validate_demo_role(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if clean not in ("job_seeker", "employer", "admin"):
+            raise ValueError("Invalid demo role requested. Allowed roles: 'job_seeker', 'employer', 'admin'.")
+        return clean
+
+
+class DemoRoleInfo(BaseModel):
+    role: str
+    label: str
+    description: str
+
+
+class DemoStatusOut(BaseModel):
+    enabled: bool
+    roles: List[DemoRoleInfo] = []
+

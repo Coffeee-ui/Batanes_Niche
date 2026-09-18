@@ -13,6 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  demoLogin: (role: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -72,6 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const demoLogin = useCallback(async (role: string) => {
+    setError(null);
+    try {
+      const data = await authApi.demoLogin(role);
+      setAccessToken(data.access_token);
+      setRefreshToken(data.refresh_token);
+      const me = await authApi.me();
+      setUser(me);
+    } catch (err) {
+      const msg = extractError(err);
+      setError(msg);
+      throw new Error(msg);
+    }
+  }, []);
+
   const register = useCallback(async (payload: RegisterPayload) => {
     setError(null);
     try {
@@ -113,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: !!user,
       login,
+      demoLogin,
       register,
       logout,
       refreshUser,

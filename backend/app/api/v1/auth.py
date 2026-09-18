@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.api.deps import get_db, require_authenticated, limiter
 from app.models.user import User
 from app.schemas.auth import (
@@ -10,6 +11,9 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    DemoLoginRequest,
+    DemoStatusOut,
+    DemoRoleInfo,
 )
 from app.schemas.user import PrivateUserProfile
 from app.schemas.common import MessageOut
@@ -85,3 +89,44 @@ def reset_password(request: Request, reset_data: ResetPasswordRequest, db: Sessi
 def get_me(current_user: User = Depends(require_authenticated)):
     """Retrieves authenticated user's private profile with completeness score."""
     return UserService.get_private_profile(current_user)
+
+
+@router.get("/demo-status", response_model=DemoStatusOut, status_code=status.HTTP_200_OK)
+def get_demo_status():
+    """
+    Returns Demo Mode status. Strictly disabled and returns enabled=False in non-development environments.
+    """
+    if not settings.is_demo_mode_active:
+        return DemoStatusOut(enabled=False, roles=[])
+
+    return DemoStatusOut(
+        enabled=True,
+        roles=[
+            DemoRoleInfo(
+                role="job_seeker",
+                label="Job Seeker",
+                description="Demo Seeker: Juan Abad (Browse previews, view full jobs, apply)",
+            ),
+            DemoRoleInfo(
+                role="employer",
+                label="Employer",
+                description="Demo Employer: Batanes Seaside Inn & Tours (Manage postings & applicants)",
+            ),
+            DemoRoleInfo(
+                role="admin",
+                label="Administrator",
+                description="Demo Administrator: Platform Administrator (Portal moderation & audit logs)",
+            ),
+        ],
+    )
+
+
+@router.post("/demo-login", response_model=Token, status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+def demo_login(request: Request, payload: DemoLoginRequest, db: Session = Depends(get_db)):
+    """
+    One-click demo authentication for development.
+    Strictly disabled in production or when DEMO_MODE=False.
+    """
+    return AuthService.demo_authenticate(db, payload.role)
+

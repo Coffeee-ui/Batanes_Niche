@@ -450,6 +450,15 @@ ProtectedRoute inspects user.role:
 
 ---
 
+### Scenario 7: I Want to Work with or Configure Development Demo Mode
+1. **Backend Environment Flag**: Open [backend/.env](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/.env) and toggle `DEMO_MODE=True` or `DEMO_MODE=False`. Note that Demo Mode requires `ENVIRONMENT` to be set to a development tier (`development`, `dev`, `local`, `test`).
+2. **Backend Config Logic**: Open [config.py](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/app/core/config.py) to inspect `is_demo_mode_active` and its production safeguards.
+3. **Authentication Handlers**: Open [auth_service.py](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/app/services/auth_service.py) in `AuthService.demo_authenticate()` and [auth.py](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/app/api/v1/auth.py) for `/demo-status` and `/demo-login`.
+4. **Frontend Login UI**: Open [LoginPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/auth/LoginPage.tsx) to inspect `#demo-access-section` and button bindings.
+5. **Session Management**: Open [AuthContext.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/contexts/AuthContext.tsx) in `demoLogin()` to see how standard tokens are stored.
+
+---
+
 ## 11. Next Steps & Documentation Map
 
 - To review visual workflows and system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).

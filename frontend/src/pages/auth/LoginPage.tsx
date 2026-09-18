@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, MapPin, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, MapPin, Mail, Lock, User as UserIcon, Briefcase, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { authApi } from '../../api/client';
 import { Spinner } from '../../components/ui';
+import type { DemoStatusResponse, UserRole } from '../../types';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { from?: string } | null;
@@ -16,6 +18,27 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Demo Mode state (Backend-controlled)
+  const [demoConfig, setDemoConfig] = useState<DemoStatusResponse | null>(null);
+  const [demoLoadingRole, setDemoLoadingRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    authApi.getDemoStatus()
+      .then(res => {
+        if (isMounted && res?.enabled) {
+          setDemoConfig(res);
+        }
+      })
+      .catch(() => {
+        // Silently omit Demo Mode controls in production or when unavailable
+        if (isMounted) setDemoConfig(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +52,20 @@ export default function LoginPage() {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async (role: UserRole) => {
+    setError('');
+    setDemoLoadingRole(role);
+    try {
+      await demoLogin(role);
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Demo authentication failed.';
+      setError(msg);
+    } finally {
+      setDemoLoadingRole(null);
     }
   };
 
@@ -139,6 +176,56 @@ export default function LoginPage() {
           >
             {loading ? <Spinner size="sm" /> : 'Sign In'}
           </button>
+
+          {demoConfig?.enabled && demoConfig.roles.length > 0 && (
+            <div id="demo-access-section" className="pt-5 mt-5 border-t" style={{ borderColor: 'hsl(var(--color-border-subtle))' }}>
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--color-text-muted))' }}>
+                  Demo Access
+                </span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{
+                    background: 'hsl(var(--color-primary) / 0.12)',
+                    color: 'hsl(var(--color-primary))',
+                    border: '1px solid hsl(var(--color-primary) / 0.25)',
+                  }}
+                >
+                  Dev Mode
+                </span>
+              </div>
+              <p className="text-xs mb-3" style={{ color: 'hsl(var(--color-text-muted))' }}>
+                One-click instant access for development & demonstration:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {demoConfig.roles.map((demo) => {
+                  const isRoleLoading = demoLoadingRole === demo.role;
+                  return (
+                    <button
+                      key={demo.role}
+                      id={`btn-demo-${demo.role}`}
+                      type="button"
+                      disabled={loading || !!demoLoadingRole}
+                      onClick={() => handleDemoLogin(demo.role)}
+                      className="btn btn-outline py-2.5 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      title={demo.description}
+                    >
+                      {isRoleLoading ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <>
+                          {demo.role === 'job_seeker' && <UserIcon className="w-3.5 h-3.5" />}
+                          {demo.role === 'employer' && <Briefcase className="w-3.5 h-3.5" />}
+                          {demo.role === 'admin' && <ShieldCheck className="w-3.5 h-3.5" />}
+                          <span>{demo.label}</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </form>
 
         <p className="text-center text-sm mt-6" style={{ color: 'hsl(var(--color-text-muted))' }}>
