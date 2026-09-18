@@ -218,6 +218,8 @@ flowchart TD
 
 ## 9. Next Steps
 
+- For comprehensive user journey and multi-tier system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
+- For practical developer modification maps and code paths, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
 - For mathematical formulas and calculation steps of the recommendation algorithm, see [**09-Recommendation-Engine.md**](./09-Recommendation-Engine.md).
 - To examine how the frontend React SPA renders these workflows, see [**10-Frontend-Architecture.md**](./10-Frontend-Architecture.md).
 - For complete operational coverage of the administrative portal, see [**11-Administrative-UI.md**](./11-Administrative-UI.md).

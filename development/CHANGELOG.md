@@ -4,6 +4,33 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ---
 
+## [2.0.2] — 2026-09-12
+
+### Added
+
+- **Documentation — `20-System-Flowcharts.md` (new file)**
+  - Created a comprehensive 3-level standard flowchart suite conforming strictly to ISO/ANSI flowchart notation (terminators, processes, decisions, input/outputs):
+    - **Level 1 (General User Journey)**: High-level visual guide for non-technical stakeholders from discovery to employment outcome.
+    - **Level 2 (Role-Specific Workflows)**: Granular step-by-step logic flows for Job Seekers (registration, onboarding, job search, recommendations, bookmarks, application tracking), Employers (registration, business verification, job posting, applicant management, candidate discovery, contact reveal), Auth & Security (email/password login, rate-limited OTP password reset), Application State Machine (pending <-> accepted/rejected transitions), Notification Subsystem (transactional event generation, polling, read marking), and Administrator Operations (Jinja2 SSR portal, job/employer moderation, audit logging).
+    - **Level 3 (Technical Multi-Tier Execution Architecture)**: Complete end-to-end request-response flow across React SPA, Axios interceptor, FastAPI middleware, slowapi rate limiting, router/dependency injection, service layer, SQLAlchemy ORM, and PostgreSQL database.
+
+- **Documentation — `21-Developer-Architecture-Guide.md` (new file)**
+  - Created a definitive developer navigation manual to accelerate onboarding and code modifications:
+    - **"Where Do I Modify This?" Master Matrix**: Rapid mapping from 12+ real-world system features to exact frontend components, API endpoints, backend services, and database tables.
+    - **Specific Inbox & Messaging Absence Documentation**: Explicitly clarifies that the portal does not feature an inbox or live chat, detailing the actual communication architecture (application status state machine, persistent in-app notifications, and revealed applicant email/phone for employers).
+    - **Code Traceability Walks**: Detailed end-to-end trace walkthroughs through all code layers for Job Applications and OTP Password Reset.
+    - **Frontend & Backend Modification Maps**: Component-by-component and service-by-service guides on how state, validation, and database operations connect.
+    - **Modification Recipes**: Step-by-step guides for adding fields to jobs, adding notifications, creating new API endpoints, and altering application states.
+
+### Fixed
+
+- **Documentation — Synchronized documentation drift across existing modules**
+  - `03-Repository-Structure.md`: Removed references to non-existent `backend/app/api/v1/endpoints/health.py` (`/health` and `/ready` are defined directly in `main.py`); removed non-existent `saved_jobs_service.py` and added `skill_service.py`; corrected frontend components (`auth/`, `forms/`, `layout/`, `ui/`) and pages directory structure (`LandingPage.tsx`, `DashboardPage.tsx`, `auth/`, `jobs/`, `ApplicationsPage.tsx`, `SavedJobsPage.tsx`, `CandidatesPage.tsx`, `NotificationsPage.tsx`, `ProfilePage.tsx`); updated documentation catalog to 21 modules.
+  - `05-API-Architecture.md`: Corrected endpoint paths and HTTP verbs: `PUT /api/v1/applications/{app_id}` (was documented as `PATCH .../status`), `POST /api/v1/saved-jobs/{job_id}` and `DELETE /api/v1/saved-jobs/{job_id}` (was documented under generic query params), and `PUT /api/v1/notifications/read` (was documented as `POST`).
+  - `10-Frontend-Architecture.md`: Replaced fictional `/employer/*` and separate seeker routes with actual routing table: `/dashboard` (adaptive dashboard for both seekers and employers), `/applications` (seeker only), `/saved-jobs` (seeker only), `/candidates` (employer only), `/my-jobs` (employer only), `/jobs/new` (employer only); documented `ProtectedRoute.tsx` role enforcement behavior.
+  - `08-Business-Workflows.md`: Added Next Steps cross-reference links directing readers to Docs 20 and 21.
+  - `README.md`: Updated master index table to 21 modules (including `19`, `20`, and `21`) and updated Getting Started navigation links.
+
 ## [2.0.1] — 2026-09-08
 
 ### Fixed

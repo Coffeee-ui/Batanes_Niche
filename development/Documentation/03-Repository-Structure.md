@@ -34,22 +34,20 @@ backend/
 │   │   ├── auth.py                   # Signed cookie session management & CSRF helpers
 │   │   └── routes.py                 # Admin route handlers & view controllers
 │   ├── api/                          # REST API presentation layer
-│   │   ├── v1/                       # API version 1 route endpoints
-│   │   │   ├── auth.py               # /api/v1/auth endpoints
-│   │   │   ├── users.py              # /api/v1/users endpoints
-│   │   │   ├── jobs.py               # /api/v1/jobs endpoints
-│   │   │   ├── applications.py       # /api/v1/applications endpoints
-│   │   │   ├── recommendations.py    # /api/v1/recommendations endpoints
-│   │   │   ├── saved_jobs.py         # /api/v1/saved-jobs endpoints
-│   │   │   ├── notifications.py      # /api/v1/notifications endpoints
-│   │   │   ├── meta.py               # /api/v1/meta endpoints
-│   │   │   └── health.py             # /api/v1/health & /api/v1/ready probes
-│   │   └── deps.py                   # Dependency injection (db session, auth guards)
+│   │   ├── deps.py                   # Dependency injection (db session, auth guards, rate limiter)
+│   │   └── v1/                       # API version 1 route endpoints
+│   │       ├── applications.py       # /api/v1/applications endpoints
+│   │       ├── auth.py               # /api/v1/auth endpoints
+│   │       ├── jobs.py               # /api/v1/jobs endpoints
+│   │       ├── meta.py               # /api/v1/meta endpoints
+│   │       ├── notifications.py      # /api/v1/notifications endpoints
+│   │       ├── recommendations.py    # /api/v1/recommendations endpoints
+│   │       ├── saved_jobs.py         # /api/v1/saved-jobs endpoints
+│   │       └── users.py              # /api/v1/users endpoints
 │   ├── core/                         # Core infrastructure & configuration
 │   │   ├── config.py                 # Pydantic BaseSettings (.env parsing)
-│   │   ├── security.py               # bcrypt, JWT creation/decoding, OTP generation
 │   │   ├── geography.py              # Canonical Batanes geographic hierarchy
-│   │   └── limiter.py                # SlowAPI rate limiter instance
+│   │   └── security.py               # bcrypt, JWT creation/decoding, OTP generation
 │   ├── database/                     # Database engine and session factory
 │   │   ├── session.py                # SQLAlchemy engine, SessionLocal, Base model
 │   │   └── base.py                   # Metadata registry importing all models
@@ -77,26 +75,26 @@ backend/
 │   │   ├── error_report_repository.py# ErrorReport persistence
 │   │   └── audit_log_repository.py   # Append-only audit log queries
 │   ├── schemas/                      # Pydantic v2 data validation & serialization
-│   │   ├── auth.py                   # UserRegister, UserLogin, Token, PasswordReset
-│   │   ├── user.py                   # UserProfile, JobSeekerSummary, Update schemas
-│   │   ├── job.py                    # JobCreate, JobUpdate, JobOut schemas
 │   │   ├── application.py            # ApplicationCreate, ApplicationOut schemas
-│   │   ├── saved_job.py              # SavedJobOut schema
+│   │   ├── auth.py                   # UserRegister, UserLogin, Token, PasswordReset
+│   │   ├── common.py                 # MessageOut schema
+│   │   ├── job.py                    # JobCreate, JobUpdate, JobOut schemas
+│   │   ├── meta.py                   # Geography, options schemas
 │   │   ├── notification.py           # NotificationOut schema
 │   │   ├── recommendation.py         # CandidateRanking, JobRanking schemas
-│   │   └── meta.py                   # Geography, options schemas
+│   │   └── user.py                   # UserProfile, JobSeekerSummary, Update schemas
 │   ├── services/                     # Business logic and domain rules
-│   │   ├── auth_service.py           # Auth, registration, token rotation, OTP reset
-│   │   ├── user_service.py           # Profile completeness, candidate directory
-│   │   ├── job_service.py            # Job validation, lifecycle, formatting
 │   │   ├── application_service.py    # Application transactions, contact reveal
-│   │   ├── recommendation_service.py # Deterministic two-tier matching engine
-│   │   ├── geography_service.py      # Location validation & distance scoring
-│   │   ├── notification_service.py   # In-app notifications
-│   │   ├── saved_jobs_service.py     # Bookmark management
 │   │   ├── audit_service.py          # Append-only audit logging
+│   │   ├── auth_service.py           # Auth, registration, token rotation, OTP reset
+│   │   ├── email_delivery_service.py # SMTP OTP delivery with dev simulation
 │   │   ├── error_logging_service.py  # 500 error reporting & secrets scrubbing
-│   │   └── email_delivery_service.py # SMTP OTP delivery with dev simulation
+│   │   ├── geography_service.py      # Location validation & distance scoring
+│   │   ├── job_service.py            # Job validation, lifecycle, saved jobs management
+│   │   ├── notification_service.py   # In-app notifications
+│   │   ├── recommendation_service.py # Deterministic two-tier matching engine
+│   │   ├── skill_service.py          # Canonical skill catalog normalization & matching
+│   │   └── user_service.py           # Profile completeness, candidate directory
 │   ├── cli.py                        # Management CLI (create-admin, seed-data)
 │   └── main.py                       # FastAPI application entry point & router mounting
 ├── tests/                            # Comprehensive Pytest test suite
@@ -131,30 +129,37 @@ frontend/
 │   ├── api/                          # HTTP client and API integration
 │   │   └── client.ts                 # Axios instance, Bearer token, silent refresh interceptor
 │   ├── components/                   # Reusable UI and layout components
-│   │   ├── common/                   # Shared UI primitives (Badge, Card, Modal, Spinner)
-│   │   ├── feedback/                 # User feedback components (LoadingSpinner, EmptyState)
-│   │   ├── jobs/                     # Job-specific components (JobCard, JobFilterBar, JobForm)
-│   │   ├── layout/                   # Structural layout (Navbar, Footer, Layout container)
-│   │   └── ui/                       # Toast notification provider & alerts
+│   │   ├── auth/                     # Authentication components
+│   │   │   └── ProtectedRoute.tsx    # Role-based route guard wrapper
+│   │   ├── forms/                    # Form input controls
+│   │   │   └── SkillSelector.tsx     # Canonical skill multi-select with custom 'Other' input
+│   │   ├── layout/                   # Structural layout components
+│   │   │   ├── Footer.tsx            # Application footer with Batanes context & navigation
+│   │   │   ├── Layout.tsx            # Main shell component wrapping Navbar, Outlet, and Footer
+│   │   │   └── Navbar.tsx            # Navigation bar with role-aware menu & notifications bell
+│   │   └── ui/                       # Shared UI presentation components
+│   │       ├── index.tsx             # Shared UI primitives (Spinner, PageSpinner, Modal, Dialog)
+│   │       ├── JobCard.tsx           # Interactive vacancy card with bookmark toggle
+│   │       └── Toast.tsx             # Reactive toast notification alert system
 │   ├── contexts/                     # React Context state providers
-│   │   ├── AuthContext.tsx           # Global authentication state, login, logout, refresh
-│   │   └── ToastContext.tsx          # Global toast notification queue
+│   │   └── AuthContext.tsx           # Global authentication state, login, logout, refresh
 │   ├── pages/                        # Page-level route views
-│   │   ├── HomePage.tsx              # Public landing page with hero and featured vacancies
-│   │   ├── LoginPage.tsx             # User authentication form
-│   │   ├── RegisterPage.tsx          # User registration with role invariant selection
-│   │   ├── ForgotPasswordPage.tsx    # Password reset request (OTP dispatch)
-│   │   ├── ResetPasswordPage.tsx     # OTP verification and new password entry
-│   │   ├── JobsPage.tsx              # Public job catalog with multi-facet filters
-│   │   ├── JobDetailPage.tsx         # Job details, requirements, and application submission
-│   │   ├── PostJobPage.tsx           # Employer job creation form
-│   │   ├── EditJobPage.tsx           # Employer job modification form
-│   │   ├── DashboardPage.tsx         # Job seeker dashboard (applications & saved jobs)
-│   │   ├── EmployerDashboardPage.tsx # Employer dashboard (job listings & applicant review)
-│   │   ├── CandidatesPage.tsx        # Employer candidate search & recommendation directory
-│   │   ├── ProfilePage.tsx           # User profile editing & completeness score gauge
+│   │   ├── auth/                     # Authentication pages
+│   │   │   ├── ForgotPasswordPage.tsx# Multi-step 6-digit OTP password reset view
+│   │   │   ├── LoginPage.tsx         # User authentication form
+│   │   │   └── RegisterPage.tsx      # Dual-role account registration form
+│   │   ├── jobs/                     # Job domain pages
+│   │   │   ├── JobDetailPage.tsx     # Job details, requirements, and application submission
+│   │   │   ├── JobsPage.tsx          # Public job catalog with multi-facet filters
+│   │   │   ├── MyJobsPage.tsx        # Employer job management view (active & closed)
+│   │   │   └── PostJobPage.tsx       # Employer vacancy creation form
+│   │   ├── ApplicationsPage.tsx      # Job seeker submitted applications & status tracking
+│   │   ├── CandidatesPage.tsx        # Employer candidate search & recommendations view
+│   │   ├── DashboardPage.tsx         # Unified dashboard (renders Seeker or Employer view)
+│   │   ├── LandingPage.tsx           # Public homepage with search hero & island highlights
 │   │   ├── NotificationsPage.tsx     # In-app notifications feed with mark-as-read
-│   │   └── NotFoundPage.tsx          # 404 error page
+│   │   ├── ProfilePage.tsx           # User profile editing & completeness score gauge
+│   │   └── SavedJobsPage.tsx         # Job seeker bookmarked vacancies catalog
 │   ├── test/                         # Frontend Vitest test suite
 │   │   ├── AuthContext.test.tsx      # AuthContext login and hydration tests
 │   │   ├── JobCard.test.tsx          # JobCard presentation & bookmark visibility tests
@@ -182,7 +187,7 @@ Contains operational runbooks, local scripts, and the complete documentation sui
 
 ```text
 development/
-├── Documentation/                    # Comprehensive Developer Documentation Package (18 files)
+├── Documentation/                    # Comprehensive Developer Documentation Package (21 files)
 │   ├── README.md                     # Documentation index & cross-reference guide
 │   ├── 01-System-Overview.md         # Vision, personas, scope, and non-features
 │   ├── 02-Architecture.md            # Multi-tier system architecture and Mermaid diagrams
@@ -201,7 +206,10 @@ development/
 │   ├── 15-Deployment-and-Operations.md # Production Docker, Nginx, PostgreSQL, backups
 │   ├── 16-Data-Analysis-Reference.md # Entity relationships, measures, and analytical SQL
 │   ├── 17-Developer-Guide.md         # Local setup, CLI commands, and extension guides
-│   └── 18-Architecture-Decisions.md  # 14 Architecture Decision Records (ADRs)
+│   ├── 18-Architecture-Decisions.md  # 14 Architecture Decision Records (ADRs)
+│   ├── 19-Skills-and-Business-Type-Catalog.md # 18 skills, enterprise catalog, and normalization rules
+│   ├── 20-System-Flowcharts.md       # Three-level visual workflows (User, Specific, System)
+│   └── 21-Developer-Architecture-Guide.md # Practical developer modification & feature lookup matrix
 ├── scripts/                          # Windows batch scripts for rapid local development
 │   ├── setup.bat                     # Automated venv creation, dep install, migrations
 │   ├── start.bat                     # Launches backend (8000) and frontend (5173)
@@ -238,7 +246,7 @@ When adding or modifying functionality, follow these strict placement rules:
 | **Add a database table or column** | `backend/app/models/<domain>.py` + create Alembic migration in `backend/alembic/versions/` | Do not modify the database directly without an Alembic migration script. |
 | **Add a database query or filter** | `backend/app/repositories/<domain>_repository.py` | Do not write raw SQL or ORM filter queries in services or routes. |
 | **Add a frontend page or view** | `frontend/src/pages/<PageName>.tsx` + register route in `frontend/src/App.tsx` | Do not put large page layouts directly inside App.tsx or components/. |
-| **Add a reusable UI element** | `frontend/src/components/common/<ComponentName>.tsx` | Do not hardcode ad-hoc CSS colors; use semantic CSS tokens. |
+| **Add a reusable UI element** | `frontend/src/components/ui/<ComponentName>.tsx` | Do not hardcode ad-hoc CSS colors; use semantic CSS tokens. |
 | **Add an admin screen or tool** | `backend/app/admin/routes.py` + `backend/app/admin/templates/<template>.html` | Do not build admin screens inside the React frontend SPA. |
 | **Add an automated test** | Backend: `backend/tests/test_<domain>.py`<br/>Frontend: `frontend/src/test/<Component>.test.tsx` | Do not skip tests when adding or changing service functionality. |
 
@@ -246,6 +254,8 @@ When adding or modifying functionality, follow these strict placement rules:
 
 ## 7. Next Steps
 
+- For step-by-step developer navigation and feature modification maps, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
+- For comprehensive multi-level visual workflows, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
 - To examine the exact database schema, foreign keys, and constraints, see [**04-Database-and-ERD.md**](./04-Database-and-ERD.md).
 - To review the REST API routing contracts and schema definitions, see [**05-API-Architecture.md**](./05-API-Architecture.md).
 - To understand user roles and capability matrices, see [**07-User-Roles-and-Permissions.md**](./07-User-Roles-and-Permissions.md).

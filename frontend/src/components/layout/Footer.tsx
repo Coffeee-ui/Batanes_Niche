@@ -51,6 +51,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-1.5 mt-4 text-xs" style={{ color: 'hsl(var(--color-text-faint))' }}>
               <span>Made with</span>
+              {/* INTENTIONAL FIXED COLOR: Emotional decorative heart icon symbol; independent of theme status semantics. */}
               <Heart className="w-3 h-3 text-red-400 fill-red-400" />
               <span>for Batanes</span>
             </div>

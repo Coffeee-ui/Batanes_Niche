@@ -8,7 +8,7 @@ The system is a production-ready, hyper-localized employment marketplace enginee
 
 ## Documentation Index
 
-The documentation suite is structured into 18 specialized modules, each covering a specific architectural, operational, or business domain.
+The documentation suite is structured into 21 specialized modules, each covering a specific architectural, operational, or business domain.
 
 | # | Document | Primary Focus & Scope | Target Audience |
 |---|---|---|---|
@@ -30,6 +30,9 @@ The documentation suite is structured into 18 specialized modules, each covering
 | **16** | [**Data Analysis Reference**](./16-Data-Analysis-Reference.md) | Analytical guide for researchers: Entity mapping, analytical dimensions, derived measures, SQL join recipes, and strict privacy exclusions. | Data Analysts, BI Engineers |
 | **17** | [**Developer Guide**](./17-Developer-Guide.md) | Local environment onboarding, virtual environment setup, configuration, CLI tooling, dev servers, and step-by-step recipes for extending the code. | New Engineers, Contributors |
 | **18** | [**Architecture Decisions**](./18-Architecture-Decisions.md) | 14 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives for foundational design choices. | Architects, Lead Developers |
+| **19** | [**Skills and Business Type Catalog**](./19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, categorization rules, and normalization utilities. | Backend Engineers, Content Curators |
+| **20** | [**System Flowcharts**](./20-System-Flowcharts.md) | Comprehensive standard flowchart suite (Level 1 User Journey, Level 2 Role-specific workflows, Level 3 Multi-tier architecture execution). | Non-technical Audience, All Engineers |
+| **21** | [**Developer Architecture Guide**](./21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code traceability walks, frontend/backend/DB modification maps, and recipes. | New & Contributing Developers |
 
 ---
 
@@ -60,3 +63,5 @@ Readiness Check:      http://localhost:8000/ready (Database Connectivity Probe)
 
 To set up your local development environment, follow the step-by-step guide in [**17-Developer-Guide.md**](./17-Developer-Guide.md).
 For a high-level conceptual understanding of the platform design, begin with [**01-System-Overview.md**](./01-System-Overview.md) and [**02-Architecture.md**](./02-Architecture.md).
+To visualize user flows and end-to-end execution across tiers, refer to [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
+To locate specific files, components, and code pathways for modifications, consult [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).

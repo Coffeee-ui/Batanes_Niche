@@ -124,7 +124,7 @@ export default function MyJobsPage() {
                     <button
                       id={`btn-close-job-${job.id}`}
                       onClick={() => setCloseId(job.id)}
-                      className="btn btn-ghost p-2 text-red-500"
+                      className="btn btn-ghost p-2 text-danger"
                       aria-label="Close job"
                     >
                       <Trash2 className="w-4 h-4" />

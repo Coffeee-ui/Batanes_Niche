@@ -81,29 +81,29 @@ Rate limits are enforced at the router layer using **SlowAPI** backed by in-memo
 |---|---|---|---|---|---|---|---|
 | `POST` | `/api/v1/applications` | Bearer | Job Seeker | `ApplicationCreate` | `SeekerApplicationOut` | `201`, `400`, `403` | Submits application. Prevents duplicates. Atomically creates employer notification. |
 | `GET` | `/api/v1/applications` | Bearer | Seeker / Employer | Query: `limit`, `offset` | `List[Union[SeekerAppOut, EmployerAppOut]]` | `200`, `401` | Role-filtered: Seekers get submitted apps with job info; Employers get received apps with authorized contact info. |
-| `PATCH` | `/api/v1/applications/{id}/status` | Bearer | Employer | Path: `id`, Body: `ApplicationUpdate` | `EmployerApplicationOut` | `200`, `400`, `403`, `404` | Transitions status (`pending` <-> `accepted`/`rejected`). Atomically creates seeker notification. Enforces ownership. |
+| `PUT` | `/api/v1/applications/{app_id}` | Bearer | Employer | Path: `app_id`, Body: `ApplicationUpdate` | `EmployerApplicationOut` | `200`, `400`, `403`, `404` | Transitions status (`pending` <-> `accepted`/`rejected`). Atomically creates seeker notification. Enforces ownership. |
 
 ### 3.5 Recommendations Router (`/api/v1/recommendations`)
 
 | Method | Path | Auth | Role | Request Schema | Response Schema | Status | Description & Rules |
 |---|---|---|---|---|---|---|---|
-| `GET` | `/api/v1/recommendations/candidates` | Bearer | Employer | Query: `job_id`, `limit` | `CandidateRankingResponse` | `200`, `403`, `404` | Ranks candidates against specified job using deterministic two-tier formula (70 skill / 30 geo). Ownership enforced. |
+| `GET` | `/api/v1/recommendations/candidates` | Bearer | Employer | Query: `skills`, `municipality`, `barangay`, `limit` | `CandidateRankingResponse` | `200`, `403` | Ranks candidates against employer criteria using deterministic two-tier formula (70 skill / 30 geo). Candidate contact info strictly sanitized. |
 | `GET` | `/api/v1/recommendations/jobs-ranked` | Bearer | Job Seeker | Query: `limit` | `JobRankingResponse` | `200`, `403` | Ranks available vacancies for authenticated seeker using two-tier formula based on profile skills and municipality. |
 
 ### 3.6 Saved Jobs Router (`/api/v1/saved-jobs`)
 
 | Method | Path | Auth | Role | Request Schema | Response Schema | Status | Description & Rules |
 |---|---|---|---|---|---|---|---|
-| `GET` | `/api/v1/saved-jobs` | Bearer | Job Seeker | Query: `limit`, `offset` | `List[SavedJobOut]` | `200`, `403` | Retrieves vacancies bookmarked by authenticated job seeker. |
-| `POST` | `/api/v1/saved-jobs` | Bearer | Job Seeker | `SavedJobCreate` | `SavedJobOut` | `201`, `400`, `403` | Bookmarks a vacancy. Prevents duplicate bookmarks via `uq_saved_jobs_user_job`. |
-| `DELETE` | `/api/v1/saved-jobs/{id}` | Bearer | Job Seeker | Path: `id` | `{"detail": "..."}` | `200`, `403`, `404` | Removes a bookmarked vacancy. Ownership enforced. |
+| `GET` | `/api/v1/saved-jobs` | Bearer | Job Seeker | None | `List[SavedJobOut]` | `200`, `403` | Retrieves vacancies bookmarked by authenticated job seeker. |
+| `POST` | `/api/v1/saved-jobs/{job_id}` | Bearer | Job Seeker | Path: `job_id` | `MessageOut` | `201`, `400`, `403` | Bookmarks an active vacancy. Prevents duplicate bookmarks via `uq_saved_jobs_seeker_job`. |
+| `DELETE` | `/api/v1/saved-jobs/{job_id}` | Bearer | Job Seeker | Path: `job_id` | `MessageOut` | `200`, `403`, `404` | Removes a bookmarked vacancy. Ownership enforced. |
 
 ### 3.7 Notifications Router (`/api/v1/notifications`)
 
 | Method | Path | Auth | Role | Request Schema | Response Schema | Status | Description & Rules |
 |---|---|---|---|---|---|---|---|
-| `GET` | `/api/v1/notifications` | Bearer | Any | Query: `limit`, `offset` | `List[NotificationOut]` | `200`, `401` | Retrieves in-app notifications for authenticated user sorted by `created_at DESC`. |
-| `POST` | `/api/v1/notifications/read` | Bearer | Any | None | `{"detail": "..."}` | `200`, `401` | Marks all unread notifications as read (`is_read = True`) for authenticated user. |
+| `GET` | `/api/v1/notifications` | Bearer | Any | Query: `limit` | `List[NotificationOut]` | `200`, `401` | Retrieves in-app notifications for authenticated user sorted by `created_at DESC`. |
+| `PUT` | `/api/v1/notifications/read` | Bearer | Any | None | `MessageOut` | `200`, `401` | Marks all unread notifications as read (`is_read = True`) for authenticated user. |
 
 ### 3.8 Metadata & Reference Router (`/api/v1/meta`)
 
@@ -145,6 +145,8 @@ The following endpoints do **not** exist in Version 2 and must not be called:
 
 ## 6. Next Steps
 
+- For developer navigation and the "Where Do I Modify This?" lookup matrix, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
+- For complete end-to-end multi-tier system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
 - For token formats, cryptographic hashing, and security guards, see [**06-Authentication-and-Security.md**](./06-Authentication-and-Security.md).
 - For role capability boundaries and row ownership validation, see [**07-User-Roles-and-Permissions.md**](./07-User-Roles-and-Permissions.md).
-- For complete end-to-end API interaction sequences, see [**08-Business-Workflows.md**](./08-Business-Workflows.md).
+- For business workflows and operational sequences, see [**08-Business-Workflows.md**](./08-Business-Workflows.md).

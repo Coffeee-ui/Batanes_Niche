@@ -149,7 +149,7 @@ export default function LandingPage() {
               style={{ animationDelay: '240ms' }}
             >
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(var(--color-text-muted))' }} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(var(--color-hero-input-placeholder))' }} />
                 <input
                   id="hero-search-input"
                   type="text"
@@ -158,10 +158,10 @@ export default function LandingPage() {
                   onChange={e => setSearchQ(e.target.value)}
                   className="w-full pl-11 pr-4 py-4 rounded-xl text-sm font-medium"
                   style={{
-                    background: 'rgba(255,255,255,0.95)',
-                    border: 'none',
+                    background: 'hsl(var(--color-hero-input-bg))',
+                    border: '1px solid hsl(var(--color-border-subtle))',
                     outline: 'none',
-                    color: 'hsl(var(--color-text))',
+                    color: 'hsl(var(--color-hero-input-text))',
                     boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
                   }}
                 />
@@ -172,15 +172,19 @@ export default function LandingPage() {
                 onChange={e => setSearchMuni(e.target.value)}
                 className="py-4 px-4 rounded-xl text-sm font-medium sm:w-44"
                 style={{
-                  background: 'rgba(255,255,255,0.95)',
-                  border: 'none',
+                  background: 'hsl(var(--color-hero-input-bg))',
+                  border: '1px solid hsl(var(--color-border-subtle))',
                   outline: 'none',
-                  color: 'hsl(var(--color-text))',
+                  color: 'hsl(var(--color-hero-input-text))',
                   boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
                   appearance: 'none',
                   WebkitAppearance: 'none',
                   paddingRight: '2.5rem',
-                  // Custom chevron: encoded SVG at a dark readable color
+                  /*
+                   * INTENTIONAL FIXED COLOR:
+                   * The SVG chevron is embedded as a data URL where CSS custom properties
+                   * cannot be evaluated. The slate stroke (#4b5563) maintains readable contrast.
+                   */
                   backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'right 0.75rem center',
@@ -333,7 +337,7 @@ export default function LandingPage() {
       <section
         className="py-20"
         style={{
-          background: 'linear-gradient(135deg, hsl(214 89% 48%) 0%, hsl(168 76% 38%) 100%)',
+          background: 'linear-gradient(135deg, hsl(var(--color-primary)) 0%, hsl(var(--color-secondary)) 100%)',
         }}
       >
         <div className="container-page text-center">
@@ -351,7 +355,7 @@ export default function LandingPage() {
               to="/register"
               id="cta-register"
               className="btn text-sm px-8 py-3.5 rounded-xl font-bold bg-white"
-              style={{ color: 'hsl(214, 89%, 42%)' }}
+              style={{ color: 'hsl(var(--color-primary-dark))' }}
             >
               Create Free Account
             </Link>

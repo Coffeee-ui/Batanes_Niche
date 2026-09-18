@@ -8,35 +8,261 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ----- CSS Custom Properties (Light Theme) ----- */
+/* =========================================================
+   COLOR QUICK REFERENCE
+   =========================================================
+   Primary brand / main action:     --color-primary
+   Primary button text:             --color-primary-foreground
+   Secondary brand / ocean teal:    --color-secondary
+   Secondary button / badge text:   --color-secondary-foreground
+   Page canvas background:          --color-background (alias: --color-bg)
+   Main content text:               --color-foreground (alias: --color-text)
+   Card & modal surfaces:           --color-surface
+   Surface foreground text:         --color-surface-foreground
+   Muted / secondary text:          --color-muted-foreground (alias: --color-text-muted)
+   Subtle hints & timestamps:       --color-text-faint
+   Container & input borders:       --color-border, --color-border-subtle
+   Focus ring outline:              --color-ring
+   Error / destructive actions:     --color-danger (alias: --color-destructive)
+   Error button text:               --color-danger-foreground
+   Success statuses:                --color-success, --color-success-foreground
+   Warning / attention states:      --color-warning, --color-warning-text
+   Information banners:             --color-info, --color-info-foreground
+   Hero search input (on gradient): --color-hero-input-bg, --color-hero-input-text
+   Dark theme overrides:            [data-theme='dark'] (see Section 8 below)
+
+   IMPORTANT RULE:
+   Change semantic tokens here instead of adding ad-hoc colors
+   or inline hex/RGB values directly inside React components.
+   ========================================================= */
+
+/* ----- CSS Custom Properties (Light Theme — Default) ----- */
 :root {
-  /* Brand palette */
-  --color-primary: 214 89% 52%;        /* vivid ocean blue */
+  /* =========================================================
+     1. BRAND & PRIMARY COLORS
+     ========================================================= */
+  /*
+   * PRIMARY
+   * Main brand and action color (vivid ocean blue).
+   * Used by: Primary action buttons (.btn-primary), active navigation links,
+   *          interactive link hover states, focus indicator outlines,
+   *          primary badges, and progress bars.
+   * Visual consequence: Changing this modifies the central brand accent
+   *                     and all high-priority call-to-action buttons across the site.
+   * Pair with: --color-primary-foreground for guaranteed readable text/icons.
+   */
+  --color-primary: 214 89% 52%;
+
+  /*
+   * PRIMARY DARK
+   * Darker ocean blue shade used for hover and pressed states of primary actions.
+   * Used by: Hover state of links, button gradients, and active dropdown items.
+   */
   --color-primary-dark: 214 89% 42%;
-  --color-secondary: 168 76% 42%;      /* Batanes teal/sea */
-  --color-accent: 35 95% 58%;          /* golden sunrise */
 
-  /* Surfaces — stepped clearly so cards stand out from page background */
-  --color-bg: 214 22% 97%;             /* near-white with cool blue tint */
-  --color-bg-alt: 214 18% 93%;         /* clearly distinct step — sections, auth pages */
-  --color-surface: 0 0% 100%;          /* pure white — cards and panels */
-  --color-surface-hover: 214 20% 98%;  /* very slight wash for hover states */
-  --color-border: 214 20% 83%;         /* visible border without being harsh */
-  --color-border-subtle: 214 20% 89%;  /* soft but present card boundary */
+  /*
+   * PRIMARY FOREGROUND
+   * Text and icon color displayed on top of --color-primary backgrounds.
+   * Used by: .btn-primary text, active navigation pill labels, primary badges.
+   * Visual consequence: Keeps text crisp and readable on primary buttons.
+   */
+  --color-primary-foreground: 0 0% 100%;
 
-  /* Text — calibrated for readable contrast hierarchy on white surfaces */
-  --color-text: 215 25% 12%;           /* near-black — primary content */
-  --color-text-muted: 215 18% 38%;     /* medium grey — secondary labels, metadata */
-  --color-text-faint: 215 12% 52%;     /* visible grey — helper text, timestamps */
+  /* =========================================================
+     2. SECONDARY & ACCENT COLORS
+     ========================================================= */
+  /*
+   * SECONDARY
+   * Coastal teal/sea tone representing the Batanes landscape.
+   * Used by: Primary button gradient endpoints, secondary branding accents,
+   *          and hero section visual elements.
+   * Pair with: --color-secondary-foreground.
+   */
+  --color-secondary: 168 76% 42%;
 
-  /* Status */
+  /*
+   * SECONDARY FOREGROUND
+   * Text and icon color displayed on top of --color-secondary backgrounds.
+   */
+  --color-secondary-foreground: 0 0% 100%;
+
+  /*
+   * ACCENT
+   * Golden sunrise amber tone for highlights, badges, and attention points.
+   */
+  --color-accent: 35 95% 58%;
+
+  /*
+   * ACCENT FOREGROUND
+   * Dark readable text on top of golden amber accents.
+   */
+  --color-accent-foreground: 215 25% 12%;
+
+  /* =========================================================
+     3. BACKGROUND & CANVAS COLORS
+     ========================================================= */
+  /*
+   * BACKGROUND (Canvas)
+   * The fundamental application viewport background color.
+   * Used by: <body> background, page layout wrappers.
+   * Visual consequence: Changing this alters the foundation tone of the whole app.
+   * In Light Mode: A very pale cool-grey/blue tint (214 22% 97%) preventing glare.
+   * In Dark Mode: Shifts to deep obsidian (222 27% 9%).
+   * Pair with: --color-foreground.
+   */
+  --color-background: 214 22% 97%;
+  --color-bg: var(--color-background); /* Legacy compatibility alias */
+
+  /*
+   * BACKGROUND ALT / MUTED
+   * A stepped tone visually distinct from both the page canvas and white cards.
+   * Used by: Alternating sections, authentication card backing, input fields,
+   *          and page footer background.
+   */
+  --color-bg-alt: 214 18% 93%;
+  --color-muted: var(--color-bg-alt); /* Semantic alias */
+
+  /* =========================================================
+     4. SURFACE & CARD COLORS
+     ========================================================= */
+  /*
+   * SURFACE
+   * Foreground panel surface color for content elevation.
+   * Used by: Cards (.card), modals (.modal, ConfirmDialog), dropdown menus,
+   *          dialog popups, and toast notifications.
+   * Visual consequence: Determines the background of all elevated UI cards.
+   * In Light Mode: Pure white (0 0% 100%) so cards clearly lift above the canvas.
+   * In Dark Mode: Deep elevated slate (222 25% 14%).
+   * Pair with: --color-surface-foreground (or --color-foreground).
+   */
+  --color-surface: 0 0% 100%;
+  --color-surface-hover: 214 20% 98%;
+  --color-surface-foreground: var(--color-foreground);
+
+  /*
+   * HERO SEARCH INPUT SURFACE & TEXT
+   * High-contrast pairing specifically engineered for the landing page hero search bar
+   * which rests over the dark ocean gradient banner.
+   * In Light Mode: Crisp white container with dark charcoal text.
+   * In Dark Mode: Elevated dark slate container with bright legible text.
+   */
+  --color-hero-input-bg: 0 0% 100%;
+  --color-hero-input-text: 215 25% 12%;
+  --color-hero-input-placeholder: 215 12% 48%;
+
+  /* =========================================================
+     5. TEXT & FOREGROUND COLORS
+     ========================================================= */
+  /*
+   * FOREGROUND (Primary Text)
+   * The dominant text color for high-emphasis content.
+   * Used by: Headings (h1-h6), card titles, navigation labels, table text,
+   *          and general body copy.
+   * Visual consequence: Controls primary reading contrast against surfaces.
+   * In Light Mode: Near-black charcoal (215 25% 12%) for WCAG AAA contrast.
+   * In Dark Mode: Crisp off-white (210 20% 92%).
+   */
+  --color-foreground: 215 25% 12%;
+  --color-text: var(--color-foreground); /* Legacy compatibility alias */
+
+  /*
+   * MUTED FOREGROUND (Secondary Text)
+   * Medium contrast grey text for supporting information.
+   * Used by: Company names, section descriptions, form labels, metadata chips.
+   * In Light Mode: Slate grey (215 18% 38%) exceeding 4.5:1 WCAG AA contrast.
+   * In Dark Mode: Soft grey (210 14% 64%).
+   */
+  --color-muted-foreground: 215 18% 38%;
+  --color-text-muted: var(--color-muted-foreground); /* Legacy compatibility alias */
+
+  /*
+   * FAINT TEXT
+   * Subtle low-emphasis text for tertiary information.
+   * Used by: Timestamps ("Posted 3 days ago"), placeholder hints, inactive icons.
+   * In Light Mode: 215 12% 52% (~4.1:1 on white).
+   * In Dark Mode: 210 10% 48% (~4.2:1 on dark surface).
+   */
+  --color-text-faint: 215 12% 52%;
+
+  /* =========================================================
+     6. BORDER, INPUT & FOCUS RING COLORS
+     ========================================================= */
+  /*
+   * BORDER
+   * Structural boundary lines separating content containers.
+   * Used by: Card hover borders, input outlines, table dividers, dialog lines.
+   */
+  --color-border: 214 20% 83%;
+
+  /*
+   * BORDER SUBTLE
+   * Soft, low-contrast boundary line for resting card containers.
+   * Used by: Default .card border, navbar bottom rule, divider rules (<hr>).
+   */
+  --color-border-subtle: 214 20% 89%;
+
+  /*
+   * INPUT
+   * Default resting background color for form inputs and select dropdowns.
+   */
+  --color-input: var(--color-bg-alt);
+
+  /*
+   * RING
+   * Accent outline color for focused interactive elements (:focus-visible).
+   */
+  --color-ring: var(--color-primary);
+
+  /* =========================================================
+     7. STATUS & FEEDBACK COLORS
+     ========================================================= */
+  /*
+   * SUCCESS
+   * Positive verification, active status, accepted applications.
+   * Used by: .badge-success, .status-dot-active, success toast icon.
+   */
   --color-success: 145 63% 42%;
-  --color-warning: 38 95% 55%;
-  --color-warning-text: 35 75% 34%;    /* readable amber text on pale warning bg */
-  --color-danger: 3 87% 56%;
-  --color-info: 199 89% 48%;
+  --color-success-foreground: 0 0% 100%;
 
-  /* Shadows — slightly stronger for Light Mode card lift */
+  /*
+   * WARNING
+   * Pending status, alerts requiring review, cautionary badges.
+   * Used by: .badge-warning background, pending application status.
+   */
+  --color-warning: 38 95% 55%;
+  --color-warning-foreground: var(--color-warning-text);
+
+  /*
+   * WARNING TEXT
+   * Calibrated text color for rendering legible labels on warning backgrounds.
+   * In Light Mode: Deep amber (35 75% 34%) for high contrast on pale amber bg.
+   * In Dark Mode: Bright golden amber (35 90% 68%).
+   */
+  --color-warning-text: 35 75% 34%;
+
+  /*
+   * DANGER / DESTRUCTIVE
+   * Errors, failed actions, application rejection, close/withdraw buttons.
+   * Used by: .btn-danger, .badge-danger, ErrorBanner, toast error icon.
+   * Pair with: --color-danger-foreground for white button text.
+   */
+  --color-danger: 3 87% 56%;
+  --color-danger-foreground: 0 0% 100%;
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-danger-foreground);
+
+  /*
+   * INFO
+   * Informational notices, tips, neutral status updates.
+   * Used by: Toast info alerts, informational banner borders and icons.
+   */
+  --color-info: 199 89% 48%;
+  --color-info-foreground: 0 0% 100%;
+
+  /* =========================================================
+     8. SHADOWS, RADII & TRANSITIONS
+     ========================================================= */
+  /* Shadows — calibrated for card elevation */
   --shadow-sm: 0 1px 4px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 16px -2px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.05);
   --shadow-lg: 0 10px 40px -4px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.07);
@@ -54,18 +280,42 @@
   --transition-slow: 350ms ease;
 }
 
-/* ----- Dark Theme ----- */
+/* =========================================================
+   9. DARK THEME OVERRIDES
+   =========================================================
+   Applied when <html data-theme="dark"> is active.
+   Overrides surface lightness, borders, and typography to maintain
+   optimal readability and WCAG AA contrast against dark backgrounds.
+   ========================================================= */
 [data-theme='dark'] {
-  --color-bg: 222 27% 9%;
-  --color-bg-alt: 222 25% 12%;
-  --color-surface: 222 25% 14%;
-  --color-surface-hover: 222 25% 17%;
-  --color-border: 222 20% 26%;         /* slightly stronger — surfaces stay distinct */
-  --color-border-subtle: 222 20% 20%;  /* subtle but present */
-  --color-text: 210 20% 92%;
-  --color-text-muted: 210 14% 64%;     /* slightly brighter for comfortable readability */
-  --color-text-faint: 210 10% 48%;     /* improved from 40% — helper text now readable */
-  --color-warning-text: 35 90% 68%;    /* bright amber — readable on dark warning bg */
+  /* Canvas & Surrounding */
+  --color-background: 222 27% 9%;       /* Deep dark canvas */
+  --color-bg: var(--color-background);
+  --color-bg-alt: 222 25% 12%;          /* Stepped dark section backing */
+  --color-muted: var(--color-bg-alt);
+
+  /* Surfaces & Containers */
+  --color-surface: 222 25% 14%;         /* Elevated dark slate cards */
+  --color-surface-hover: 222 25% 17%;   /* Card hover feedback */
+
+  /* Hero Input on Dark Banner */
+  --color-hero-input-bg: 222 25% 16%;   /* Dark slate container */
+  --color-hero-input-text: 210 20% 95%; /* Crisp off-white text */
+  --color-hero-input-placeholder: 210 12% 65%;
+
+  /* Structural Boundaries */
+  --color-border: 222 20% 26%;          /* Distinct card/input borders */
+  --color-border-subtle: 222 20% 20%;   /* Soft resting boundaries */
+
+  /* Typography Hierarchy */
+  --color-foreground: 210 20% 92%;      /* High-contrast off-white body text */
+  --color-text: var(--color-foreground);
+  --color-muted-foreground: 210 14% 64%;/* Legible secondary labels */
+  --color-text-muted: var(--color-muted-foreground);
+  --color-text-faint: 210 10% 48%;      /* Readable metadata timestamps */
+
+  /* Status Text Adaptation */
+  --color-warning-text: 35 90% 68%;     /* Bright golden amber readable on dark warning bg */
 }
 
 /* ----- Base Resets ----- */
@@ -140,7 +390,8 @@ a:hover { color: hsl(var(--color-primary-dark)); }
   .btn:disabled { @apply opacity-50 cursor-not-allowed; }
 
   .btn-primary {
-    @apply btn text-white;
+    @apply btn;
+    color: hsl(var(--color-primary-foreground));
     background: linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)));
     box-shadow: 0 2px 8px hsl(var(--color-primary) / 0.35);
   }
@@ -173,7 +424,8 @@ a:hover { color: hsl(var(--color-primary-dark)); }
   }
 
   .btn-danger {
-    @apply btn text-white;
+    @apply btn;
+    color: hsl(var(--color-danger-foreground));
     background: hsl(var(--color-danger));
     box-shadow: 0 2px 8px hsl(var(--color-danger) / 0.25);
   }

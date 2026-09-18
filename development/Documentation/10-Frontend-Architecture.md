@@ -34,24 +34,27 @@ The routing topology is declared in `frontend/src/App.tsx`. All routes are group
                    |                                     |                                     |
                    v                                     v                                     v
        +-----------------------+             +-----------------------+             +-----------------------+
-       |     Public Routes     |             |  Seeker-Only Routes   |             | Employer-Only Routes  |
+       |     Public Routes     |             |  Authenticated Common |             |   Role-Gated Routes   |
        +-----------------------+             +-----------------------+             +-----------------------+
-       | /                     |             | /dashboard            |             | /employer             |
-       | /jobs                 |             | /profile              |             | /employer/jobs/new    |
-       | /jobs/:id             |             | /notifications        |             | /employer/jobs/:id/edit|
-       | /login                |             +-----------------------+             | /candidates           |
-       | /register             |                                                   | /profile              |
-       | /forgot-password      |                                                   | /notifications        |
-       | /reset-password       |                                                   +-----------------------+
+       | / (LandingPage)       |             | /dashboard (Adaptive) |             | Job Seeker:           |
+       | /about (Static)       |             | /profile (ProfilePage)|             | - /applications       |
+       | /privacy (Static)     |             | /notifications (Feed) |             | - /saved-jobs         |
+       | /terms (Static)       |             +-----------------------+             | Employer:             |
+       | /jobs (Catalog)       |                                                   | - /jobs/post          |
+       | /jobs/:id (Detail)    |                                                   | - /jobs/my            |
+       | /login                |                                                   | - /candidates         |
+       | /register             |                                                   +-----------------------+
+       | /forgot-password      |
        | * (404 Not Found)     |
        +-----------------------+
 ```
 
-### Route Guard Implementation
-- **`ProtectedRoute`**: Verifies `isAuthenticated == true`. If unauthenticated, saves current location and redirects to `/login`.
+### Route Guard Implementation (`ProtectedRoute.tsx`)
+- **`ProtectedRoute`**: Verifies `isAuthenticated == true`. If unauthenticated, preserves target location in navigation state and redirects to `/login`.
 - **Role Verification**:
-  - `SeekerOnly`: Redirects employers attempting to access `/dashboard` to `/employer`.
-  - `EmployerOnly`: Redirects seekers attempting to access `/employer/*` or `/candidates` to `/dashboard`.
+  - Accepts an optional `role` prop (`role="job_seeker"` or `role="employer"`).
+  - If the authenticated user's role does not match the required `role`, `ProtectedRoute` automatically redirects them to `/dashboard`.
+  - `/dashboard` dynamically renders either `<SeekerDashboard />` or `<EmployerDashboard />` based on `user.role`.
 
 ---
 
@@ -239,6 +242,8 @@ The frontend strictly enforces a **Zero-Jargon User Interface Contract**:
 
 ## 7. Next Steps
 
+- For developer modification maps and frontend component lookup tables, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
+- For complete visual user journey and multi-tier system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
 - To inspect the server-rendered administrative UI, see [**11-Administrative-UI.md**](./11-Administrative-UI.md).
 - To examine application lifecycle and notifications, see [**12-Notifications-and-Applications.md**](./12-Notifications-and-Applications.md).
 - For instructions on running frontend tests, see [**14-Testing-and-Quality.md**](./14-Testing-and-Quality.md).
