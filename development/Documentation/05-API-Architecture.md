@@ -66,14 +66,32 @@ Rate limits are enforced at the router layer using **SlowAPI** backed by in-memo
 
 ### 3.3 Jobs Router (`/api/v1/jobs`)
 
+> [!NOTE]
+> **Public/Private Data Boundary** — Job data is gated by authentication to prevent unauthenticated visitors from inspecting full job details via the network tab. The preview endpoints enforce this boundary at the API level.
+
 | Method | Path | Auth | Role | Request Schema | Response Schema | Status | Description & Rules |
 |---|---|---|---|---|---|---|---|
-| `GET` | `/api/v1/jobs` | Optional | Public | Query: `query`, `municipality`, `employment_type`, `salary_min`, `limit`, `offset` | `List[JobOut]` | `200` | Retrieves active, non-deleted job vacancies (`status = 'active' AND deleted_at IS NULL`). |
-| `GET` | `/api/v1/jobs/{id}` | Optional | Public | Path: `id` | `JobOut` | `200`, `404` | Retrieves details of a specific job listing. |
+| `GET` | `/api/v1/jobs/preview` | None | Public | Query: `limit`, `offset` | `List[JobPreviewOut]` | `200` | **Public preview endpoint.** Returns restricted preview fields only (`id`, `title`, `salary_min`, `salary_max`, `required_skills`). No authentication required. Used by the public landing page. |
+| `GET` | `/api/v1/jobs` | Optional | Public / Any | Query: `query`, `municipality`, `employment_type`, `limit`, `offset` | `List[JobPreviewOut]` (unauthenticated) or `List[JobOut]` (authenticated) | `200` | **Auth-aware listing.** Unauthenticated callers receive `JobPreviewOut` (preview fields only). Authenticated callers receive the full `JobOut` schema with company name, description, and location. |
+| `GET` | `/api/v1/jobs/{id}` | Bearer | Any authenticated | Path: `id` | `JobOut` | `200`, `401`, `404` | **Requires authentication.** Unauthenticated requests return `401 Unauthorized`. Returns full job detail for the authenticated caller. Employers and admins may also see their own closed/archived jobs. |
 | `POST` | `/api/v1/jobs` | Bearer | Employer | `JobCreate` | `JobOut` | `201`, `400`, `403` | Creates a new vacancy. Validates location against canonical geography. |
 | `PUT` | `/api/v1/jobs/{id}` | Bearer | Employer | Path: `id`, Body: `JobUpdate` | `JobOut` | `200`, `403`, `404` | Updates an existing vacancy. Enforces ownership check (`job.employer_id == user.id`). |
 | `DELETE` | `/api/v1/jobs/{id}` | Bearer | Employer | Path: `id` | `{"detail": "..."}` | `200`, `403`, `404` | Soft-deletes a vacancy by setting `deleted_at = utcnow()`. Enforces ownership. |
 | `GET` | `/api/v1/jobs/my` | Bearer | Employer | Query: `limit`, `offset` | `List[JobOut]` | `200`, `403` | Lists all vacancies owned by the authenticated employer (active and closed, excluding deleted). |
+
+#### JobPreviewOut Schema
+
+The `JobPreviewOut` schema is the restricted public-facing projection of a job. It contains only the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `int` | Job identifier (used for deep-linking to detail page) |
+| `title` | `str` | Job title |
+| `salary_min` | `Decimal` | Minimum salary |
+| `salary_max` | `Decimal` | Maximum salary |
+| `required_skills` | `str` | Comma-separated required skills string |
+
+All other `JobOut` fields (`description`, `municipality`, `barangay`, `island`, `employment_type`, `employer_id`, `company_name`, `status`, `created_at`) are **strictly excluded** from this schema.
 
 ### 3.4 Applications Router (`/api/v1/applications`)
 

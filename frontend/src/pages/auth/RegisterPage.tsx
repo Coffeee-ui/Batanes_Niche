@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, MapPin, Briefcase, User, Mail, Lock, Phone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Spinner } from '../../components/ui';
@@ -10,6 +10,10 @@ const MUNICIPALITIES = ['Basco', 'Itbayat', 'Ivana', 'Mahatao', 'Sabtang', 'Uyug
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as { from?: string } | null;
+  const from = state?.from || '/dashboard';
+
   const [form, setForm] = useState<RegisterPayload>({
     username: '',
     email: '',
@@ -46,7 +50,7 @@ export default function RegisterPage() {
         username: form.username.trim() || form.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') + '_' + Math.floor(Math.random() * 1000),
       };
       await register(payload);
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed.';
       setError(msg);
@@ -280,7 +284,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm mt-6" style={{ color: 'hsl(var(--color-text-muted))' }}>
           Already have an account?{' '}
-          <Link to="/login" id="link-to-login" className="font-semibold" style={{ color: 'hsl(var(--color-primary))' }}>
+          <Link to="/login" state={{ from }} id="link-to-login" className="font-semibold" style={{ color: 'hsl(var(--color-primary))' }}>
             Sign In
           </Link>
         </p>

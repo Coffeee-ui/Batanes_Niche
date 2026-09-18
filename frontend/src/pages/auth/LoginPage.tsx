@@ -143,7 +143,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm mt-6" style={{ color: 'hsl(var(--color-text-muted))' }}>
           Don't have an account?{' '}
-          <Link to="/register" id="link-to-register" className="font-semibold" style={{ color: 'hsl(var(--color-primary))' }}>
+          <Link to="/register" state={{ from }} id="link-to-register" className="font-semibold" style={{ color: 'hsl(var(--color-primary))' }}>
             Create one free
           </Link>
         </p>

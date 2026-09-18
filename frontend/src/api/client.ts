@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type {
-  User, Job, Application, Notification, SavedJob,
+  User, Job, JobPreview, Application, Notification, SavedJob,
   PaginatedResponse, Token, RegisterPayload,
   LoginPayload, JobCreate, JobFilters, Candidate,
   CandidateRankingResponse, JobRankingResponse,
@@ -223,6 +223,12 @@ export const jobsApi = {
       page_size: limit,
       total_pages: Math.max(1, Math.ceil(items.length / limit)),
     };
+  },
+
+  preview: async (params: { page?: number; page_size?: number } = {}): Promise<JobPreview[]> => {
+    const limit = params.page_size || 50;
+    const offset = ((params.page || 1) - 1) * limit;
+    return api.get<JobPreview[]>('/jobs/preview', { params: { limit, offset } }).then(r => r.data);
   },
 
   get: (id: number) =>

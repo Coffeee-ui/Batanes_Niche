@@ -65,6 +65,14 @@ export interface Job {
   application_count?: number;
 }
 
+export interface JobPreview {
+  id: number;
+  title: string;
+  salary_min: number;
+  salary_max: number;
+  required_skills?: string;
+}
+
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 
 export interface EmployerApplicantProfile {

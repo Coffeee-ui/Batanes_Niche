@@ -38,23 +38,52 @@ The routing topology is declared in `frontend/src/App.tsx`. All routes are group
        +-----------------------+             +-----------------------+             +-----------------------+
        | / (LandingPage)       |             | /dashboard (Adaptive) |             | Job Seeker:           |
        | /about (Static)       |             | /profile (ProfilePage)|             | - /applications       |
-       | /privacy (Static)     |             | /notifications (Feed) |             | - /saved-jobs         |
-       | /terms (Static)       |             +-----------------------+             | Employer:             |
-       | /jobs (Catalog)       |                                                   | - /jobs/post          |
-       | /jobs/:id (Detail)    |                                                   | - /jobs/my            |
-       | /login                |                                                   | - /candidates         |
-       | /register             |                                                   +-----------------------+
-       | /forgot-password      |
+       | /privacy (Static)     |             | /jobs/:id (Detail) *  |             | - /saved-jobs         |
+       | /terms (Static)       |             | /notifications (Feed) |             | Employer:             |
+       | /jobs (Catalog)       |             +-----------------------+             | - /jobs/post          |
+       | /login                |                                                   | - /jobs/my            |
+       | /register             |                                                   | - /candidates         |
+       | /forgot-password      |                                                   +-----------------------+
        | * (404 Not Found)     |
        +-----------------------+
+
+* /jobs/:id requires authentication (any role). Unauthenticated direct URL access redirects to /login with state.from preserved for seamless post-login return.
 ```
 
 ### Route Guard Implementation (`ProtectedRoute.tsx`)
-- **`ProtectedRoute`**: Verifies `isAuthenticated == true`. If unauthenticated, preserves target location in navigation state and redirects to `/login`.
+- **`ProtectedRoute`**: Verifies `isAuthenticated == true`. If unauthenticated, preserves target location in navigation state (`state.from`) and redirects to `/login`.
 - **Role Verification**:
   - Accepts an optional `role` prop (`role="job_seeker"` or `role="employer"`).
   - If the authenticated user's role does not match the required `role`, `ProtectedRoute` automatically redirects them to `/dashboard`.
   - `/dashboard` dynamically renders either `<SeekerDashboard />` or `<EmployerDashboard />` based on `user.role`.
+- **Post-Auth Return Flow**: Both `LoginPage` and `RegisterPage` read `location.state?.from` and redirect to that path after successful authentication, falling back to `/dashboard` if no prior path was captured.
+
+### Public Job Preview Boundary
+
+The landing page (`/`) and the jobs catalog (`/jobs`) display public-facing data for unauthenticated visitors, but this data is strictly limited at both the API and frontend layers:
+
+| Layer | Mechanism | Effect |
+|---|---|---|
+| **Backend API** | `GET /api/v1/jobs/preview` returns `JobPreviewOut` | Only `id`, `title`, `salary_min`, `salary_max`, `required_skills` leave the server |
+| **Backend API** | `GET /api/v1/jobs` returns `JobPreviewOut` when unauthenticated | Prevents full data exposure via the general listing endpoint |
+| **Backend API** | `GET /api/v1/jobs/{id}` requires Bearer token | `401 Unauthorized` for unauthenticated callers |
+| **Frontend Route** | `/jobs/:id` wrapped in `<ProtectedRoute>` | Unauthenticated direct URL navigation redirects to `/login` |
+| **Frontend Component** | `JobPreviewCard` renders only allowed fields | Company name, description, location, employment type are never rendered on the landing page |
+
+#### `JobPreviewCard` Component (`frontend/src/components/ui/JobPreviewCard.tsx`)
+
+A dedicated read-only card for public-facing job previews. Props: `{ job: JobPreview }`.
+
+**Renders** (and only these):
+- Job title (with `line-clamp-2` overflow handling and `title` tooltip for long names)
+- Salary formatted as `₱{min} – ₱{max}`, `From ₱{min}`, `Up to ₱{max}`, or `Salary negotiable`
+- Required skills as flex-wrapped tag badges; falls back to `"No specific skills listed"`
+- Auth-gate notice (lock icon + text) visible only when unauthenticated
+- "View Full Details" CTA: navigates to `/jobs/:id` for authenticated users, or to `/login` with `state: { from: '/jobs/:id' }` for unauthenticated users
+
+**Never renders**: company name, description, municipality, barangay, island, employment type, application count, employer ID, or timestamps.
+
+Exported from the UI barrel at `frontend/src/components/ui/index.tsx`.
 
 ---
 

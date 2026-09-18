@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Briefcase, Users, TrendingUp, ArrowRight,
-  Star, ChevronRight, Waves, Mountain, Wind
+  ChevronRight, Waves, Mountain, Wind, Lock, AlertCircle, LogIn, UserPlus
 } from 'lucide-react';
 import { jobsApi } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import type { Job } from '../types';
-import JobCard from '../components/ui/JobCard';
+import type { JobPreview } from '../types';
+import JobPreviewCard from '../components/ui/JobPreviewCard';
 import { JobCardSkeleton } from '../components/ui';
 
 const MUNICIPALITIES = ['Basco', 'Itbayat', 'Ivana', 'Mahatao', 'Sabtang', 'Uyugan'];
@@ -33,11 +33,11 @@ const featureCards = [
   },
 ];
 
-const stats = [
-  { label: 'Active Jobs', value: '120+', icon: <Briefcase className="w-5 h-5" /> },
-  { label: 'Registered Seekers', value: '800+', icon: <Users className="w-5 h-5" /> },
-  { label: 'Employers', value: '60+', icon: <Star className="w-5 h-5" /> },
-  { label: 'Municipalities', value: '6', icon: <MapPin className="w-5 h-5" /> },
+const platformHighlights = [
+  { label: 'Municipalities Covered', value: '6', icon: <MapPin className="w-5 h-5" /> },
+  { label: 'Major Island Groups', value: '3', icon: <Mountain className="w-5 h-5" /> },
+  { label: 'Hyper-Localized Focus', value: '100%', icon: <Briefcase className="w-5 h-5" /> },
+  { label: 'Community Tailored', value: 'Ivatan', icon: <Users className="w-5 h-5" /> },
 ];
 
 export default function LandingPage() {
@@ -45,14 +45,21 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [searchQ, setSearchQ] = useState('');
   const [searchMuni, setSearchMuni] = useState('');
-  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+  const [featuredJobs, setFeaturedJobs] = useState<JobPreview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchJobs = () => {
+    setLoading(true);
+    setError(null);
+    jobsApi.preview({ page_size: 6 })
+      .then(data => setFeaturedJobs(data))
+      .catch(() => setError('Unable to load job opportunities at this time.'))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    jobsApi.list({ page_size: 6 })
-      .then(data => setFeaturedJobs(data.items))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchJobs();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -62,11 +69,6 @@ export default function LandingPage() {
     if (searchMuni) params.set('municipality', searchMuni);
     navigate(`/jobs?${params.toString()}`);
   };
-
-  if (isAuthenticated) {
-    navigate('/dashboard');
-    return null;
-  }
 
   return (
     <div>
@@ -180,11 +182,6 @@ export default function LandingPage() {
                   appearance: 'none',
                   WebkitAppearance: 'none',
                   paddingRight: '2.5rem',
-                  /*
-                   * INTENTIONAL FIXED COLOR:
-                   * The SVG chevron is embedded as a data URL where CSS custom properties
-                   * cannot be evaluated. The slate stroke (#4b5563) maintains readable contrast.
-                   */
                   backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'right 0.75rem center',
@@ -242,28 +239,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Platform Highlights Section (Authentic facts, strictly no fabricated counts) */}
       <section className="py-12" style={{ background: 'hsl(var(--color-bg))' }}>
         <div className="container-page">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-children">
-            {stats.map(stat => (
+            {platformHighlights.map(item => (
               <div
-                key={stat.label}
+                key={item.label}
                 className="card p-5 text-center"
               >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
                   style={{ background: 'hsl(var(--color-primary) / 0.1)', color: 'hsl(var(--color-primary))' }}
                 >
-                  {stat.icon}
+                  {item.icon}
                 </div>
                 <p
                   className="text-2xl font-black mb-1"
                   style={{ fontFamily: 'Outfit, sans-serif', color: 'hsl(var(--color-text))' }}
                 >
-                  {stat.value}
+                  {item.value}
                 </p>
-                <p className="text-xs" style={{ color: 'hsl(var(--color-text-muted))' }}>{stat.label}</p>
+                <p className="text-xs" style={{ color: 'hsl(var(--color-text-muted))' }}>{item.label}</p>
               </div>
             ))}
           </div>
@@ -298,36 +295,114 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Featured Jobs Section */}
+      {/* Featured Jobs Section — Public Job Preview */}
       <section className="py-16" style={{ background: 'hsl(var(--color-bg))' }}>
         <div className="container-page">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-2" style={{ background: 'hsl(var(--color-primary) / 0.1)', color: 'hsl(var(--color-primary))' }}>
+                <Briefcase className="w-3.5 h-3.5" />
+                Public Job Preview
+              </div>
               <h2 className="text-2xl font-black mb-1" style={{ color: 'hsl(var(--color-text))' }}>
                 Latest Opportunities
               </h2>
               <p className="text-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                Fresh openings from local Batanes employers
+                Preview available positions. Authenticated users can view complete job descriptions and employer details.
               </p>
             </div>
-            <Link to="/jobs" id="link-view-all-jobs" className="btn btn-secondary text-sm">
-              View All <ArrowRight className="w-4 h-4" />
+            <Link to="/jobs" id="link-view-all-jobs" className="btn btn-secondary text-sm self-start sm:self-auto">
+              Browse All Jobs <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
+          {/* Authentication Callout Banner for Unauthenticated Visitors */}
+          {!isAuthenticated && (
+            <div
+              className="rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              style={{
+                background: 'linear-gradient(135deg, hsl(var(--color-primary) / 0.08), hsl(var(--color-secondary) / 0.08))',
+                border: '1px solid hsl(var(--color-primary) / 0.2)',
+              }}
+            >
+              <div className="flex items-start gap-3.5">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: 'hsl(var(--color-primary))', color: 'white' }}
+                >
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold mb-0.5" style={{ color: 'hsl(var(--color-text))' }}>
+                    Sign up or log in to view full job details.
+                  </h4>
+                  <p className="text-xs" style={{ color: 'hsl(var(--color-text-muted))' }}>
+                    Full job descriptions, employer names, exact locations, and direct applications require an account.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <Link
+                  to="/login"
+                  id="link-preview-login"
+                  className="btn btn-secondary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  id="link-preview-register"
+                  className="btn btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Job Previews Grid */}
           {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={i} />)}
             </div>
+          ) : error ? (
+            <div
+              className="card p-8 text-center flex flex-col items-center justify-center"
+              style={{ border: '1px dashed hsl(var(--color-border))' }}
+            >
+              <AlertCircle className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--color-warning))' }} />
+              <p className="text-sm font-medium mb-3" style={{ color: 'hsl(var(--color-text))' }}>{error}</p>
+              <button
+                onClick={fetchJobs}
+                className="btn btn-secondary text-xs px-4 py-2"
+              >
+                Try Again
+              </button>
+            </div>
           ) : featuredJobs.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
               {featuredJobs.map(job => (
-                <JobCard key={job.id} job={job} />
+                <JobPreviewCard key={job.id} job={job} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-12" style={{ color: 'hsl(var(--color-text-muted))' }}>
-              No jobs listed yet. Check back soon!
+            <div
+              className="text-center py-16 px-4 rounded-2xl"
+              style={{
+                background: 'hsl(var(--color-bg-alt))',
+                border: '1px dashed hsl(var(--color-border))',
+                color: 'hsl(var(--color-text-muted))',
+              }}
+            >
+              <Briefcase className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <h3 className="text-base font-bold mb-1" style={{ color: 'hsl(var(--color-text))' }}>
+                No active jobs posted at this time
+              </h3>
+              <p className="text-xs max-w-sm mx-auto">
+                Check back soon or register an account to receive alerts as soon as employers post new positions.
+              </p>
             </div>
           )}
         </div>
@@ -345,20 +420,33 @@ export default function LandingPage() {
             className="text-3xl sm:text-4xl font-black text-white mb-4"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            Ready to find your next opportunity?
+            {isAuthenticated ? 'Ready to discover more opportunities?' : 'Ready to find your next opportunity?'}
           </h2>
           <p className="text-white/75 mb-8 max-w-md mx-auto">
-            Join hundreds of Ivatan professionals already on Batanes Niche.
+            {isAuthenticated
+              ? 'Visit your dashboard to view personalized matches and track applications.'
+              : 'Join Ivatan professionals already finding meaningful work on Batanes Niche.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              to="/register"
-              id="cta-register"
-              className="btn text-sm px-8 py-3.5 rounded-xl font-bold bg-white"
-              style={{ color: 'hsl(var(--color-primary-dark))' }}
-            >
-              Create Free Account
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                id="cta-dashboard"
+                className="btn text-sm px-8 py-3.5 rounded-xl font-bold bg-white"
+                style={{ color: 'hsl(var(--color-primary-dark))' }}
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/register"
+                id="cta-register"
+                className="btn text-sm px-8 py-3.5 rounded-xl font-bold bg-white"
+                style={{ color: 'hsl(var(--color-primary-dark))' }}
+              >
+                Create Free Account
+              </Link>
+            )}
             <Link
               to="/jobs"
               id="cta-browse"

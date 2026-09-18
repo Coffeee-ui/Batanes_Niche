@@ -1,17 +1,27 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_employer_context, get_current_user_optional
+from app.api.deps import get_db, require_employer_context, require_authenticated, get_current_user_optional
 from app.models.user import User
-from app.schemas.job import JobCreate, JobUpdate, JobOut
+from app.schemas.job import JobCreate, JobUpdate, JobOut, JobPreviewOut
 from app.schemas.common import MessageOut
 from app.services.job_service import JobService
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
-@router.get("", response_model=List[JobOut], status_code=status.HTTP_200_OK)
+@router.get("/preview", response_model=List[JobPreviewOut], status_code=status.HTTP_200_OK)
+def list_jobs_preview(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Public job preview for unauthenticated visitors (only job title, skills, salary)."""
+    return JobService.list_active_jobs_preview(db, limit=limit, offset=offset)
+
+
+@router.get("", response_model=List[Union[JobOut, JobPreviewOut]], status_code=status.HTTP_200_OK)
 def list_jobs(
     municipality: Optional[str] = Query(None),
     island: Optional[str] = Query(None),
@@ -19,9 +29,12 @@ def list_jobs(
     employment_type: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    """Browses, searches, and filters active jobs."""
+    """Browses, searches, and filters active jobs. Returns restricted preview if unauthenticated."""
+    if not current_user:
+        return JobService.list_active_jobs_preview(db, limit=limit, offset=offset)
     return JobService.list_active_jobs(
         db,
         municipality=municipality,
@@ -60,10 +73,10 @@ def list_my_jobs(
 @router.get("/{job_id}", response_model=JobOut, status_code=status.HTTP_200_OK)
 def get_job(
     job_id: int,
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(require_authenticated),
     db: Session = Depends(get_db),
 ):
-    """Retrieves single job details."""
+    """Retrieves single job details. Requires authentication."""
     return JobService.get_job_by_id(db, job_id=job_id, current_user=current_user)
 
 

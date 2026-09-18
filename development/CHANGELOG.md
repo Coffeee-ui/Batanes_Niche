@@ -56,6 +56,23 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ### Added
 
+- **Landing page optimization — restricted public job preview with enforced authentication boundary**
+  - Public landing page now displays only a controlled preview of each job: **Job Title**, **Required Skills**, and **Salary** (min–max). No company name, description, location (municipality/barangay/island), employment type, employer ID, application count, or timestamps are exposed to unauthenticated visitors.
+  - Introduced `JobPreviewOut` backend schema (`backend/app/schemas/job.py`) containing only `id`, `title`, `salary_min`, `salary_max`, and `required_skills`.
+  - Added `JobService.list_active_jobs_preview()` service method that returns `List[JobPreviewOut]` for public consumption.
+  - Added `GET /api/v1/jobs/preview` endpoint — fully public, no authentication required — returning preview-only job fields.
+  - Updated `GET /api/v1/jobs` to inspect the optional `Authorization` header: unauthenticated requests now receive `JobPreviewOut` (preview only), authenticated requests continue to receive the full `JobOut` payload.
+  - Updated `GET /api/v1/jobs/{job_id}` to require authentication via `require_authenticated` dependency; unauthenticated requests return `401 Unauthorized`.
+  - Added `JobPreview` TypeScript interface to `frontend/src/types/index.ts` (mirrors the backend preview schema).
+  - Added `jobsApi.preview()` method to `frontend/src/api/client.ts` targeting `/jobs/preview`.
+  - Created new `JobPreviewCard` component (`frontend/src/components/ui/JobPreviewCard.tsx`) that strictly renders only Job Title, Required Skills (as tag badges), and Salary. Includes an auth-gate notice and a "View Full Details" CTA that redirects unauthenticated users to `/login` with `state.from` for seamless post-login return.
+  - Exported `JobPreviewCard` from the UI barrel (`frontend/src/components/ui/index.tsx`).
+  - Updated `LandingPage.tsx` to: fetch preview jobs via `jobsApi.preview({ page_size: 6 })`; render `JobPreviewCard` components; display a prominent guest authentication callout banner with Sign In and Create Account links; handle loading skeletons, network errors, and authentic empty states gracefully. Removed the forced dashboard redirect for authenticated users.
+  - Replaced fabricated statistics (`120+ Active Jobs`, `800+ Registered Seekers`, `60+ Employers`) with accurate, verifiable platform highlights: `6 Municipalities Covered`, `3 Major Island Groups`, `100% Hyper-Localized Focus`, `Ivatan Community Tailored`.
+  - Protected the `/jobs/:id` route in `frontend/src/App.tsx` with `<ProtectedRoute>` so that unauthenticated direct URL navigation to a job detail page redirects to `/login` with `state.from` preserved.
+  - Updated `RegisterPage.tsx` to redirect to `location.state?.from` after successful registration, consistent with `LoginPage.tsx` — ensuring the full login-then-return and register-then-return flows work seamlessly.
+  - Added `backend/tests/test_job_preview.py` covering: public preview endpoint field validation (preview fields present, restricted fields absent); unauthenticated `GET /api/v1/jobs` returns preview-only; authenticated `GET /api/v1/jobs` returns full `JobOut`; `GET /api/v1/jobs/{id}` returns 401 for unauthenticated; and authenticated single-job access returns full detail.
+
 - **V3 compatibility correction — deterministic skill normalization and canonical selection flow**
   - Implemented a shared backend skill normalization path for profile skills and job required skills, including whitespace/case cleanup, exact catalog matching, duplicate prevention, and rejection of empty custom entries.
   - Reused the existing canonical skill catalog while preserving custom values that do not map to an exact catalog entry.

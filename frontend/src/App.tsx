@@ -142,10 +142,12 @@ export default function App() {
               <Route path="/terms"   element={<TermsPage />} />
 
               {/* Public job browsing */}
-              <Route path="/jobs"     element={<JobsPage />} />
-              <Route path="/jobs/:id" element={<JobDetailPage />} />
+              <Route path="/jobs" element={<JobsPage />} />
 
               {/* Protected: any authenticated user */}
+              <Route path="/jobs/:id" element={
+                <ProtectedRoute><JobDetailPage /></ProtectedRoute>
+              } />
               <Route path="/dashboard" element={
                 <ProtectedRoute><DashboardPage /></ProtectedRoute>
               } />

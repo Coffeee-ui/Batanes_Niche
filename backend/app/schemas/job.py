@@ -46,6 +46,16 @@ class JobOut(BaseModel):
     company_name: Optional[str] = None
 
 
+class JobPreviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    salary_min: Decimal
+    salary_max: Decimal
+    required_skills: str
+
+
 class SavedJobOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

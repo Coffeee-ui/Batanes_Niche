@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.job import Job
 from app.models.saved_job import SavedJob
 from app.models.user import User
-from app.schemas.job import JobCreate, JobUpdate, JobOut, SavedJobOut
+from app.schemas.job import JobCreate, JobUpdate, JobOut, JobPreviewOut, SavedJobOut
 from app.repositories.job_repository import JobRepository
 from app.repositories.saved_job_repository import SavedJobRepository
 from app.services.geography_service import GeographyService
@@ -14,6 +14,17 @@ from app.services.skill_service import serialize_skill_values
 
 
 class JobService:
+    @staticmethod
+    def _to_job_preview_out(job: Job) -> JobPreviewOut:
+        """Converts Job model to restricted JobPreviewOut schema."""
+        return JobPreviewOut(
+            id=job.id,
+            title=job.title,
+            salary_min=job.salary_min,
+            salary_max=job.salary_max,
+            required_skills=job.required_skills,
+        )
+
     @staticmethod
     def _to_job_out(job: Job) -> JobOut:
         """Converts Job model to JobOut schema with island resolution and company name."""
@@ -212,6 +223,20 @@ class JobService:
             offset=offset,
         )
         return [JobService._to_job_out(j) for j in jobs]
+
+    @staticmethod
+    def list_active_jobs_preview(
+        db: Session,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[JobPreviewOut]:
+        """Lists active jobs restricted to public preview fields (title, skills, salary)."""
+        jobs = JobRepository.list_active_jobs(
+            db,
+            limit=limit,
+            offset=offset,
+        )
+        return [JobService._to_job_preview_out(j) for j in jobs]
 
     @staticmethod
     def list_employer_jobs(
