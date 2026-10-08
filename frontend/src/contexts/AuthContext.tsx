@@ -150,7 +150,7 @@ export function useAuth(): AuthContextType {
   return ctx;
 }
 
-export function useRequireAuth(role?: 'job_seeker' | 'employer' | 'admin') {
+export function useRequireAuth(role?: 'job_seeker' | 'employer') {
   const { user, isAuthenticated, isLoading } = useAuth();
   return { user, isAuthenticated, isLoading, hasRole: role ? user?.role === role : true };
 }

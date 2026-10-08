@@ -44,6 +44,7 @@ class JobOut(BaseModel):
     status: str
     created_at: datetime
     company_name: Optional[str] = None
+    application_count: int = 0
 
 
 class JobPreviewOut(BaseModel):

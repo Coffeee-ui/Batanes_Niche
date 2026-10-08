@@ -105,7 +105,7 @@ export default function MyJobsPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
-                    to={`/jobs/${job.id}/applicants`}
+                    to={`/applications`}
                     id={`btn-view-applicants-${job.id}`}
                     className="btn btn-secondary text-xs py-2 px-3"
                   >

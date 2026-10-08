@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ToastProvider from './components/ui/Toast';
@@ -22,6 +22,14 @@ const SavedJobsPage      = lazy(() => import('./pages/SavedJobsPage'));
 const CandidatesPage     = lazy(() => import('./pages/CandidatesPage'));
 const NotificationsPage  = lazy(() => import('./pages/NotificationsPage'));
 
+// Guard: /jobs is for job seekers and guests only; employers go to their dashboard
+function JobsPageGuard() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><PageSpinner /></div>;
+  if (user?.role === 'employer') return <Navigate to="/dashboard" replace />;
+  return <JobsPage />;
+}
+
 // Simple 404 page
 function NotFoundPage() {
   return (
@@ -38,7 +46,7 @@ function NotFoundPage() {
       <p className="text-sm mb-8" style={{ color: 'hsl(var(--color-text-muted))' }}>
         The page you're looking for doesn't exist or has been moved.
       </p>
-      <a href="/" className="btn btn-primary">Go Home</a>
+      <Link to="/" className="btn btn-primary">Go Home</Link>
     </div>
   );
 }
@@ -141,13 +149,15 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms"   element={<TermsPage />} />
 
-              {/* Public job browsing */}
-              <Route path="/jobs" element={<JobsPage />} />
+              {/* Public job browsing — job seekers and guests only; employers are redirected */}
+              <Route path="/jobs" element={<JobsPageGuard />} />
 
-              {/* Protected: any authenticated user */}
+              {/* Protected: any authenticated user — backend & component enforce ownership for employers */}
               <Route path="/jobs/:id" element={
                 <ProtectedRoute><JobDetailPage /></ProtectedRoute>
               } />
+              {/* Legacy notification link redirect */}
+              <Route path="/employer" element={<Navigate to="/jobs/my" replace />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute><DashboardPage /></ProtectedRoute>
               } />
@@ -158,10 +168,12 @@ export default function App() {
                 <ProtectedRoute><NotificationsPage /></ProtectedRoute>
               } />
 
-              {/* Protected: job seeker only */}
+              {/* Protected: any authenticated user — backend returns role-appropriate data */}
               <Route path="/applications" element={
-                <ProtectedRoute role="job_seeker"><ApplicationsPage /></ProtectedRoute>
+                <ProtectedRoute><ApplicationsPage /></ProtectedRoute>
               } />
+
+              {/* Protected: job seeker only */}
               <Route path="/saved-jobs" element={
                 <ProtectedRoute role="job_seeker"><SavedJobsPage /></ProtectedRoute>
               } />

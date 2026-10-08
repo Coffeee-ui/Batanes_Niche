@@ -112,11 +112,6 @@ def get_demo_status():
                 label="Employer",
                 description="Demo Employer: Batanes Seaside Inn & Tours (Manage postings & applicants)",
             ),
-            DemoRoleInfo(
-                role="admin",
-                label="Administrator",
-                description="Demo Administrator: Platform Administrator (Portal moderation & audit logs)",
-            ),
         ],
     )
 

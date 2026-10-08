@@ -32,9 +32,15 @@ def list_jobs(
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    """Browses, searches, and filters active jobs. Returns restricted preview if unauthenticated."""
+    """Browses, searches, and filters active jobs. Returns restricted preview if unauthenticated. Employers are not permitted to browse job-seeker listings."""
     if not current_user:
         return JobService.list_active_jobs_preview(db, limit=limit, offset=offset)
+    if current_user.role == "employer":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Employers cannot browse job seeker listings.",
+        )
     return JobService.list_active_jobs(
         db,
         municipality=municipality,

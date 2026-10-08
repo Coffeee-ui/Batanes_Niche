@@ -8,10 +8,14 @@ from app.core.geography import MUNICIPALITY_TO_ISLAND
 class JobRepository:
     @staticmethod
     def get_by_id(db: Session, job_id: int, include_deleted: bool = False) -> Optional[Job]:
-        stmt = select(Job).options(joinedload(Job.employer)).where(Job.id == job_id)
+        stmt = (
+            select(Job)
+            .options(joinedload(Job.employer), joinedload(Job.applications))
+            .where(Job.id == job_id)
+        )
         if not include_deleted:
             stmt = stmt.where(Job.deleted_at.is_(None))
-        return db.scalars(stmt).first()
+        return db.scalars(stmt).unique().first()
 
     @staticmethod
     def create(db: Session, job: Job) -> Job:
@@ -74,11 +78,15 @@ class JobRepository:
         limit: int = 50,
         offset: int = 0,
     ) -> List[Job]:
-        stmt = select(Job).options(joinedload(Job.employer)).where(Job.employer_id == employer_id)
+        stmt = (
+            select(Job)
+            .options(joinedload(Job.employer), joinedload(Job.applications))
+            .where(Job.employer_id == employer_id)
+        )
         if not include_closed:
             stmt = stmt.where(Job.status == "active", Job.deleted_at.is_(None))
         stmt = stmt.order_by(Job.created_at.desc()).offset(offset).limit(limit)
-        return list(db.scalars(stmt).all())
+        return list(db.scalars(stmt).unique().all())
 
     @staticmethod
     def list_all_for_admin(

@@ -73,7 +73,7 @@ class ApplicationService:
                 title="New Application Received",
                 message=f"{seeker.full_name} submitted an application for your job posting: '{job.title}'.",
                 type="new_application",
-                link=f"/employer",
+                link=f"/jobs/my",
             )
             NotificationRepository.create(db, notification)
 

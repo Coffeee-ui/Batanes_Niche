@@ -51,6 +51,7 @@ class JobService:
             status=job.status,
             created_at=job.created_at,
             company_name=company_name,
+            application_count=len(job.applications) if job.applications is not None else 0,
         )
 
     @staticmethod
@@ -102,7 +103,7 @@ class JobService:
 
     @staticmethod
     def get_job_by_id(db: Session, job_id: int, current_user: Optional[User] = None) -> JobOut:
-        """Retrieves a single job. Allows owner/admin to view closed/archived jobs."""
+        """Retrieves a single job. Allows owner/admin to view closed/archived jobs. Employers can only view their own jobs."""
         include_deleted = bool(current_user and (current_user.role == "admin" or current_user.role == "employer"))
         job = JobRepository.get_by_id(db, job_id, include_deleted=include_deleted)
         if not job:
@@ -115,6 +116,12 @@ class JobService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Job posting not found.",
+            )
+        # Employers can only view their own jobs, not browse other employers' postings
+        if current_user and current_user.role == "employer" and job.employer_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Employers can only view their own job listings.",
             )
         return JobService._to_job_out(job)
 

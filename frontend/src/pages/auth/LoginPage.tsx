@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, MapPin, Mail, Lock, User as UserIcon, Briefcase, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, MapPin, Mail, Lock, User as UserIcon, Briefcase } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/client';
 import { Spinner } from '../../components/ui';
@@ -197,8 +197,8 @@ export default function LoginPage() {
               <p className="text-xs mb-3" style={{ color: 'hsl(var(--color-text-muted))' }}>
                 One-click instant access for development & demonstration:
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {demoConfig.roles.map((demo) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {demoConfig.roles.filter(d => d.role === 'job_seeker' || d.role === 'employer').map((demo) => {
                   const isRoleLoading = demoLoadingRole === demo.role;
                   return (
                     <button
@@ -216,7 +216,6 @@ export default function LoginPage() {
                         <>
                           {demo.role === 'job_seeker' && <UserIcon className="w-3.5 h-3.5" />}
                           {demo.role === 'employer' && <Briefcase className="w-3.5 h-3.5" />}
-                          {demo.role === 'admin' && <ShieldCheck className="w-3.5 h-3.5" />}
                           <span>{demo.label}</span>
                         </>
                       )}

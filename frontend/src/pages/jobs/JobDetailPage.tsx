@@ -207,7 +207,7 @@ export default function JobDetailPage() {
                 <p className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--color-text))' }}>
                   Your Listing
                 </p>
-                <Link to={`/jobs/${job.id}/applicants`} id="btn-view-applicants" className="btn btn-primary w-full text-sm">
+                <Link to={`/applications`} id="btn-view-applicants" className="btn btn-primary w-full text-sm">
                   <Users className="w-4 h-4" /> View Applicants
                 </Link>
                 <Link to={`/jobs/${job.id}/edit`} id="btn-edit-job" className="btn btn-secondary w-full text-sm mt-2">

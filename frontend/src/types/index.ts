@@ -3,7 +3,7 @@
 // Aligned with Version 2 Single Source of Truth (Sections 8, 14, 15)
 // ============================================================
 
-export type UserRole = 'job_seeker' | 'employer' | 'admin';
+export type UserRole = 'job_seeker' | 'employer';
 
 export interface User {
   id: number;

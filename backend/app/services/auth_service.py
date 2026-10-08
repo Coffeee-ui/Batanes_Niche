@@ -139,14 +139,13 @@ class AuthService:
             )
 
         role_clean = role.strip().lower()
-        if role_clean not in ("job_seeker", "employer", "admin"):
+        if role_clean not in ("job_seeker", "employer"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid demo role requested. Allowed roles: 'job_seeker', 'employer', 'admin'.",
+                detail="Invalid demo role requested. Allowed roles: 'job_seeker', 'employer'.",
             )
 
         canonical_usernames = {
-            "admin": "admin",
             "employer": "batanes_inn",
             "job_seeker": "ivatan_guide",
         }
