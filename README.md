@@ -118,14 +118,20 @@ For rapid onboarding on Windows, run the scripts in `development/scripts/`:
 :: 1. Setup virtualenv, install all dependencies, run migrations
 development\scripts\setup.bat
 
-:: 2. Launch backend (port 8000) and frontend (port 5173) concurrently
+:: 2a. Launch NEW TypeScript backend (port 8000) and frontend (port 5173) concurrently
+development\scripts\start-ts.bat
+:: (or run .\start-ts.bat from root)
+
+:: 2b. OR Launch LEGACY FastAPI backend (port 8000) and frontend (port 5173) concurrently
 development\scripts\start.bat
+:: (or development\scripts\start-legacy.bat / .\start-legacy.bat from root)
 
 :: 3. Run all backend and frontend tests
 development\scripts\test.bat
 
 :: 4. Stop all running background dev servers
 development\scripts\stop.bat
+:: (or .\stop.bat from root)
 ```
 
 ---
