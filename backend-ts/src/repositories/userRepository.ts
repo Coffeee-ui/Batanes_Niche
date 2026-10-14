@@ -29,14 +29,38 @@ export class UserRepository {
   }
 
   static async getByUsernameOrEmail(identifier: string): Promise<UserWithProfiles | null> {
-    const clean = identifier.trim().toLowerCase();
-    // Case-insensitive match on username or email
-    const users = await prisma.user.findMany({
+    const clean = identifier.trim();
+    const cleanLower = clean.toLowerCase();
+
+    // Fast indexed lookup: exact username (case-preserved or lowered) or lowercase email
+    const exactMatch = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: clean },
+          { username: cleanLower },
+          { email: cleanLower },
+        ],
+      },
       include: { employer_profile: true, job_seeker_profile: true },
     });
+    if (exactMatch) return exactMatch;
+
+    // Fallback: limited candidates matching prefix to preserve case-insensitive login without scanning full DB
+    const prefix = cleanLower.slice(0, 3);
+    const candidates = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { startsWith: prefix } },
+          { email: { startsWith: prefix } },
+        ],
+      },
+      take: 25,
+      include: { employer_profile: true, job_seeker_profile: true },
+    });
+
     return (
-      users.find(
-        u => u.username.toLowerCase() === clean || u.email.toLowerCase() === clean
+      candidates.find(
+        u => u.username.toLowerCase() === cleanLower || u.email.toLowerCase() === cleanLower
       ) || null
     );
   }

@@ -50,8 +50,9 @@ APP_NAME="Batanes Niche Job Portal"
 BASE_URL="http://localhost:8000"
 PORT=8000
 
-# Local SQLite Database (via Prisma)
-DATABASE_URL="file:../batanes_niche.db"
+# Local SQLite Database (via Prisma) — Default
+DB_PROVIDER=sqlite
+DATABASE_URL="file:../../Database/batanes_niche.db"
 
 # JWT Authentication
 JWT_SECRET_KEY="batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum"
@@ -73,21 +74,22 @@ MAIL_PASSWORD=
 MAIL_FROM=noreply@batanesjobs.ph
 ```
 
-#### Step 3: Generate Prisma Client & Run Migrations
+#### Step 3: Sync Database & Seed Demo Data
 ```powershell
-npx prisma generate
-npx prisma migrate dev --name init
+# From project root or backend-ts/:
+pnpm db:migrate
 ```
+This syncs the provider in `schema.prisma`, runs `prisma db push`, and populates the database with idempotent demo data. To switch between SQLite and PostgreSQL/Supabase, see [**25-Database-Environment-Switching.md**](./25-Database-Environment-Switching.md).
 
-#### Step 4: Seed Demonstration Data
+
+#### Step 4: Standalone Seed (Optional)
 ```powershell
-# (Seed scripts are in backend-ts/prisma/ or via the Python backend seed tool)
-# Alternatively, run the Python seed once to populate the shared SQLite file:
-Set-Location ..
-Set-Location backend
-.\venv\Scripts\Activate.ps1
-python -m app.cli seed-data
-Set-Location ..\backend-ts
+# Note: `pnpm db:migrate` automatically runs the seed.
+# To run the idempotent seed independently:
+pnpm db:seed
+
+# Alternatively, the Python backend CLI can seed the shared database:
+# python -m app.cli seed-data
 ```
 
 #### Step 5: Start TypeScript Backend Server

@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { settings } from './core/config';
-import { prisma } from './database/client';
+import { checkDatabaseHealth, disconnectDatabase } from './database/client';
 import { structuredLoggingMiddleware } from './middleware/logging';
 import { errorHandler } from './middleware/errorHandler';
 import { apiV1Router } from './api/v1';
@@ -56,19 +56,11 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // GET /ready (Readiness probe)
 app.get('/ready', async (_req: Request, res: Response) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({
-      status: 'ready',
-      database: 'connected',
-      timestamp: new Date().toISOString(),
-    });
-  } catch (exc) {
-    res.status(503).json({
-      status: 'not_ready',
-      database: 'disconnected',
-      error: exc instanceof Error ? exc.message : String(exc),
-    });
+  const health = await checkDatabaseHealth();
+  if (health.status === 'ready') {
+    res.status(200).json(health);
+  } else {
+    res.status(503).json(health);
   }
 });
 
@@ -84,12 +76,30 @@ app.use('/admin', adminRouter);
 app.use(errorHandler);
 
 // Start server
+let server: any = null;
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(settings.PORT, () => {
+  server = app.listen(settings.PORT, () => {
     console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
-    console.log(`[Batanes Niche] Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
+    console.log(`[Batanes Niche] Provider: ${settings.DB_PROVIDER.toUpperCase()}, Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
     console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);
   });
+
+  const handleShutdown = async (signal: string) => {
+    console.log(`\n[Batanes Niche] Received ${signal}. Starting graceful shutdown...`);
+    if (server) {
+      server.close(async () => {
+        console.log('[Batanes Niche] HTTP server closed.');
+        await disconnectDatabase();
+        process.exit(0);
+      });
+    } else {
+      await disconnectDatabase();
+      process.exit(0);
+    }
+  };
+
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 }
 
 export default app;

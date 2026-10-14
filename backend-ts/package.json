@@ -9,10 +9,15 @@
   },
   "main": "dist/main.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "tsc",
+    "dev": "ts-node src/database/syncProvider.ts && ts-node-dev --respawn --transpile-only src/main.ts",
+    "build": "ts-node src/database/syncProvider.ts && tsc",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
+    "db:sync": "ts-node src/database/syncProvider.ts",
+    "db:push": "pnpm run db:sync && prisma db push",
+    "db:seed": "ts-node src/database/seed.ts",
+    "db:migrate": "pnpm run db:push && pnpm run db:seed",
+    "db:reset": "ts-node src/database/reset.ts",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
   },

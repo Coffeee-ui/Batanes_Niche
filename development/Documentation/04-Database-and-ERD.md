@@ -383,3 +383,5 @@ erDiagram
 - For details on how REST API endpoints interact with these entities, see [**05-API-Architecture.md**](./05-API-Architecture.md).
 - To understand how refresh tokens and OTP tokens are validated, see [**06-Authentication-and-Security.md**](./06-Authentication-and-Security.md).
 - For the analytical query patterns and data sensitivity guidelines, see [**16-Data-Analysis-Reference.md**](./16-Data-Analysis-Reference.md).
+- For switching between SQLite and PostgreSQL/Supabase, see [**25-Database-Environment-Switching.md**](./25-Database-Environment-Switching.md).
+

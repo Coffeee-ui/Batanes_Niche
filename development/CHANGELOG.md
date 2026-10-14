@@ -56,6 +56,56 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ### Added
 
+- **Database Layer — Environment-Switchable SQLite ↔ PostgreSQL/Supabase (Option C: Prisma Dynamic Provider)**
+  - The active database is now determined exclusively by `.env`; no code changes are required to switch databases.
+  - **`syncProvider.ts`** (new): Inspects `DB_PROVIDER` / `DATABASE_URL` protocol at startup, rewrites the `datasource` block in `prisma/schema.prisma` to `sqlite` or `postgresql`, and invokes `prisma generate` to regenerate the client. Runs automatically before every `dev`, `db:push`, and `db:seed` invocation.
+  - **`client.ts`**: Added live DB health probe (`$queryRaw SELECT 1`), connection pool settings (`DB_POOL_MIN`, `DB_POOL_MAX`, `DB_TIMEOUT_SEC`, `DB_SSL`), and graceful `disconnect()` on `SIGINT`/`SIGTERM`.
+  - **`config.ts`** (TypeScript): Added `DB_PROVIDER` enum resolution, pool and timeout settings, and fail-fast validation that rejects an ambiguous `DATABASE_URL` / `DB_PROVIDER` mismatch at startup.
+  - **`config.py`** (Python/FastAPI backend): Added `DB_PROVIDER`, `DB_POOL_MIN`, `DB_POOL_MAX`, `DB_TIMEOUT_SEC`, and `DB_SSL` fields mirroring the TypeScript configuration.
+  - **`session.py`**: SQLAlchemy engine factory now uses `QueuePool` for PostgreSQL (with SSL for Supabase) and `StaticPool` + SQLite `PRAGMA foreign_keys = ON` event listener for development.
+  - **`seed.ts`** (new): Fully idempotent TypeScript seed — creates admin, demo employer (`batanes_inn`), demo job seeker (`ivatan_guide`), and sample jobs; skips records that already exist. Safe to re-run at any time.
+  - **`reset.ts`** (new): Development-only database reset — truncates all tables and re-seeds. Refuses to run when `NODE_ENV=production`.
+  - **`userRepository.ts`**: Optimized `getByUsernameOrEmail` to issue two parallel indexed lookups instead of a full-table scan, preventing performance degradation on large PostgreSQL tables.
+  - **`main.ts`**: Added `SIGINT`/`SIGTERM` graceful shutdown handlers and enhanced `/ready` readiness probe that performs a live DB health check and reports `{ status, database, provider, latencyMs }`.
+  - **Package scripts** (`backend-ts/package.json` + root `package.json`):
+    | Script | Action |
+    |---|---|
+    | `db:sync` | Sync `schema.prisma` provider, regenerate Prisma Client |
+    | `db:push` | `db:sync` + `prisma db push` |
+    | `db:seed` | Idempotent TypeScript seed |
+    | `db:migrate` | `db:push` + `db:seed` (first-run or after switch) |
+    | `db:reset` | Wipe + re-seed (dev only) |
+  - **`.env` / `.env.example`**: Added `DB_PROVIDER`, `DIRECT_URL` (for Prisma migrations against Supabase pooler), `DB_POOL_MIN/MAX`, `DB_TIMEOUT_SEC`, `DB_SSL`, and inline instructions for both SQLite and Supabase setup.
+  - **`README.md`**: Added Section 6 "Database Configuration: SQLite ↔ Supabase/PostgreSQL" with step-by-step runbooks for both providers, command reference table, and a note about admin session portability.
+  - **`development/Documentation/25-Database-Environment-Switching.md`** (new): Full reference document covering architecture, configuration, Prisma provider sync, Python session factory, seed/reset scripts, and Supabase connection guide.
+
+- **Frontend — Footer cleanup**
+  - Removed all navigation links from `Footer.tsx`; footer is now centered, text-only, and minimal.
+
+### Files Changed
+
+- `backend-ts/src/database/syncProvider.ts` *(new)*
+- `backend-ts/src/database/seed.ts` *(new)*
+- `backend-ts/src/database/reset.ts` *(new)*
+- `backend-ts/src/database/client.ts`
+- `backend-ts/src/core/config.ts`
+- `backend-ts/src/main.ts`
+- `backend-ts/src/repositories/userRepository.ts`
+- `backend-ts/package.json`
+- `backend/app/database/session.py`
+- `backend/app/core/config.py`
+- `frontend/src/components/layout/Footer.tsx`
+- `.env.example`
+- `.env`
+- `backend-ts/.env`
+- `package.json`
+- `README.md`
+- `development/Documentation/25-Database-Environment-Switching.md` *(new)*
+
+---
+
+### Added (previous unreleased)
+
 - **Backend Migration to TypeScript (`backend-ts/`) — Express.js + Prisma ORM + Nunjucks Drop-In Replacement**
   - Engineered a fully typed, modern TypeScript backend residing in `backend-ts/` designed as a 100% bit-for-bit behavioral drop-in replacement for the original Python/FastAPI backend.
   - **Zero Frontend Disruption**: Preserves all 32 REST endpoints, query parameters, payload structures, status codes (`201` for resource creations, `422` for validation errors, `429` for rate limits), and the exact `{ "detail": ... }` error envelope required by `frontend/src/api/client.ts`.

@@ -172,7 +172,83 @@ pnpm dev
 
 ---
 
-## 6. Running Automated Tests
+## 6. Database Configuration: SQLite ↔ Supabase/PostgreSQL
+
+The backend is **environment-switchable** — the active database is determined by `.env` only. No code changes are needed.
+
+### Option A: Run on SQLite (Default Development — Zero Setup)
+
+`backend-ts/.env` (or root `.env`):
+```env
+DB_PROVIDER=sqlite
+DATABASE_URL="file:../../Database/batanes_niche.db"
+```
+
+Then run the TypeScript backend normally:
+```cmd
+:: From project root
+start-ts.bat
+
+:: Or from terminal (TypeScript backend):
+cd backend-ts
+pnpm db:migrate   # sync schema + push to SQLite + seed demo data
+pnpm dev
+```
+
+Verify: `GET http://localhost:8000/ready` → `{ "provider": "sqlite", "status": "ready" }`
+
+---
+
+### Option B: Switch to Supabase / PostgreSQL (Production Simulation)
+
+#### Step 1 — Update `backend-ts/.env` (no code changes):
+```env
+DB_PROVIDER=postgres
+
+# Supabase Transaction Pooler (port 6543) — used by the app:
+DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Supabase Direct Connection (port 5432) — used by Prisma schema push:
+DIRECT_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+
+# For local Docker Postgres instead of Supabase:
+# DATABASE_URL="postgresql://batanes_user:change_me_in_production@localhost:5432/batanes_niche"
+# DB_SSL=false
+```
+
+#### Step 2 — Push schema and seed:
+```cmd
+cd backend-ts
+
+:: Sync schema.prisma provider, push schema, seed demo data
+pnpm db:migrate
+```
+This command:
+1. Detects `DB_PROVIDER=postgres` and updates `schema.prisma` to `provider = "postgresql"`
+2. Runs `prisma db push` against your Supabase/PostgreSQL instance
+3. Runs the idempotent TypeScript seed (admin + demo employer + demo seeker + sample jobs)
+
+#### Step 3 — Start the server:
+```cmd
+pnpm dev
+```
+Verify: `GET http://localhost:8000/ready` → `{ "provider": "postgresql", "status": "ready" }`
+
+> [!NOTE]
+> **Admin sessions are not portable across backends.** When switching between the FastAPI and TypeScript backend (or between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since the admin session cookie signer differs.
+
+#### Available database commands (from root or `backend-ts/`):
+| Command | Purpose |
+|---|---|
+| `pnpm db:sync` | Sync `schema.prisma` provider to match `.env`, regenerate Prisma Client |
+| `pnpm db:push` | Sync + push schema to active database |
+| `pnpm db:seed` | Run idempotent demo data seed (skips existing records) |
+| `pnpm db:migrate` | `db:push` + `db:seed` in sequence |
+| `pnpm db:reset` | Drop all data, re-run seed (dev only, refuses in production) |
+
+
+
+## 7. Running Automated Tests
 
 ### Backend Test Suite (Pytest + Coverage)
 ```bash
@@ -189,7 +265,7 @@ pnpm build
 
 ---
 
-## 7. Administrative Portal (`/admin`)
+## 8. Administrative Portal (`/admin`)
 
 The administrative portal is hosted on the FastAPI backend under `/admin`:
 - **Security**: Authenticated via signed HttpOnly session cookies (`batanes_admin_session`) with a 12-hour timeout.
@@ -207,7 +283,7 @@ The administrative portal is hosted on the FastAPI backend under `/admin`:
 
 ---
 
-## 8. Deployment Overview
+## 9. Deployment Overview
 
 Production uses **Docker Compose** fronted by **Nginx**:
 - **Nginx**: Terminates SSL, routes `/api/` and `/admin` to FastAPI, serves static React SPA assets with long-term caching, and handles SPA fallback routing.
@@ -248,9 +324,10 @@ The full developer documentation package is maintained in `development/Documenta
 | **22** | [**TypeScript Backend Architecture**](./development/Documentation/22-TypeScript-Backend-Architecture.md) | Specification for the Express.js / TypeScript drop-in backend replacement (`backend-ts/`) and Prisma ORM. |
 | **23** | [**TypeScript Migration Guide**](./development/Documentation/23-TypeScript-Migration-Guide.md) | Full 30-endpoint API contract audit, technology mapping table, security parity, and migration log. |
 | **24** | [**PNPM Migration Guide**](./development/Documentation/24-PNPM-Migration-Guide.md) | Monorepo workspace setup, pnpm topology, `.npmrc` configuration, Dockerfile updates, and verification log. |
+| **25** | [**Database Environment Switching**](./development/Documentation/25-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. |
 
 ---
 
-## 10. License
+## 11. License
 
 Developed for the province of Batanes. All rights reserved.
