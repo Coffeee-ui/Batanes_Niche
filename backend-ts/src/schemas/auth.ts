@@ -85,8 +85,8 @@ export const DemoLoginRequestSchema = z.object({
   role: z
     .string()
     .transform(v => v.trim().toLowerCase())
-    .refine(v => ['job_seeker', 'employer', 'admin'].includes(v), {
-      message: "Invalid demo role requested. Allowed roles: 'job_seeker', 'employer', 'admin'.",
+    .refine(v => ['job_seeker', 'employer'].includes(v), {
+      message: "Invalid demo role requested. Allowed roles: 'job_seeker', 'employer'.",
     }),
 });
 

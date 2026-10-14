@@ -32,7 +32,7 @@ export class Settings {
   public readonly BASE_URL: string = process.env.BASE_URL || 'http://localhost:8000';
 
   public readonly DEMO_MODE: boolean = parseBool(process.env.DEMO_MODE, false);
-  public readonly DATABASE_URL: string = process.env.DATABASE_URL || 'file:../../backend/batanes_niche.db';
+  public readonly DATABASE_URL: string = process.env.DATABASE_URL || 'file:../../Database/batanes_niche.db';
 
   public readonly JWT_SECRET_KEY: string =
     process.env.JWT_SECRET_KEY || 'batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum';

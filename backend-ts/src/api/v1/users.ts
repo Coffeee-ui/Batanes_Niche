@@ -41,8 +41,8 @@ usersRouter.get(
   requireAuthenticated,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (req.user!.role !== 'employer' && req.user!.role !== 'admin') {
-        throw new HttpError(403, 'Candidate directory is accessible only to employers and administrators.');
+      if (req.user!.role !== 'employer') {
+        throw new HttpError(403, 'Candidate directory is accessible only to employers.');
       }
 
       const municipality = (req.query.municipality as string) || null;

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DEMO_MODE: bool = False
 
     # Database Configuration
-    DATABASE_URL: str = "sqlite:///./batanes_niche.db"
+    DATABASE_URL: str = "sqlite:///../Database/batanes_niche.db"
 
     # JWT Authentication
     JWT_SECRET_KEY: str = "batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum"
