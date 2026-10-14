@@ -158,7 +158,7 @@ Both backends return identical error shapes. The frontend `extractError()` funct
 ## 5. Running the TypeScript Backend
 
 ### Prerequisites
-- Node.js 18+ and npm 10+
+- Node.js 20+ and pnpm 9+
 - A PostgreSQL 16 database **or** the shared SQLite file (`batanes_niche.db` in project root)
 
 ### Quick Start (Local Development)
@@ -168,19 +168,19 @@ Both backends return identical error shapes. The frontend `extractError()` funct
 Set-Location backend-ts
 
 # Install dependencies (first time only)
-npm install
+pnpm install
 
 # Generate Prisma client
-npx prisma generate
+pnpm run prisma:generate
 
 # For SQLite: point DATABASE_URL to the shared db file (already in backend-ts/.env)
 # For PostgreSQL: update DATABASE_URL in backend-ts/.env
 
-# Run migrations
-npx prisma migrate dev
+# Run migrations / push schema
+pnpm run prisma:push
 
 # Start development server (hot reload via ts-node)
-npm run dev
+pnpm dev
 ```
 
 Server will be available at:
@@ -193,24 +193,22 @@ Server will be available at:
 
 ```powershell
 # Type-check only (no output files)
-npx tsc --noEmit    # Must exit code 0
+pnpm run typecheck    # Must exit code 0
 
 # Full compile to dist/
-npm run build       # Must exit code 0
+pnpm run build        # Must exit code 0
 ```
 
 ### Running with the Frontend
 
-Start both servers in separate terminals:
+Start both servers in separate terminals (or use root scripts):
 
 ```powershell
 # Terminal 1 — TypeScript Backend
-Set-Location backend-ts
-npm run dev
+pnpm --filter batanes-niche-backend-ts dev
 
 # Terminal 2 — React Frontend
-Set-Location frontend
-npm run dev
+pnpm --filter batanes-niche-frontend dev
 ```
 
 The frontend Vite proxy forwards `/api` requests to `http://localhost:8000`. No frontend changes are needed.
@@ -323,7 +321,7 @@ The following development documentation files were updated to reflect the TypeSc
 
 ## 9. Next Steps
 
-- Run `npm run dev` in `backend-ts/` against the seeded database and manually verify each user flow end-to-end with the React frontend.
+- Run `pnpm dev` in `backend-ts/` against the seeded database and manually verify each user flow end-to-end with the React frontend.
 - Write Jest + Supertest integration tests covering the 30 API endpoints.
-- Update `docker/backend.Dockerfile` to use `node:20-alpine` as the base image and compile `backend-ts/` instead of `backend/`.
+- Deploy using `docker/backend-ts.Dockerfile` with multi-stage pnpm builds.
 - For full architecture details, see [**22-TypeScript-Backend-Architecture.md**](./22-TypeScript-Backend-Architecture.md).

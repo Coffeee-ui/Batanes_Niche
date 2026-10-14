@@ -68,17 +68,17 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
 ## 3. Docker Containerization Architecture
 
-### 3.1 Backend Dockerfile (`docker/backend.Dockerfile`)
+### 3.1 Backend Dockerfile (`docker/backend-ts.Dockerfile`)
 - **Base Image**: `node:20-alpine`.
 - **System Dependencies**: Installs `curl` for container healthchecks and OpenSSL for Prisma.
-- **Security**: Creates an unprivileged system user (`appuser`, UID 1001) to run the Node.js application.
-- **Build**: Runs `npm ci`, `npx prisma generate`, and `npm run build` to compile TypeScript to `dist/`.
+- **Security**: Creates an unprivileged system user (`node`) to run the Node.js application.
+- **Build**: Runs `pnpm install --frozen-lockfile`, `pnpm run prisma:generate`, and `pnpm run build` to compile TypeScript to `dist/`.
 - **Healthcheck**: Probes `http://localhost:8000/health` every 20 seconds.
 - **Entrypoint**: Runs `node dist/main.js`.
 
 ### 3.2 Frontend Dockerfile (`docker/frontend.Dockerfile`)
 - **Multi-Stage Build**:
-  1. **Build Stage (`node:20-alpine`)**: Runs `npm install` and `npm run build` to compile the React TypeScript application into optimized static assets (`dist/`).
+  1. **Build Stage (`node:20-alpine`)**: Runs `pnpm install --frozen-lockfile` and `pnpm run build` to compile the React TypeScript application into optimized static assets (`dist/`).
   2. **Runtime Stage (`nginx:1.27-alpine`)**: Copies compiled assets from build stage to `/usr/share/nginx/html` and deploys `docker/nginx.conf`.
 - **Port Exposure**: Exposes Port 80 for reverse proxy traffic.
 

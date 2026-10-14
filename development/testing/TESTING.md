@@ -73,13 +73,13 @@ pytest tests/test_jobs.py -v
 cd frontend
 
 # Run all tests once
-npm test
+pnpm test
 
 # Run tests in watch mode
-npx vitest
+pnpm exec vitest
 
 # Run TypeScript typecheck & production build verification
-npm run build
+pnpm run build
 ```
 
 ---
@@ -88,6 +88,6 @@ npm run build
 
 Every pull request or release tag must pass all of the following checks:
 1. `pytest tests/ --cov=app` passes with **0 failures** and **>= 85% coverage**.
-2. `npm run build` exits with code **0** and **0 TypeScript errors**.
-3. `npm test` passes with **0 failures** across all component and zero-jargon tests.
+2. `pnpm run build` exits with code **0** and **0 TypeScript errors**.
+3. `pnpm test` passes across component and zero-jargon tests.
 4. No secrets or credentials committed in the repository.

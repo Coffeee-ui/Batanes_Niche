@@ -159,8 +159,8 @@ uvicorn app.main:app --reload --port 8000
 #### 2. Frontend Setup (Terminal 2)
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 - **React Application**: `http://localhost:5173` (proxies `/api` to `http://localhost:8000`)
 
@@ -177,8 +177,8 @@ pytest tests/ --cov=app --cov-report=term-missing
 ### Frontend Test Suite (Vitest + Jargon Scan)
 ```bash
 cd frontend
-npm test
-npm run build
+pnpm test
+pnpm build
 ```
 
 ---
@@ -236,6 +236,12 @@ The full developer documentation package is maintained in `development/Documenta
 | **16** | [**Data Analysis Reference**](./development/Documentation/16-Data-Analysis-Reference.md) | Analytical guide for researchers: Entity mapping, analytical dimensions, SQL join recipes, and privacy rules. |
 | **17** | [**Developer Guide**](./development/Documentation/17-Developer-Guide.md) | Local environment onboarding, virtualenv setup, configuration, CLI tooling, dev servers, and extension recipes. |
 | **18** | [**Architecture Decisions**](./development/Documentation/18-Architecture-Decisions.md) | 14 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives. |
+| **19** | [**Skills and Business Type Catalog**](./development/Documentation/19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, and categorization rules. |
+| **20** | [**System Flowcharts**](./development/Documentation/20-System-Flowcharts.md) | Comprehensive standard flowchart suite (User Journeys, Role Workflows, Multi-Tier Architecture Execution). |
+| **21** | [**Developer Architecture Guide**](./development/Documentation/21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code walks, and modification maps. |
+| **22** | [**TypeScript Backend Architecture**](./development/Documentation/22-TypeScript-Backend-Architecture.md) | Specification for the Express.js / TypeScript drop-in backend replacement (`backend-ts/`) and Prisma ORM. |
+| **23** | [**TypeScript Migration Guide**](./development/Documentation/23-TypeScript-Migration-Guide.md) | Full 30-endpoint API contract audit, technology mapping table, security parity, and migration log. |
+| **24** | [**PNPM Migration Guide**](./development/Documentation/24-PNPM-Migration-Guide.md) | Monorepo workspace setup, pnpm topology, `.npmrc` configuration, Dockerfile updates, and verification log. |
 
 ---
 

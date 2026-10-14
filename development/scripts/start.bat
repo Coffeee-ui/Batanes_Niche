@@ -11,7 +11,7 @@ echo Starting Backend Server on http://localhost:8000 ...
 start "Batanes Backend (FastAPI)" cmd /k "cd /d "%ROOT_DIR%\backend" && call venv\Scripts\activate.bat && uvicorn app.main:app --reload --port 8000"
 
 echo Starting Frontend Dev Server on http://localhost:5173 ...
-start "Batanes Frontend (Vite)" cmd /k "cd /d "%ROOT_DIR%\frontend" && npm run dev"
+start "Batanes Frontend (Vite)" cmd /k "cd /d "%ROOT_DIR%\frontend" && pnpm dev"
 
 echo.
 echo ============================================================

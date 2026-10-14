@@ -9,8 +9,8 @@ Before setting up the **Batanes Niche Job Portal** locally, ensure your machine 
 
 | Tool / Runtime | Minimum Version | Verified Version | Purpose |
 |---|---|---|---|
-| **Node.js** | `18.0.0` (LTS) | `20.15.x` | Backend-ts runtime (TypeScript/Express.js), Frontend development |
-| **npm** | `10.0.0` | `10.7.x` | Package manager for both backend-ts and frontend |
+| **Node.js** | `20.0.0` (LTS) | `20.x` | Backend-ts runtime (TypeScript/Express.js), Frontend development |
+| **pnpm** | `9.0.0` | `12.x` | Package manager for workspace, backend-ts, and frontend |
 | **Python** | `3.11.0` | `3.11.x` | Legacy Python backend (`backend/`) reference only |
 | **Git** | `2.40.0` | Latest | Version control |
 
@@ -30,8 +30,12 @@ cd Batanes_Niche
 
 #### Step 1: Install Dependencies
 ```bash
+# From workspace root:
+pnpm install
+
+# Or specifically for backend-ts:
 cd backend-ts
-npm install
+pnpm install
 ```
 
 #### Step 2: Configure Environment Variables
@@ -89,11 +93,11 @@ Set-Location ..\backend-ts
 #### Step 5: Start TypeScript Backend Server
 ```powershell
 # Development (ts-node with watch)
-npm run dev
+pnpm dev
 
 # Or build and run compiled output
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
 - **API Base**: `http://localhost:8000/api/v1`
 - **Admin Portal (Nunjucks SSR)**: `http://localhost:8000/admin`
@@ -102,8 +106,7 @@ npm start
 
 Quick start (PowerShell one-liner from project root):
 ```powershell
-Set-Location backend-ts
-npm run dev
+pnpm --filter batanes-niche-backend-ts dev
 ```
 
 ---
@@ -215,8 +218,8 @@ Open a separate terminal in the project root:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 - **React Application**: `http://localhost:5173`
 - Vite automatically proxies `/api` requests to `http://localhost:8000`.
@@ -229,32 +232,26 @@ For rapid local operations on Windows, pre-configured batch scripts are provided
 
 | Batch Script | Path | Operation Performed |
 |---|---|---|
-| **Setup All** | `development\scripts\setup.bat` | Creates backend-ts node_modules, runs Prisma migrate, and installs all frontend npm packages. |
+| **Setup All** | `development\scripts\setup.bat` | Creates backend-ts node_modules, runs Prisma migrate, and installs all workspace pnpm packages. |
 | **Start All** | `development\scripts\start.bat` | Launches backend-ts (`:8000`) and frontend (`:5173`) in concurrent terminal processes. |
 | **Stop All** | `development\scripts\stop.bat` | Terminates active node and vite processes. |
-| **Test All** | `development\scripts\test.bat` | Executes backend Jest suite followed by frontend Vitest suite. |
+| **Test All** | `development\scripts\test.bat` | Executes backend test suite followed by frontend Vitest suite. |
 
 ---
 
 ## 4. Running Automated Tests
 
-### Backend Tests (Jest + Supertest — TypeScript)
-```bash
-cd backend-ts
-npm test
-```
-
 ### Backend Type Check
 ```bash
 cd backend-ts
-npx tsc --noEmit
+pnpm run typecheck
 ```
 
 ### Frontend Tests (vitest)
 ```bash
 cd frontend
-npm test
-npm run build
+pnpm test
+pnpm run build
 ```
 
 ---

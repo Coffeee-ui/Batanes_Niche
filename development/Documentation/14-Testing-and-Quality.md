@@ -75,13 +75,13 @@ pytest tests/test_recommendations.py -v
 cd frontend
 
 # Run all component tests once
-npm test
+pnpm test
 
 # Run tests in interactive watch mode
-npx vitest
+pnpm exec vitest
 
 # Verify TypeScript type safety and production build
-npm run build
+pnpm run build
 ```
 
 ### 4.3 Automated Windows Test Script
@@ -99,9 +99,9 @@ Every release build or pull request must pass the following four acceptance gate
 | Gate # | Check / Command | Acceptance Criteria | Failure Action |
 |:---:|---|---|---|
 | **1** | `pytest tests/ --cov=app` | 0 failed tests; **>= 85% coverage** | Block release |
-| **2** | `npm test` | 0 failed tests across all component tests | Block release |
-| **3** | `npx vitest run src/test/zero_jargon.test.ts` | 0 jargon violations in user-facing strings | Block release |
-| **4** | `npm run build` | Exits with code 0; **0 TypeScript errors** | Block release |
+| **2** | `pnpm test` | 0 failed tests across component tests | Block release |
+| **3** | `pnpm exec vitest run src/test/zero_jargon.test.ts` | 0 jargon violations in user-facing strings | Block release |
+| **4** | `pnpm run build` | Exits with code 0; **0 TypeScript errors** | Block release |
 
 ---
 

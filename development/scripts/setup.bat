@@ -13,7 +13,7 @@ if errorlevel 1 (
 )
 echo [OK] Python detected.
 
-REM 2. Check Node
+REM 2. Check Node & pnpm
 node --version >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Node.js is not installed or not in PATH. Please install Node.js 20+.
@@ -21,9 +21,16 @@ if errorlevel 1 (
 )
 echo [OK] Node.js detected.
 
-REM 3. Set up Backend
+pnpm --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] pnpm is not installed. Run: npm install -g pnpm or corepack enable
+    exit /b 1
+)
+echo [OK] pnpm detected.
+
+REM 3. Set up Backend (Python reference)
 echo.
-echo [1/4] Setting up Backend Virtual Environment...
+echo [1/4] Setting up Backend Virtual Environment (Python reference)...
 cd /d "%~dp0..\..\backend"
 if not exist "venv" (
     echo Creating virtual environment in backend\venv...
@@ -45,18 +52,20 @@ if not exist ".env" (
     echo [2/4] .env already exists.
 )
 
-REM 5. Run Database Migrations
+REM 5. Run Database Migrations (Python / Alembic)
 echo.
 echo [3/4] Running Database Migrations...
 cd /d "%~dp0..\..\backend"
 call venv\Scripts\activate.bat
 alembic upgrade head
 
-REM 6. Set up Frontend
+REM 6. Set up Workspace Dependencies (Frontend & Backend-TS)
 echo.
-echo [4/4] Installing Frontend Dependencies...
-cd /d "%~dp0..\..\frontend"
-call npm install
+echo [4/4] Installing Workspace Dependencies via pnpm...
+cd /d "%~dp0..\.."
+call pnpm install
+cd /d "%~dp0..\..\backend-ts"
+call pnpm run prisma:generate
 
 echo.
 echo ============================================================

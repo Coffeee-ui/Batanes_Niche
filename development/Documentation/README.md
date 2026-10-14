@@ -8,10 +8,10 @@ The system is a production-ready, hyper-localized employment marketplace enginee
 
 ## Documentation Index
 
-The documentation suite is structured into 23 specialized modules, each covering a specific architectural, operational, or business domain.
+The documentation suite is structured into 24 specialized modules, each covering a specific architectural, operational, or business domain.
 
 > [!IMPORTANT]
-> The backend has been migrated from **Python/FastAPI** (`backend/`) to **TypeScript/Express.js** (`backend-ts/`). See [**23-TypeScript-Migration-Guide.md**](./23-TypeScript-Migration-Guide.md) for the full audit and setup reference.
+> The repository has been migrated to a unified **pnpm workspace** (`pnpm@12.4.2`) with the backend migrated to **TypeScript/Express.js** (`backend-ts/`). See [**23-TypeScript-Migration-Guide.md**](./23-TypeScript-Migration-Guide.md) and [**24-PNPM-Migration-Guide.md**](./24-PNPM-Migration-Guide.md).
 
 | # | Document | Primary Focus & Scope | Target Audience |
 |---|---|---|---|
@@ -38,6 +38,7 @@ The documentation suite is structured into 23 specialized modules, each covering
 | **21** | [**Developer Architecture Guide**](./21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code traceability walks, frontend/backend/DB modification maps, and recipes. | New & Contributing Developers |
 | **22** | [**TypeScript Backend Architecture**](./22-TypeScript-Backend-Architecture.md) | Specification for the drop-in TypeScript / Node.js backend replacement (`backend-ts/`), Prisma ORM, Express.js API, and contract parity. | Architects, Backend Engineers |
 | **23** | [**TypeScript Migration Guide**](./23-TypeScript-Migration-Guide.md) | Complete migration log: 30-endpoint API contract audit, technology mapping table, security parity analysis, risk register & resolutions, and updated setup instructions. | Backend Engineers, DevOps |
+| **24** | [**PNPM Migration Guide**](./24-PNPM-Migration-Guide.md) | PNPM monorepo workspace migration log: workspace topology, `.npmrc` configuration, Dockerfile updates, script migration, and verification. | DevOps, All Engineers |
 
 
 ---

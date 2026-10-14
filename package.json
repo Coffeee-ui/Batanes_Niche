@@ -1,0 +1,13 @@
+{
+  "name": "batanes-niche-root",
+  "version": "2.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.4.2",
+  "scripts": {
+    "dev:backend": "pnpm --filter batanes-niche-backend-ts dev",
+    "dev:frontend": "pnpm --filter batanes-niche-frontend dev",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter batanes-niche-frontend test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  }
+}

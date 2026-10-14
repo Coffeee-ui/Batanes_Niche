@@ -9,7 +9,7 @@ Welcome to the **Batanes Niche Job Portal Version 2**. This guide outlines the s
 Ensure you have the following installed on your machine:
 - **Python**: Version 3.11 or higher
 - **Node.js**: Version 20.x or higher (LTS recommended)
-- **npm**: Version 10.x or higher
+- **pnpm**: Version 9.x or higher (e.g. `pnpm@12.4.2`)
 - **Git**: Latest version
 
 ---
@@ -105,12 +105,12 @@ uvicorn app.main:app --reload --port 8000
 Open a separate terminal in the project root:
 ```bash
 cd frontend
-npm install
+pnpm install
 ```
 
 ### Step 2: Start Frontend Development Server
 ```bash
-npm run dev
+pnpm dev
 ```
 The React SPA will be available at:
 - `http://localhost:5173`
@@ -141,7 +141,7 @@ pytest tests/ --cov=app --cov-report=term-missing
 ### Frontend Tests (vitest)
 ```bash
 cd frontend
-npm test
+pnpm test
 ```
 
 ---

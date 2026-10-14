@@ -8,11 +8,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /build
 
-COPY frontend/package*.json ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 
-COPY frontend/ ./
-RUN npm run build
+COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY frontend/package.json ./frontend/
+RUN pnpm --filter batanes-niche-frontend install --frozen-lockfile
+
+COPY frontend/ ./frontend/
+RUN pnpm --filter batanes-niche-frontend build
 
 # Stage 2: Minimal Nginx web server
 FROM nginx:1.25-alpine AS runner
@@ -21,7 +24,7 @@ FROM nginx:1.25-alpine AS runner
 RUN rm -rf /etc/nginx/conf.d/* /usr/share/nginx/html/*
 
 # Copy build artifacts
-COPY --from=builder /build/dist /usr/share/nginx/html
+COPY --from=builder /build/frontend/dist /usr/share/nginx/html
 
 # Copy custom nginx configuration
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf

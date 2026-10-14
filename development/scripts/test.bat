@@ -20,7 +20,7 @@ if errorlevel 1 (
 echo.
 echo [2/2] Running Frontend Tests (vitest + zero-jargon audit)...
 cd /d "%ROOT_DIR%\frontend"
-call npm test
+call pnpm test
 if errorlevel 1 (
     echo [ERROR] Frontend tests failed!
     exit /b 1
