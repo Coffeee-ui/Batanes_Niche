@@ -8,7 +8,10 @@ The system is a production-ready, hyper-localized employment marketplace enginee
 
 ## Documentation Index
 
-The documentation suite is structured into 21 specialized modules, each covering a specific architectural, operational, or business domain.
+The documentation suite is structured into 23 specialized modules, each covering a specific architectural, operational, or business domain.
+
+> [!IMPORTANT]
+> The backend has been migrated from **Python/FastAPI** (`backend/`) to **TypeScript/Express.js** (`backend-ts/`). See [**23-TypeScript-Migration-Guide.md**](./23-TypeScript-Migration-Guide.md) for the full audit and setup reference.
 
 | # | Document | Primary Focus & Scope | Target Audience |
 |---|---|---|---|
@@ -33,13 +36,16 @@ The documentation suite is structured into 21 specialized modules, each covering
 | **19** | [**Skills and Business Type Catalog**](./19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, categorization rules, and normalization utilities. | Backend Engineers, Content Curators |
 | **20** | [**System Flowcharts**](./20-System-Flowcharts.md) | Comprehensive standard flowchart suite (Level 1 User Journey, Level 2 Role-specific workflows, Level 3 Multi-tier architecture execution). | Non-technical Audience, All Engineers |
 | **21** | [**Developer Architecture Guide**](./21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code traceability walks, frontend/backend/DB modification maps, and recipes. | New & Contributing Developers |
+| **22** | [**TypeScript Backend Architecture**](./22-TypeScript-Backend-Architecture.md) | Specification for the drop-in TypeScript / Node.js backend replacement (`backend-ts/`), Prisma ORM, Express.js API, and contract parity. | Architects, Backend Engineers |
+| **23** | [**TypeScript Migration Guide**](./23-TypeScript-Migration-Guide.md) | Complete migration log: 30-endpoint API contract audit, technology mapping table, security parity analysis, risk register & resolutions, and updated setup instructions. | Backend Engineers, DevOps |
+
 
 ---
 
 ## Core System Characteristics
 
-- **Zero-Jargon UI Contract**: The public interface is strictly tailored to everyday Ivatans and local business owners. Technical system terminology (e.g., *FastAPI*, *PostgreSQL*, *JWT*, *SQLAlchemy*, *Alembic*, *Docker*) is strictly forbidden from rendering in user-facing views.
-- **Strict Separation of Admin Interface**: The administrative portal is completely decoupled from the React single-page application. It is server-rendered via FastAPI and Jinja2 templates under `/admin`, protected by signed HttpOnly session cookies and CSRF tokens.
+- **Zero-Jargon UI Contract**: The public interface is strictly tailored to everyday Ivatans and local business owners. Technical system terminology (e.g., *Express.js*, *Prisma*, *JWT*, *Zod*, *Docker*) is strictly forbidden from rendering in user-facing views.
+- **Strict Separation of Admin Interface**: The administrative portal is completely decoupled from the React single-page application. It is server-rendered via Express.js and **Nunjucks** templates under `/admin`, protected by HMAC-SHA256 signed HttpOnly session cookies and CSRF tokens.
 - **Deterministic Island Geography**: Locations are strictly validated against a canonical hierarchy of 3 islands, 6 municipalities, and 29 barangays, supporting composite names (e.g., *Kayhuvokan (Santa Rosa)*, *San Vicente (Igang)*).
 - **Two-Tier Recommendation Algorithm**: Job matches and candidate rankings do not rely on opaque machine learning. Matching is deterministic, transparent, and reproducible based on a 70-point skill overlap and a 30-point transit accessibility model.
 - **Explicit Scope Boundaries**: Version 2 intentionally omits real-time chat, WebSockets, and offline synchronization in favor of robust transactional email OTP notifications and standard RESTful synchronization.
@@ -50,9 +56,8 @@ The documentation suite is structured into 21 specialized modules, each covering
 
 ```text
 Public Frontend:      http://localhost:5173 (React 18 + Vite + Tailwind CSS)
-Backend REST API:     http://localhost:8000/api/v1 (FastAPI + Pydantic v2)
-Interactive API Docs: http://localhost:8000/docs (Swagger UI - Development only)
-Admin Portal:         http://localhost:8000/admin (FastAPI + Jinja2 Templates)
+Backend REST API:     http://localhost:8000/api/v1 (Express.js + TypeScript + Prisma)
+Admin Portal:         http://localhost:8000/admin (Express.js + Nunjucks Templates)
 Health Check:         http://localhost:8000/health (Liveness Probe)
 Readiness Check:      http://localhost:8000/ready (Database Connectivity Probe)
 ```

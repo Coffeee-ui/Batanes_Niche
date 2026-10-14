@@ -1,14 +1,17 @@
 # 17 - Developer Guide & Extension Manual
 
+> [!IMPORTANT]
+> The backend has been migrated to **TypeScript/Express.js** (`backend-ts/`). The Python backend (`backend/`) is preserved as a reference. The sections below cover **both** backends; start with §2.2a (TypeScript) for new development.
+
 ## 1. System Requirements & Prerequisites
 
 Before setting up the **Batanes Niche Job Portal** locally, ensure your machine satisfies the following prerequisites:
 
 | Tool / Runtime | Minimum Version | Verified Version | Purpose |
 |---|---|---|---|
-| **Python** | `3.11.0` | `3.11.x` | Backend runtime, SQLAlchemy, Alembic, FastAPI |
-| **Node.js** | `20.0.0` (LTS) | `20.15.x` | Frontend development runtime |
-| **npm** | `10.0.0` | `10.7.x` | Frontend package manager |
+| **Node.js** | `18.0.0` (LTS) | `20.15.x` | Backend-ts runtime (TypeScript/Express.js), Frontend development |
+| **npm** | `10.0.0` | `10.7.x` | Package manager for both backend-ts and frontend |
+| **Python** | `3.11.0` | `3.11.x` | Legacy Python backend (`backend/`) reference only |
 | **Git** | `2.40.0` | Latest | Version control |
 
 ---
@@ -23,7 +26,89 @@ cd Batanes_Niche
 
 ---
 
-### 2.2 Backend Setup (FastAPI)
+### 2.2a Backend Setup (TypeScript — Active)
+
+#### Step 1: Install Dependencies
+```bash
+cd backend-ts
+npm install
+```
+
+#### Step 2: Configure Environment Variables
+Copy and edit the example `.env`:
+```bash
+# The backend-ts/.env is already scaffolded; edit as needed:
+```
+```env
+ENVIRONMENT=development
+DEBUG=True
+APP_NAME="Batanes Niche Job Portal"
+BASE_URL="http://localhost:8000"
+PORT=8000
+
+# Local SQLite Database (via Prisma)
+DATABASE_URL="file:../batanes_niche.db"
+
+# JWT Authentication
+JWT_SECRET_KEY="batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum"
+JWT_ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Admin Session Secret (HMAC-SHA256)
+ADMIN_SESSION_SECRET="batanes-niche-admin-session-local-secret-super-secure-high-entropy-64chars"
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# SMTP (Leave empty for simulation mode)
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM=noreply@batanesjobs.ph
+```
+
+#### Step 3: Generate Prisma Client & Run Migrations
+```powershell
+npx prisma generate
+npx prisma migrate dev --name init
+```
+
+#### Step 4: Seed Demonstration Data
+```powershell
+# (Seed scripts are in backend-ts/prisma/ or via the Python backend seed tool)
+# Alternatively, run the Python seed once to populate the shared SQLite file:
+Set-Location ..
+Set-Location backend
+.\venv\Scripts\Activate.ps1
+python -m app.cli seed-data
+Set-Location ..\backend-ts
+```
+
+#### Step 5: Start TypeScript Backend Server
+```powershell
+# Development (ts-node with watch)
+npm run dev
+
+# Or build and run compiled output
+npm run build
+npm start
+```
+- **API Base**: `http://localhost:8000/api/v1`
+- **Admin Portal (Nunjucks SSR)**: `http://localhost:8000/admin`
+- **Health Check**: `http://localhost:8000/health`
+- **Readiness Probe**: `http://localhost:8000/ready`
+
+Quick start (PowerShell one-liner from project root):
+```powershell
+Set-Location backend-ts
+npm run dev
+```
+
+---
+
+### 2.2b Backend Setup (Python — Legacy Reference)
 
 #### Step 1: Create and Activate Virtual Environment
 ```bash
@@ -144,19 +229,25 @@ For rapid local operations on Windows, pre-configured batch scripts are provided
 
 | Batch Script | Path | Operation Performed |
 |---|---|---|
-| **Setup All** | `development\scripts\setup.bat` | Creates backend venv, installs all pip dependencies, runs Alembic migrations, and installs all frontend npm packages. |
-| **Start All** | `development\scripts\start.bat` | Launches backend (`:8000`) and frontend (`:5173`) in concurrent terminal processes. |
-| **Stop All** | `development\scripts\stop.bat` | Terminates active uvicorn and vite processes. |
-| **Test All** | `development\scripts\test.bat` | Executes backend pytest suite followed by frontend Vitest suite. |
+| **Setup All** | `development\scripts\setup.bat` | Creates backend-ts node_modules, runs Prisma migrate, and installs all frontend npm packages. |
+| **Start All** | `development\scripts\start.bat` | Launches backend-ts (`:8000`) and frontend (`:5173`) in concurrent terminal processes. |
+| **Stop All** | `development\scripts\stop.bat` | Terminates active node and vite processes. |
+| **Test All** | `development\scripts\test.bat` | Executes backend Jest suite followed by frontend Vitest suite. |
 
 ---
 
 ## 4. Running Automated Tests
 
-### Backend Tests (pytest)
+### Backend Tests (Jest + Supertest — TypeScript)
 ```bash
-cd backend
-pytest tests/ --cov=app --cov-report=term-missing
+cd backend-ts
+npm test
+```
+
+### Backend Type Check
+```bash
+cd backend-ts
+npx tsc --noEmit
 ```
 
 ### Frontend Tests (vitest)
@@ -170,24 +261,23 @@ npm run build
 
 ## 5. Developer Extension Recipes
 
-### Recipe 1: Adding a New REST API Endpoint
-1. **Define Schema**: In `backend/app/schemas/<domain>.py`, create Pydantic input and output models.
-2. **Implement Repository Method**: In `backend/app/repositories/<domain>_repository.py`, create the required SQLAlchemy query method.
-3. **Implement Domain Rule**: In `backend/app/services/<domain>_service.py`, implement validation, authorization, and business logic.
-4. **Register Router Endpoint**: In `backend/app/api/v1/<domain>.py`, create the route handler using dependency injection (`db: Session = Depends(get_db)`).
-5. **Write Unit Test**: In `backend/tests/test_<domain>.py`, write positive and negative assertions.
+### Recipe 1: Adding a New REST API Endpoint (TypeScript)
+1. **Define Schema**: In `backend-ts/src/schemas/<domain>.ts`, create Zod input and output schemas.
+2. **Implement Repository Method**: In `backend-ts/src/repositories/<domain>Repository.ts`, create the required Prisma query method.
+3. **Implement Domain Rule**: In `backend-ts/src/services/<domain>Service.ts`, implement validation, authorization, and business logic.
+4. **Register Router Endpoint**: In `backend-ts/src/api/v1/<domain>.ts`, create the route handler using the Express Router.
+5. **Write Unit Test**: In `backend-ts/tests/test_<domain>.test.ts`, write positive and negative assertions with Jest/Supertest.
 
 ### Recipe 2: Adding a New Database Entity
-1. **Create Model**: In `backend/app/models/<new_entity>.py`, declare the SQLAlchemy model subclassing `Base`.
-2. **Export Model**: In `backend/app/models/__init__.py` and `backend/app/database/base.py`, import the model.
-3. **Generate Migration Script**:
+1. **Update Prisma Schema**: In `backend-ts/prisma/schema.prisma`, add the new model definition.
+2. **Generate Client & Migration**:
    ```bash
-   cd backend
-   alembic revision --autogenerate -m "add_<new_entity>_table"
+   cd backend-ts
+   npx prisma migrate dev --name add_<new_entity>_table
+   npx prisma generate
    ```
-4. **Review & Apply Migration**:
-   - Inspect the generated migration in `backend/alembic/versions/`.
-   - Run `alembic upgrade head`.
+3. **Create Repository**: Add `backend-ts/src/repositories/<newEntity>Repository.ts`.
+4. **Review Migration**: Inspect `backend-ts/prisma/migrations/` for correctness.
 
 ### Recipe 3: Adding a New Frontend Page
 1. **Create Page Component**: Create `frontend/src/pages/<NewPage>.tsx`.
@@ -242,9 +332,9 @@ When active, Demo Mode provides one-click authentication on the login page for e
 ## 7. Common Pitfalls & Developer Gotchas
 
 1. **Do NOT Invent New Endpoints for Chat**: Version 2 does **not** support real-time chat or WebSockets. Communication relies on the application state machine, persistent in-app notifications, and authorized phone/email.
-2. **Do NOT Hardcode Geography**: Never hardcode Batanes municipalities or barangays in strings. Always reference `backend/app/core/geography.py` or fetch from `/api/v1/meta/options`.
-3. **Zero Technical Jargon in Public UI**: Do not display system terms like *FastAPI*, *PostgreSQL*, *JWT*, or *SQLAlchemy* in user-facing components.
-4. **Admin UI Isolation**: Never import React components into Jinja2 templates or vice versa. Admin screens belong strictly in `backend/app/admin/templates/`.
+2. **Do NOT Hardcode Geography**: Never hardcode Batanes municipalities or barangays in strings. Always reference `backend-ts/src/core/geography.ts` or fetch from `/api/v1/meta/options`.
+3. **Zero Technical Jargon in Public UI**: Do not display system terms like *Express.js*, *Prisma*, *PostgreSQL*, *JWT*, or *Zod* in user-facing components.
+4. **Admin UI Isolation**: Never import React components into Nunjucks templates or vice versa. Admin screens belong strictly in `backend-ts/src/templates/`.
 
 ---
 

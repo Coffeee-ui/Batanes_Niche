@@ -1,5 +1,8 @@
 # 02 - Architecture
 
+> [!IMPORTANT]
+> The backend has been migrated from **Python/FastAPI** (`backend/`) to **TypeScript/Express.js** (`backend-ts/`). Both implementations are present in the repository. The TypeScript backend (`backend-ts/`) is the **active, production-target** implementation. See [**22-TypeScript-Backend-Architecture.md**](./22-TypeScript-Backend-Architecture.md) for the full migration reference.
+
 ## 1. Architectural Philosophy & Principles
 
 The **Batanes Niche Job Portal** is designed as a **Modular Monolith** with clear logical and physical boundaries. The architecture balances developer ergonomics, deterministic behavior, testability, and operational simplicity.
@@ -11,12 +14,13 @@ The **Batanes Niche Job Portal** is designed as a **Modular Monolith** with clea
    - Business rules, scoring algorithms, and security checks reside strictly within Domain Services, never inside route handlers or database models.
 2. **Explicit Layer Decoupling**:
    - The public-facing client is a modern Single Page Application (SPA) built with React 18 and Vite.
-   - The administrative interface is a server-rendered Jinja2 web application completely hosted and managed by FastAPI under `/admin`.
+   - The administrative interface is a server-rendered **Nunjucks** web application (TypeScript backend) or **Jinja2** (Python backend) hosted under `/admin`.
    - The frontend SPA does not bundle, import, or leak any administrative views or capabilities.
 3. **Deterministic Business Logic**:
    - All critical calculations (e.g., profile completeness, geographic distance scoring, skill match percentage) use pure, predictable mathematical algorithms rather than probabilistic or black-box components.
 4. **Resilient Data Access**:
-   - Database operations use the **Repository Pattern** with SQLAlchemy 2.0.
+   - TypeScript backend: **Repository Pattern** with **Prisma ORM** (type-safe query builder).
+   - Python backend (original): **Repository Pattern** with **SQLAlchemy 2.0**.
    - Repositories encapsulate all query construction, filtering, pagination, and soft-delete enforcement, preventing SQL leakage into services.
 
 ---
@@ -47,12 +51,12 @@ flowchart TB
         Nginx["Nginx Reverse Proxy (Port 80/443)"]
     end
 
-    subgraph BackendApp["Backend Application Tier (FastAPI - Port 8000)"]
+    subgraph BackendApp["Backend Application Tier (Express.js / TypeScript - Port 8000)"]
         subgraph MiddlewareStack["Core Middleware Stack"]
             CORSMiddleware["CORSMiddleware"]
             LoggingMiddleware["StructuredLoggingMiddleware"]
             ErrorHandler["Global Exception Handler"]
-            RateLimiter["SlowAPI Rate Limiter"]
+            RateLimiter["express-rate-limit Rate Limiter"]
         end
 
         subgraph APIRoutes["REST API Layer (/api/v1)"]
@@ -69,7 +73,7 @@ flowchart TB
 
         subgraph AdminPortal["Server-Rendered Admin Portal (/admin)"]
             AdminRoutes["Admin Routes & Controllers"]
-            Jinja2Engine["Jinja2 Template Engine"]
+            Jinja2Engine["Nunjucks Template Engine"]
             AdminTemplates["Admin Templates & Partials"]
             AdminAuthGuard["Admin Session & CSRF Guard"]
         end
@@ -202,11 +206,13 @@ flowchart TB
   - Consumes the `/api/v1` REST API using Axios.
   - Manages public guest routes, seeker dashboards, employer portals, job search views, and candidate directory search.
   - Keeps JWT access tokens exclusively in memory; delegates persistent sessions to a rotating refresh token stored in `localStorage`.
-- **Administrative Portal (`backend/app/admin/`)**:
-  - Built with server-side Jinja2 templates.
-  - Consumes Domain Services and Repositories directly within the Python process.
+- **Administrative Portal (`backend-ts/src/admin/` — TypeScript)**:
+  - Built with server-side **Nunjucks** templates (near 1:1 Jinja2 syntax compatibility).
+  - Consumes Domain Services and Repositories directly within the Node.js process.
   - Renders dashboard analytics, user moderation tables, job audit screens, and system logs.
-  - Authenticated via signed HttpOnly session cookies (`batanes_admin_session`) and double-submit CSRF cookies (`batanes_admin_csrf`).
+  - Authenticated via HMAC-SHA256 signed HttpOnly session cookies (`batanes_admin_session`) and double-submit CSRF cookies (`batanes_admin_csrf`).
+- **Legacy Administrative Portal (`backend/app/admin/` — Python)**:
+  - Built with server-side **Jinja2** templates (now superseded by the TypeScript implementation).
 
 ### 3.2 Gateway & Reverse Proxy Tier (`docker/nginx.conf`)
 - Acts as the single entry point in production environments (Port 80/443).
@@ -216,14 +222,16 @@ flowchart TB
 - Serves the compiled React `index.html` for all client-side routes with fallback routing (`try_files $uri $uri/ /index.html`).
 - Injects standard production security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`).
 
-### 3.3 Backend API Layer (`backend/app/api/v1/`)
-- Pure HTTP translation boundary: parses request payloads, deserializes JSON via Pydantic v2, checks route-level permissions, and dispatches to Domain Services.
-- Routers contain zero SQL queries, zero scoring logic, and zero direct entity mutations.
-- Enforces rate limits using SlowAPI.
-- Serializes domain outputs into strictly typed Pydantic response models.
+### 3.3 Backend API Layer
+- **TypeScript** (`backend-ts/src/api/v1/`): Pure HTTP translation boundary using Express.js Router. Parses request payloads, deserializes/validates JSON via **Zod**, checks route-level permissions, and dispatches to Domain Services.
+- **Python** (`backend/app/api/v1/`): Uses FastAPI router with Pydantic v2 schema validation.
+- Routers in both implementations contain zero SQL queries, zero scoring logic, and zero direct entity mutations.
+- Rate limiting: **express-rate-limit** (TypeScript) / **SlowAPI** (Python).
+- Response serialization: Zod schemas (TypeScript) / Pydantic response models (Python).
 
-### 3.4 Domain Service Layer (`backend/app/services/`)
-- Encapsulates all business rules, orchestration workflows, and invariant enforcement.
+### 3.4 Domain Service Layer
+- **TypeScript** (`backend-ts/src/services/`) / **Python** (`backend/app/services/`)
+- Encapsulates all business rules, orchestration workflows, and invariant enforcement. Identical logic in both implementations.
 - Key Domain Services:
   - `AuthService`: Registration, credential verification, token issuance/rotation, compromise detection, and OTP generation.
   - `UserService`: Profile completeness scoring, profile updates, sanitized candidate searches.
@@ -236,10 +244,11 @@ flowchart TB
   - `ErrorLoggingService`: Unhandled 500 exception persistence with request scrubbing.
   - `EmailDeliveryService`: SMTP email dispatching with graceful development simulation fallback.
 
-### 3.5 Repository Layer (`backend/app/repositories/`)
-- Encapsulates database operations using SQLAlchemy 2.0 ORM sessions.
-- Enforces data integrity: active application duplicate checks, soft-delete filtering (`deleted_at IS NULL`), token hash lookups, and transaction flushes.
-- Shields Domain Services from underlying SQL query mechanics and database dialect nuances.
+### 3.5 Repository Layer
+- **TypeScript** (`backend-ts/src/repositories/`): Prisma ORM with type-safe query builders and `$transaction` blocks.
+- **Python** (`backend/app/repositories/`): SQLAlchemy 2.0 ORM sessions with synchronous transactions.
+- Both implementations enforce identical data integrity rules: active application duplicate checks, soft-delete filtering (`deleted_at IS NULL`), token hash lookups, and transaction flushes.
+- Both shield Domain Services from underlying SQL query mechanics and database dialect nuances.
 
 ### 3.6 Persistence Tier
 - **Production**: PostgreSQL 16 relational database with connection pooling and WAL archiving.
@@ -251,7 +260,8 @@ flowchart TB
 ## 4. Cross-Cutting Concerns
 
 ### 4.1 Global Exception & Error Handling
-- Handled via `backend/app/middleware/error_handler.py`.
+- **TypeScript**: Handled via `backend-ts/src/middleware/errorHandler.ts` (Express.js error middleware).
+- **Python**: Handled via `backend/app/middleware/error_handler.py`.
 - `HTTPException` instances are translated into structured JSON responses:
   ```json
   {
@@ -289,3 +299,4 @@ flowchart TB
 - For details on the repository layout and file locations, see [**03-Repository-Structure.md**](./03-Repository-Structure.md).
 - For complete table schemas and relationships, see [**04-Database-and-ERD.md**](./04-Database-and-ERD.md).
 - For the REST API contract and route specifications, see [**05-API-Architecture.md**](./05-API-Architecture.md).
+- For the TypeScript backend architecture and migration reference, see [**22-TypeScript-Backend-Architecture.md**](./22-TypeScript-Backend-Architecture.md).

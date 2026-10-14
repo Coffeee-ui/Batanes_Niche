@@ -1,5 +1,8 @@
 # 15 - Deployment and Operations
 
+> [!IMPORTANT]
+> The backend container now runs the **TypeScript/Express.js** (`backend-ts/`) implementation. References to `FastAPI`, `Uvicorn`, `Alembic`, and `uvicorn` have been updated accordingly.
+
 ## 1. Production Architecture Topology
 
 The **Batanes Niche Job Portal** is deployed as an orchestrated multi-container application using **Docker Compose** fronted by **Nginx** and backed by **PostgreSQL 16**.
@@ -15,7 +18,7 @@ flowchart TB
         end
 
         subgraph BackendService["Backend Container (batanes_backend)"]
-            FastAPIApp["FastAPI + Uvicorn Workers<br/>(Port 8000)"]
+            NodeApp["Express.js + Node.js<br/>(Port 8000)"]
             UploadsDir["Uploaded Documents Volume<br/>(/app/uploads)"]
         end
 
@@ -27,12 +30,12 @@ flowchart TB
 
     %% Internal routing
     NginxServer -- "Static HTML/CSS/JS (/*)" --> StaticSPAFiles
-    NginxServer -- "Proxy /api/* (Port 8000)" --> FastAPIApp
-    NginxServer -- "Proxy /admin* (Port 8000)" --> FastAPIApp
-    NginxServer -- "Proxy /static/* (Port 8000)" --> FastAPIApp
+    NginxServer -- "Proxy /api/* (Port 8000)" --> NodeApp
+    NginxServer -- "Proxy /admin* (Port 8000)" --> NodeApp
+    NginxServer -- "Proxy /static/* (Port 8000)" --> NodeApp
 
-    FastAPIApp -- "SQLAlchemy 2.0 Async/Sync" --> PostgreSQL
-    FastAPIApp --> UploadsDir
+    NodeApp -- "Prisma ORM" --> PostgreSQL
+    NodeApp --> UploadsDir
     PostgreSQL --> PostgresData
 ```
 
@@ -66,11 +69,12 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 ## 3. Docker Containerization Architecture
 
 ### 3.1 Backend Dockerfile (`docker/backend.Dockerfile`)
-- **Base Image**: `python:3.11-slim`.
-- **System Dependencies**: Installs `libpq-dev`, `gcc`, and `curl` for database drivers and container healthchecks.
-- **Security**: Creates an unprivileged system user (`appuser`, UID 1001) to run the Python application.
+- **Base Image**: `node:20-alpine`.
+- **System Dependencies**: Installs `curl` for container healthchecks and OpenSSL for Prisma.
+- **Security**: Creates an unprivileged system user (`appuser`, UID 1001) to run the Node.js application.
+- **Build**: Runs `npm ci`, `npx prisma generate`, and `npm run build` to compile TypeScript to `dist/`.
 - **Healthcheck**: Probes `http://localhost:8000/health` every 20 seconds.
-- **Entrypoint**: Runs `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+- **Entrypoint**: Runs `node dist/main.js`.
 
 ### 3.2 Frontend Dockerfile (`docker/frontend.Dockerfile`)
 - **Multi-Stage Build**:
@@ -93,9 +97,10 @@ ENVIRONMENT=production
 DEBUG=False
 APP_NAME="Batanes Niche Job Portal"
 BASE_URL=https://batanesjobs.ph
+PORT=8000
 
 # Relational Database Connection (PostgreSQL 16)
-DATABASE_URL=postgresql+asyncpg://batanes_user:REPLACE_WITH_HIGH_ENTROPY_PASSWORD@db:5432/batanes_niche
+DATABASE_URL=postgresql://batanes_user:REPLACE_WITH_HIGH_ENTROPY_PASSWORD@db:5432/batanes_niche
 POSTGRES_DB=batanes_niche
 POSTGRES_USER=batanes_user
 POSTGRES_PASSWORD=REPLACE_WITH_HIGH_ENTROPY_PASSWORD
@@ -126,14 +131,14 @@ MAIL_SSL_TLS=False
 
 ## 5. Database Migrations & Operational Upgrades
 
-Database migrations are executed through **Alembic** within the running backend container:
+Database migrations are executed through **Prisma Migrate** within the running backend container:
 
 ```bash
 # Apply all pending database schema migrations
-docker compose exec backend alembic upgrade head
+docker compose exec backend npx prisma migrate deploy
 
-# Verify migration status
-docker compose exec backend alembic current
+# Verify Prisma migration status
+docker compose exec backend npx prisma migrate status
 ```
 
 ---

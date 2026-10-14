@@ -1,0 +1,95 @@
+import path from 'path';
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { settings } from './core/config';
+import { prisma } from './database/client';
+import { structuredLoggingMiddleware } from './middleware/logging';
+import { errorHandler } from './middleware/errorHandler';
+import { apiV1Router } from './api/v1';
+import { adminRouter } from './admin/routes';
+
+const app = express();
+
+// Trust proxy for IP headers
+app.set('trust proxy', 1);
+
+// CORS configuration matching FastAPI
+app.use(
+  cors({
+    origin: settings.ALLOWED_ORIGINS,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['*'],
+  })
+);
+
+// Body parsers & cookie parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Structured logging middleware
+app.use(structuredLoggingMiddleware);
+
+// Security Headers (Section 26.8)
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  if (settings.ENVIRONMENT === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// --- Health & Readiness Endpoints (Section 34) ---
+
+// GET /health (Liveness probe)
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    app: settings.APP_NAME,
+    version: '2.0.0',
+  });
+});
+
+// GET /ready (Readiness probe)
+app.get('/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: 'ready',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (exc) {
+    res.status(503).json({
+      status: 'not_ready',
+      database: 'disconnected',
+      error: exc instanceof Error ? exc.message : String(exc),
+    });
+  }
+});
+
+// Mount Static Files for Admin UI
+const adminStaticDir = path.resolve(__dirname, 'static');
+app.use('/admin/static', express.static(adminStaticDir));
+
+// Mount Routers
+app.use('/api/v1', apiV1Router);
+app.use('/admin', adminRouter);
+
+// Global Error Handler
+app.use(errorHandler);
+
+// Start server
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(settings.PORT, () => {
+    console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
+    console.log(`[Batanes Niche] Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
+    console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);
+  });
+}
+
+export default app;

@@ -7,6 +7,7 @@ The **Batanes Niche Job Portal** repository is structured into distinct top-leve
 ```text
 Batanes_Niche/
 ├── backend/                  # FastAPI backend application, models, migrations, tests
+├── backend-ts/               # Express.js + Prisma ORM TypeScript backend (drop-in replacement)
 ├── frontend/                 # React 18 single-page application, components, styles
 ├── docker/                   # Docker buildfiles and production Nginx reverse proxy config
 ├── development/              # Operational documentation, testing contracts, Windows batch scripts

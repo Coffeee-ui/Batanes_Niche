@@ -56,7 +56,16 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ### Added
 
+- **Backend Migration to TypeScript (`backend-ts/`) — Express.js + Prisma ORM + Nunjucks Drop-In Replacement**
+  - Engineered a fully typed, modern TypeScript backend residing in `backend-ts/` designed as a 100% bit-for-bit behavioral drop-in replacement for the original Python/FastAPI backend.
+  - **Zero Frontend Disruption**: Preserves all 32 REST endpoints, query parameters, payload structures, status codes (`201` for resource creations, `422` for validation errors, `429` for rate limits), and the exact `{ "detail": ... }` error envelope required by `frontend/src/api/client.ts`.
+  - **Data Parity with Prisma**: Database schema replicates all 12 existing tables, foreign keys, cascade rules, and check constraints, operating directly on the production/development database.
+  - **Admin SSR with Nunjucks**: Ports all 12 administrative routes and 7 server-rendered HTML templates with HMAC-SHA256 session cookie signing and double-submit CSRF protection.
+  - **Deterministic 70/30 Scoring Engine**: Preserves the exact geographic distance and canonical skill matching formulas.
+  - **Comprehensive Documentation**: Added `22-TypeScript-Backend-Architecture.md` and migration plan `TypeScript-Backend-Migration.md`.
+
 - **Development-Only Demo Mode — backend-controlled one-click demo access for local development and demonstration**
+
   - Added a secure, development-stage **Demo Mode** to simplify local development, testing, and stakeholder demonstrations without manual credential entry.
   - **Backend-Controlled Configuration**: Controlled exclusively by backend configuration (`DEMO_MODE: bool = False` in `Settings` and `backend/.env`). Disabled by default. The frontend cannot independently activate Demo Mode via local storage, URL params, or client state.
   - **Production Protection Guarantee**: Strictly locked to development environments (`ENVIRONMENT in ("development", "dev", "local", "test", "testing")`). If `ENVIRONMENT="production"`, Demo Mode remains permanently inactive even if `DEMO_MODE=True` is configured. Direct API invocations in production reject with `HTTP 404 Not Found`, behaving as though Demo Mode does not exist.

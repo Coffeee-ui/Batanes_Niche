@@ -1,0 +1,208 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                   Int                   @id @default(autoincrement())
+  username             String                @unique
+  email                String                @unique
+  password_hash        String
+  full_name            String
+  phone_number         String?
+  municipality         String
+  barangay             String?
+  skills               String?
+  profile_pic          String?
+  resume_url           String?
+  role                 String
+  account_status       String
+  created_at           DateTime              @default(now())
+
+  employer_profile     EmployerProfile?
+  job_seeker_profile   JobSeekerProfile?
+  jobs                 Job[]
+  applications         Application[]
+  saved_jobs           SavedJob[]
+  notifications        Notification[]
+  refresh_tokens       RefreshToken[]
+  password_reset_tokens PasswordResetToken[]
+  audit_logs           AuditLog[]
+
+  @@map("users")
+}
+
+model EmployerProfile {
+  user_id             Int      @id
+  company_name        String
+  company_address     String
+  company_description String?
+  business_type       String
+
+  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("employer_profiles")
+}
+
+model JobSeekerProfile {
+  user_id          Int      @id
+  bio              String?
+  education        String?
+  experience_years Int      @default(0)
+
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("job_seeker_profiles")
+}
+
+model Job {
+  id              Int           @id @default(autoincrement())
+  employer_id     Int
+  title           String
+  description     String
+  municipality    String
+  barangay        String?
+  salary_min      Decimal
+  salary_max      Decimal
+  employment_type String
+  required_skills String
+  status          String        @default("active")
+  created_at      DateTime      @default(now())
+  deleted_at      DateTime?
+
+  employer        User          @relation(fields: [employer_id], references: [id], onDelete: Cascade)
+  applications    Application[]
+  saved_jobs      SavedJob[]
+
+  @@index([status])
+  @@index([municipality])
+  @@index([title])
+  @@index([status, municipality])
+  @@index([employer_id])
+  @@map("jobs")
+}
+
+model Application {
+  id           Int      @id @default(autoincrement())
+  job_id       Int
+  seeker_id    Int
+  cover_letter String?
+  resume_url   String?
+  status       String   @default("pending")
+  created_at   DateTime @default(now())
+
+  job          Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  seeker       User     @relation(fields: [seeker_id], references: [id], onDelete: Cascade)
+
+  @@unique([job_id, seeker_id])
+  @@index([job_id])
+  @@index([seeker_id])
+  @@map("applications")
+}
+
+model SavedJob {
+  id        Int      @id @default(autoincrement())
+  seeker_id Int
+  job_id    Int
+  saved_at  DateTime @default(now())
+
+  seeker    User     @relation(fields: [seeker_id], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([seeker_id, job_id])
+  @@index([seeker_id])
+  @@index([job_id])
+  @@map("saved_jobs")
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  title      String
+  message    String
+  type       String
+  is_read    Boolean  @default(false)
+  link       String?
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+  @@map("notifications")
+}
+
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token_hash String   @unique
+  expires_at DateTime
+  revoked    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("refresh_tokens")
+}
+
+model RevokedToken {
+  id         Int      @id @default(autoincrement())
+  token_jti  String   @unique
+  revoked_at DateTime @default(now())
+  expires_at DateTime
+
+  @@map("revoked_tokens")
+}
+
+model PasswordResetToken {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  identifier     String
+  otp_hash       String
+  expires_at     DateTime
+  used           Boolean  @default(false)
+  attempts_count Int      @default(0)
+  created_at     DateTime @default(now())
+
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([identifier])
+  @@map("password_reset_tokens")
+}
+
+model ErrorReport {
+  id            Int      @id @default(autoincrement())
+  timestamp     DateTime @default(now())
+  username      String?
+  endpoint      String?
+  error_message String
+  stack_trace   String?
+  request_data  String?
+
+  @@index([timestamp])
+  @@map("error_reports")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  timestamp   DateTime @default(now())
+  actor_id    Int?
+  actor_role  String
+  ip_address  String?
+  action      String
+  target_type String?
+  target_id   Int?
+  details     String?
+
+  actor       User?    @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+
+  @@index([actor_id])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
