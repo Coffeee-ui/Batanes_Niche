@@ -280,8 +280,13 @@ export const applicationsApi = {
       cover_letter: coverLetter || null,
     }).then(r => r.data),
 
-  myApplications: async (_params: { page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Application>> => {
-    const items = await api.get<Application[]>('/applications').then(r => r.data);
+  myApplications: async (params: { job_id?: number; page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Application>> => {
+    const queryParams: Record<string, any> = {};
+    if (params.job_id) queryParams.job_id = params.job_id;
+    if (params.page_size) queryParams.limit = params.page_size;
+    if (params.page && params.page_size) queryParams.offset = (params.page - 1) * params.page_size;
+
+    const items = await api.get<Application[]>('/applications', { params: queryParams }).then(r => r.data);
     const normalized = items.map(a => ({
       ...a,
       job_title: a.job?.title || a.job_title || 'Position',
@@ -291,24 +296,27 @@ export const applicationsApi = {
     return {
       items: normalized,
       total: normalized.length,
-      page: 1,
-      page_size: 50,
+      page: params.page || 1,
+      page_size: params.page_size || 50,
       total_pages: 1,
     };
   },
 
   forJob: async (jobId: number): Promise<Application[]> => {
-    const items = await api.get<Application[]>('/applications').then(r => r.data);
-    return items.filter(a => a.job_id === jobId);
+    const items = await api.get<Application[]>('/applications', { params: { job_id: jobId } }).then(r => r.data);
+    return items.map(a => ({
+      ...a,
+      job_title: a.job?.title || a.job_title || 'Position',
+      company_name: a.job?.company_name || a.company_name || 'Batanes Employer',
+      seeker_name: a.applicant?.full_name || a.seeker_name || 'Applicant',
+    }));
   },
 
   updateStatus: (applicationId: number, status: string) =>
     api.put<Application>(`/applications/${applicationId}`, { status }).then(r => r.data),
 
-  withdraw: async (_applicationId: number) => {
-    // In v2 applications are archived or transitioned by employer;
-    return { message: 'Application updated' };
-  },
+  withdraw: (applicationId: number) =>
+    api.post<Application>(`/applications/${applicationId}/withdraw`).then(r => r.data),
 };
 
 // ============================================================

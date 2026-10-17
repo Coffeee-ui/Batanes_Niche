@@ -43,6 +43,7 @@ export class ApplicationService {
       resume_url: application.resume_url,
       created_at: application.created_at.toISOString(),
       applicant: applicantProfile,
+      job: application.job ? JobService.toJobOut(application.job as any) : undefined,
     };
   }
 
@@ -60,38 +61,78 @@ export class ApplicationService {
       throw new HttpError(400, 'You cannot apply to your own job listing.');
     }
 
-    const hasApplied = await ApplicationRepository.hasActiveApplication(job.id, seeker.id);
-    if (hasApplied) {
+    const existingApp = await prisma.application.findUnique({
+      where: {
+        job_id_seeker_id: { job_id: job.id, seeker_id: seeker.id },
+      },
+    });
+
+    if (existingApp && existingApp.status !== 'withdrawn') {
       throw new HttpError(400, 'You have already applied for this job.');
     }
 
     const resume = appData.resume_url?.trim() || seeker.resume_url || null;
     const coverLetter = appData.cover_letter?.trim() || null;
 
-    const [createdApp] = await prisma.$transaction([
-      prisma.application.create({
-        data: {
-          job: { connect: { id: job.id } },
-          seeker: { connect: { id: seeker.id } },
-          cover_letter: coverLetter,
-          resume_url: resume,
-          status: 'pending',
-        },
-        include: {
-          job: { include: { employer: { include: { employer_profile: true } } } },
-          seeker: { include: { job_seeker_profile: true } },
-        },
-      }),
-      prisma.notification.create({
-        data: {
-          user: { connect: { id: job.employer_id } },
-          title: 'New Application Received',
-          message: `${seeker.full_name} submitted an application for your job posting: '${job.title}'.`,
-          type: 'new_application',
-          link: '/jobs/my',
-        },
-      }),
-    ]);
+    let createdApp: ApplicationWithRelations;
+
+    if (existingApp && existingApp.status === 'withdrawn') {
+      // Re-activate previously withdrawn application to satisfy the unique constraint
+      const [updated] = await prisma.$transaction([
+        prisma.application.update({
+          where: { id: existingApp.id },
+          data: {
+            cover_letter: coverLetter,
+            resume_url: resume,
+            status: 'pending',
+            created_at: new Date(),
+          },
+          include: {
+            job: { include: { employer: { include: { employer_profile: true } } } },
+            seeker: { include: { job_seeker_profile: true } },
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            user: { connect: { id: job.employer_id } },
+            title: 'New Application Received',
+            message: `${seeker.full_name} submitted an application for your job posting: '${job.title}'.`,
+            type: 'new_application',
+            link: '/jobs/my',
+          },
+        }),
+      ]);
+      createdApp = updated;
+    } else {
+      const [created] = await prisma.$transaction([
+        prisma.application.create({
+          data: {
+            job: { connect: { id: job.id } },
+            seeker: { connect: { id: seeker.id } },
+            cover_letter: coverLetter,
+            resume_url: resume,
+            status: 'pending',
+          },
+          include: {
+            job: { include: { employer: { include: { employer_profile: true } } } },
+            seeker: { include: { job_seeker_profile: true } },
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            user: { connect: { id: job.employer_id } },
+            title: 'New Application Received',
+            message: `${seeker.full_name} submitted an application for your job posting: '${job.title}'.`,
+            type: 'new_application',
+            link: '/jobs/my',
+          },
+        }),
+      ]);
+      createdApp = created;
+    }
+
+    // Fetch fresh job so application count is accurate immediately
+    const freshJob = await JobRepository.getById(job.id, false);
 
     return {
       id: createdApp.id,
@@ -100,7 +141,7 @@ export class ApplicationService {
       cover_letter: createdApp.cover_letter,
       resume_url: createdApp.resume_url,
       created_at: createdApp.created_at.toISOString(),
-      job: JobService.toJobOut(job),
+      job: freshJob ? JobService.toJobOut(freshJob) : JobService.toJobOut(job),
     };
   }
 
@@ -123,15 +164,16 @@ export class ApplicationService {
     }
 
     const newStatus = updateData.status.trim().toLowerCase();
-    if (!['pending', 'accepted', 'rejected'].includes(newStatus)) {
-      throw new HttpError(400, "Invalid status. Allowed statuses: 'pending', 'accepted', 'rejected'.");
+    if (!['pending', 'accepted', 'rejected', 'withdrawn'].includes(newStatus)) {
+      throw new HttpError(400, "Invalid status. Allowed statuses: 'pending', 'accepted', 'rejected', 'withdrawn'.");
     }
 
     const currentStatus = application.status;
     const allowedTransitions: Record<string, string[]> = {
-      pending: ['accepted', 'rejected'],
-      accepted: ['pending'],
+      pending: ['accepted', 'rejected', 'withdrawn'],
+      accepted: ['pending', 'rejected', 'withdrawn'],
       rejected: ['pending'],
+      withdrawn: ['pending'],
     };
 
     if (newStatus !== currentStatus && !allowedTransitions[currentStatus]?.includes(newStatus)) {
@@ -143,6 +185,8 @@ export class ApplicationService {
         ? 'accepted'
         : newStatus === 'rejected'
         ? 'rejected'
+        : newStatus === 'withdrawn'
+        ? 'withdrawn'
         : 'marked pending';
 
     const [updatedApp] = await prisma.$transaction([
@@ -160,7 +204,7 @@ export class ApplicationService {
           title: 'Application Status Updated',
           message: `Your application for '${application.job.title}' was ${statusText}.`,
           type: 'application_status_updated',
-          link: '/dashboard',
+          link: '/applications',
         },
       }),
     ]);
@@ -168,14 +212,98 @@ export class ApplicationService {
     return this.toEmployerApplicationOut(updatedApp);
   }
 
+  static async withdrawApplication(
+    appId: number,
+    currentUser: User
+  ): Promise<SeekerApplicationOut | EmployerApplicationOut> {
+    const application = await ApplicationRepository.getById(appId);
+    if (!application) {
+      throw new HttpError(404, 'Application not found.');
+    }
+
+    const isSeekerOwner = currentUser.role === 'job_seeker' && application.seeker_id === currentUser.id;
+    const isEmployerOwner = (currentUser.role === 'employer' && application.job.employer_id === currentUser.id) || currentUser.role === 'admin';
+
+    if (!isSeekerOwner && !isEmployerOwner) {
+      throw new HttpError(403, 'You do not have permission to withdraw this application.');
+    }
+
+    if (application.status === 'withdrawn') {
+      throw new HttpError(400, 'Application is already withdrawn.');
+    }
+
+    // Job seekers can withdraw if pending or accepted
+    if (isSeekerOwner && !['pending', 'accepted'].includes(application.status)) {
+      throw new HttpError(400, `Cannot withdraw an application that is already '${application.status}'.`);
+    }
+
+    // Execute atomic withdrawal & notification
+    if (isSeekerOwner) {
+      const [updatedApp] = await prisma.$transaction([
+        prisma.application.update({
+          where: { id: appId },
+          data: { status: 'withdrawn' },
+          include: {
+            job: { include: { employer: { include: { employer_profile: true } } } },
+            seeker: { include: { job_seeker_profile: true } },
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            user: { connect: { id: application.job.employer_id } },
+            title: 'Application Withdrawn',
+            message: `${currentUser.full_name} withdrew their application for '${application.job.title}'.`,
+            type: 'application_withdrawn',
+            link: '/jobs/my',
+          },
+        }),
+      ]);
+
+      return {
+        id: updatedApp.id,
+        job_id: updatedApp.job_id,
+        status: updatedApp.status,
+        cover_letter: updatedApp.cover_letter,
+        resume_url: updatedApp.resume_url,
+        created_at: updatedApp.created_at.toISOString(),
+        job: updatedApp.job ? JobService.toJobOut(updatedApp.job as any) : undefined,
+      };
+    } else {
+      // Employer withdrawing/rejecting applicant
+      const [updatedApp] = await prisma.$transaction([
+        prisma.application.update({
+          where: { id: appId },
+          data: { status: 'withdrawn' },
+          include: {
+            job: { include: { employer: { include: { employer_profile: true } } } },
+            seeker: { include: { job_seeker_profile: true } },
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            user: { connect: { id: application.seeker_id } },
+            title: 'Application Status Updated',
+            message: `Your application for '${application.job.title}' was withdrawn.`,
+            type: 'application_status_updated',
+            link: '/applications',
+          },
+        }),
+      ]);
+
+      return this.toEmployerApplicationOut(updatedApp);
+    }
+  }
+
   static async listApplications(
     currentUser: User,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
+    jobId?: number
   ): Promise<(SeekerApplicationOut | EmployerApplicationOut)[]> {
     if (currentUser.role === 'job_seeker') {
       const apps = await ApplicationRepository.listBySeeker(currentUser.id, limit, offset);
-      return apps.map((a: ApplicationWithRelations) => ({
+      const filtered = jobId ? apps.filter(a => a.job_id === jobId) : apps;
+      return filtered.map((a: ApplicationWithRelations) => ({
         id: a.id,
         job_id: a.job_id,
         status: a.status,
@@ -185,7 +313,13 @@ export class ApplicationService {
         job: a.job ? JobService.toJobOut(a.job as any) : undefined,
       }));
     } else if (currentUser.role === 'employer') {
-      const apps = await ApplicationRepository.listByEmployer(currentUser.id, limit, offset);
+      if (jobId) {
+        const job = await JobRepository.getById(jobId, true);
+        if (!job || job.employer_id !== currentUser.id) {
+          throw new HttpError(403, 'You do not have permission to view applicants for this job.');
+        }
+      }
+      const apps = await ApplicationRepository.listByEmployer(currentUser.id, jobId, limit, offset);
       return apps.map(a => this.toEmployerApplicationOut(a));
     }
     return [];

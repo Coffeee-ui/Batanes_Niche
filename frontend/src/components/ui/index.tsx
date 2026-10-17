@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -116,37 +116,185 @@ export function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   );
 }
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: string;
   confirmLabel?: string;
-  onConfirm: () => void;
+  cancelLabel?: string;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   danger?: boolean;
+  loading?: boolean;
 }
 
 export function ConfirmDialog({
-  isOpen, title, message, confirmLabel = 'Confirm',
-  onConfirm, onCancel, danger
+  isOpen,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel,
+  danger = false,
+  loading = false,
 }: ConfirmDialogProps) {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const previousActiveElementRef = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // Save triggering element for focus restore
+    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
+
+    // Lock background scrolling
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Focus inside modal
+    const focusTimer = setTimeout(() => {
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable && focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        dialogRef.current?.focus();
+      }
+    }, 50);
+
+    // Escape key listener & focus trap
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (!loading) {
+          onCancel();
+        }
+        return;
+      }
+
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      clearTimeout(focusTimer);
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      if (previousActiveElementRef.current && typeof previousActiveElementRef.current.focus === 'function') {
+        previousActiveElementRef.current.focus();
+      }
+    };
+  }, [isOpen, loading, onCancel]);
+
   if (!isOpen) return null;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!loading) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onCancel} />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-desc"
+    >
+      {/* Full-screen backdrop preventing background clicks */}
       <div
-        className="relative rounded-2xl p-6 w-full max-w-sm animate-scale-in"
-        style={{ background: 'hsl(var(--color-surface))', boxShadow: 'var(--shadow-lg)' }}
+        className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-xs"
+        style={{ pointerEvents: 'auto' }}
+        onClick={handleBackdropClick}
+      />
+
+      {/* Modal Dialog Box */}
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="relative rounded-2xl p-6 w-full max-w-md animate-scale-in outline-none"
+        style={{
+          background: 'hsl(var(--color-surface))',
+          boxShadow: 'var(--shadow-xl)',
+          border: '1px solid hsl(var(--color-border-subtle))',
+          pointerEvents: 'auto',
+          zIndex: 51,
+        }}
+        onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold mb-2" style={{ color: 'hsl(var(--color-text))' }}>{title}</h2>
-        <p className="text-sm mb-6" style={{ color: 'hsl(var(--color-text-muted))' }}>{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-          <button
-            className={danger ? 'btn btn-danger' : 'btn btn-primary'}
-            onClick={onConfirm}
+        {/* Header with Title and visible Close (X) button */}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h2
+            id="confirm-dialog-title"
+            className="text-lg font-bold"
+            style={{ color: 'hsl(var(--color-text))' }}
           >
-            {confirmLabel}
+            {title}
+          </h2>
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="p-1 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 -mr-1 -mt-1 text-muted"
+            aria-label="Close dialog"
+            id="btn-modal-close-x"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Message */}
+        <p
+          id="confirm-dialog-desc"
+          className="text-sm leading-relaxed mb-6"
+          style={{ color: 'hsl(var(--color-text-muted))' }}
+        >
+          {message}
+        </p>
+
+        {/* Actions */}
+        <div className="flex gap-3 justify-end items-center">
+          <button
+            id="btn-modal-cancel"
+            type="button"
+            className="btn btn-secondary text-sm px-4 py-2"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            {cancelLabel}
+          </button>
+          <button
+            id="btn-modal-confirm"
+            type="button"
+            className={`btn text-sm px-4 py-2 ${danger ? 'btn-danger' : 'btn-primary'}`}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? <Spinner size="sm" /> : confirmLabel}
           </button>
         </div>
       </div>

@@ -71,13 +71,19 @@ export class ApplicationRepository {
 
   static async listByEmployer(
     employerId: number,
+    jobId?: number,
     limit: number = 50,
     offset: number = 0
   ): Promise<ApplicationWithRelations[]> {
+    const where: Prisma.ApplicationWhereInput = {
+      job: { employer_id: employerId },
+    };
+    if (jobId) {
+      where.job_id = jobId;
+    }
+
     return prisma.application.findMany({
-      where: {
-        job: { employer_id: employerId },
-      },
+      where,
       include: {
         job: { include: { employer: { include: { employer_profile: true } } } },
         seeker: { include: { job_seeker_profile: true } },
@@ -93,9 +99,9 @@ export class ApplicationRepository {
       where: {
         job_id_seeker_id: { job_id: jobId, seeker_id: seekerId },
       },
-      select: { id: true },
+      select: { id: true, status: true },
     });
-    return existing !== null;
+    return existing !== null && existing.status !== 'withdrawn';
   }
 
   static async countApplications(): Promise<number> {

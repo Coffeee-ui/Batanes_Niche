@@ -73,7 +73,7 @@ export interface JobPreview {
   required_skills?: string;
 }
 
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
 export interface EmployerApplicantProfile {
   seeker_id: number;

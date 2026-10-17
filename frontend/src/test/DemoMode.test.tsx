@@ -122,7 +122,7 @@ describe('Demo Mode Frontend Integration', () => {
 
       expect(screen.getByRole('button', { name: /job seeker/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /employer/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /administrator/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /administrator/i })).not.toBeInTheDocument();
     });
 
     it('triggers demo login when a demo button is clicked', async () => {

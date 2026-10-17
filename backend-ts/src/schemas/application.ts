@@ -11,7 +11,7 @@ export const ApplicationCreateSchema = z.object({
 export type ApplicationCreate = z.infer<typeof ApplicationCreateSchema>;
 
 export const ApplicationUpdateSchema = z.object({
-  status: z.enum(['pending', 'accepted', 'rejected']),
+  status: z.enum(['pending', 'accepted', 'rejected', 'withdrawn']),
 });
 
 export type ApplicationUpdate = z.infer<typeof ApplicationUpdateSchema>;
@@ -36,6 +36,8 @@ export const EmployerApplicationOutSchema = z.object({
   resume_url: z.string().nullable().optional(),
   created_at: z.string(),
   applicant: EmployerApplicantProfileSchema,
+  job: JobOutSchema.nullable().optional(),
 });
 
 export type EmployerApplicationOut = z.infer<typeof EmployerApplicationOutSchema>;
+

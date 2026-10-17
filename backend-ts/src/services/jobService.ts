@@ -43,7 +43,9 @@ export class JobService {
       status: job.status,
       created_at: job.created_at.toISOString(),
       company_name: companyName,
-      application_count: job.applications ? job.applications.length : 0,
+      application_count: job.applications
+        ? job.applications.filter((a: { status?: string }) => a.status !== 'withdrawn').length
+        : 0,
     };
   }
 

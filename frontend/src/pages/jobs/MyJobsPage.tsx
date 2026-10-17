@@ -11,6 +11,7 @@ export default function MyJobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [closeId, setCloseId] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -22,14 +23,16 @@ export default function MyJobsPage() {
 
   const handleClose = async () => {
     if (!closeId) return;
+    setClosing(true);
     try {
       await jobsApi.close(closeId);
       setJobs(prev => prev.map(j => j.id === closeId ? { ...j, status: 'closed' as const } : j));
       toastSuccess('Job listing closed.');
+      setCloseId(null);
     } catch (err) {
       toastError(extractError(err));
     } finally {
-      setCloseId(null);
+      setClosing(false);
     }
   };
 
@@ -105,7 +108,7 @@ export default function MyJobsPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
-                    to={`/applications`}
+                    to={`/applications?jobId=${job.id}`}
                     id={`btn-view-applicants-${job.id}`}
                     className="btn btn-secondary text-xs py-2 px-3"
                   >
@@ -143,8 +146,9 @@ export default function MyJobsPage() {
         message="This will mark the job as closed. It will no longer appear in searches, and no new applications will be accepted."
         confirmLabel="Close Listing"
         danger
+        loading={closing}
         onConfirm={handleClose}
-        onCancel={() => setCloseId(null)}
+        onCancel={() => !closing && setCloseId(null)}
       />
     </div>
   );
