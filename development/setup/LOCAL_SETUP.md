@@ -123,8 +123,10 @@ Vite is preconfigured to automatically proxy `/api` requests to `http://127.0.0.
 
 For streamlined local development on Windows, batch scripts are provided in `development/scripts/`:
 
-- **Setup Everything**: `development\scripts\setup.bat` (creates venv, installs all deps, runs migrations)
-- **Start All Services**: `development\scripts\start.bat` (launches backend and frontend concurrently)
+- **Setup Everything**: `development\scripts\setup.bat` (creates venv, installs all workspace deps, generates Prisma client, runs `pnpm db:setup`)
+- **Initialize Database & Seed**: `development\scripts\init-db.bat` or `pnpm db:setup` (1-command SQLite generation, schema sync, and idempotent seeding)
+- **Reset Database**: `pnpm db:reset` or `pnpm db:setup -- --reset` (drops & recreates clean dev database)
+- **Start All Services**: `development\scripts\start-ts.bat` (launches TypeScript backend and Vite frontend concurrently)
 - **Stop All Services**: `development\scripts\stop.bat` (terminates active dev processes)
 - **Run All Tests**: `development\scripts\test.bat` (executes backend pytest and frontend vitest)
 

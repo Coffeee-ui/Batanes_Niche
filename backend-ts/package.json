@@ -15,9 +15,10 @@
     "typecheck": "tsc --noEmit",
     "db:sync": "ts-node src/database/syncProvider.ts",
     "db:push": "pnpm run db:sync && prisma db push",
-    "db:seed": "ts-node src/database/seed.ts",
-    "db:migrate": "pnpm run db:push && pnpm run db:seed",
-    "db:reset": "ts-node src/database/reset.ts",
+    "db:setup": "ts-node --transpile-only --project ../development/scripts/tsconfig.json ../development/scripts/init-db.ts",
+    "db:seed": "ts-node --transpile-only --project ../development/scripts/tsconfig.json ../development/scripts/init-db.ts --seed-only",
+    "db:reset": "ts-node --transpile-only --project ../development/scripts/tsconfig.json ../development/scripts/init-db.ts --reset",
+    "db:migrate": "pnpm run db:setup",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
   },

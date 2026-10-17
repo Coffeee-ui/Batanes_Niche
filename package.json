@@ -9,8 +9,10 @@
     "build": "pnpm -r build",
     "test": "pnpm --filter batanes-niche-frontend test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "db:migrate": "pnpm --filter batanes-niche-backend-ts db:migrate",
+    "db:setup": "pnpm --filter batanes-niche-backend-ts db:setup",
+    "db:reset": "pnpm --filter batanes-niche-backend-ts db:reset",
     "db:seed": "pnpm --filter batanes-niche-backend-ts db:seed",
+    "db:migrate": "pnpm --filter batanes-niche-backend-ts db:migrate",
     "db:push": "pnpm --filter batanes-niche-backend-ts db:push"
   }
 }

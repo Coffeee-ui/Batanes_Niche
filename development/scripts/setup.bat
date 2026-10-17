@@ -61,15 +61,21 @@ alembic upgrade head
 
 REM 6. Set up Workspace Dependencies (Frontend & Backend-TS)
 echo.
-echo [4/4] Installing Workspace Dependencies via pnpm...
+echo [4/5] Installing Workspace Dependencies via pnpm...
 cd /d "%~dp0..\.."
 call pnpm install
 cd /d "%~dp0..\..\backend-ts"
 call pnpm run prisma:generate
 
+REM 7. Initialize SQLite Database & Seed Data
+echo.
+echo [5/5] Initializing SQLite Database and Seed Data...
+cd /d "%~dp0..\.."
+call pnpm db:setup
+
 echo.
 echo ============================================================
 echo Setup completed successfully!
-echo Run 'development\scripts\start.bat' to launch the application.
+echo Run 'development\scripts\start-ts.bat' or 'start.bat' to launch the application.
 echo ============================================================
 pause

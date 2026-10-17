@@ -240,15 +240,36 @@ Verify: `GET http://localhost:8000/ready` → `{ "provider": "postgresql", "stat
 #### Available database commands (from root or `backend-ts/`):
 | Command | Purpose |
 |---|---|
-| `pnpm db:sync` | Sync `schema.prisma` provider to match `.env`, regenerate Prisma Client |
-| `pnpm db:push` | Sync + push schema to active database |
-| `pnpm db:seed` | Run idempotent demo data seed (skips existing records) |
-| `pnpm db:migrate` | `db:push` + `db:seed` in sequence |
-| `pnpm db:reset` | Drop all data, re-run seed (dev only, refuses in production) |
+| `pnpm db:setup` | **1-Command Database Setup**: Creates SQLite file/folder if missing, pushes schema, and seeds baseline + sample data idempotently inside transactions |
+| `pnpm db:reset` | Clean wipe/drop all tables & recreate with fresh seed data (dev only, strictly refuses in production) |
+| `pnpm db:seed` | Run idempotent baseline + sample data seed (skips existing records) |
+| `pnpm db:push` | Sync `schema.prisma` + push schema directly to the active database |
+| `pnpm db:migrate` | Alias for `pnpm db:setup` |
+| `development\scripts\init-db.bat` | Windows batch 1-click database setup script |
 
+#### CLI Options for `init-db.ts`:
+You can pass flags to `pnpm db:setup -- [options]` or `ts-node development/scripts/init-db.ts [options]`:
+- `--help`, `-h`: Show usage instructions and available options.
+- `--reset`: Drop and recreate the SQLite database cleanly before seeding (guarded against production & remote PostgreSQL).
+- `--seed-only`: Skip schema push and only insert baseline + sample seeds.
+- `--no-seed`: Push schema only; do not insert seed data.
+- `--db-path <path>`: Specify a custom SQLite file path (default: `Database/batanes_niche.db`).
 
+#### Development Accounts & Credentials (Development-Only):
+| Role | Username | Email | Dev Password | Access Scope |
+|---|---|---|---|---|
+| **Platform Administrator** | `admin` | `admin@batanesniche.ph` | `AdminSecure123!` | Backend SSR Admin Portal (`http://localhost:8000/admin`) |
+| **Employer (Canonical Demo)** | `batanes_inn` | `manager@batanesinn.ph` | `EmployerSecure123!` | Frontend 1-click Demo & Standard Login |
+| **Employer** | `bacasejos` | `jesi.bacasejos@gmail.com` | `EmployerSecure123!` | Frontend Standard Login |
+| **Employer** | `leklek` | `lexterlampas@gmail.com` | `EmployerSecure123!` | Frontend Standard Login |
+| **Job Seeker (Canonical Demo)** | `ivatan_guide` | `juan@batanesguide.ph` | `SeekerSecure123!` | Frontend 1-click Demo & Standard Login |
+| **Job Seeker** | `gabotero` | `gab.joland@gmail.com` | `SeekerSecure123!` | Frontend Standard Login |
+| **Job Seeker** | `elena_florez` | `elena@batanes.ph` | `SeekerSecure123!` | Frontend Standard Login |
 
-## 7. Running Automated Tests
+> [!IMPORTANT]
+> **Strict RBAC & Admin Isolation**: The frontend SPA only supports **Job Seeker** and **Employer** roles. No admin role or demo button exists in the frontend. Platform administrative access is restricted to the backend SSR interface (`/admin`). All passwords are automatically hashed with bcrypt (`10` rounds).
+
+---
 
 ### Backend Test Suite (Pytest + Coverage)
 ```bash
