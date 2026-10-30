@@ -27,14 +27,15 @@ The **Batanes Niche Job Portal** provides:
 
 ## 2. Technology Stack
 
-```
-Frontend (SPA):       React 18.3 | TypeScript 5.5 | Vite 5.3 | Tailwind CSS 3.4 | Axios
-Backend (REST API):   FastAPI 0.111 | Python 3.11 | Pydantic v2 | RateLimiter Rate Limiter
-Admin UI (SSR):       Jinja2 Templates | Itsdangerous Signed Cookies | Double-Submit CSRF
-Persistence:          Prisma ORM | PostgreSQL 16 (Production) | SQLite (Dev / Test)
-Database Migrations:  Alembic
-Containerization:     Docker Compose | Nginx 1.27 Reverse Proxy
-Testing:              Pytest 8.x + pytest-cov (Backend) | Vitest 1.6 + JSDOM (Frontend)
+```text
+Frontend (SPA):       React 18.3 | TypeScript 5.4+ | Vite 5.3 | Tailwind CSS 3.4 | Axios
+Backend (REST API):   Node.js 20+ | Express.js 4.19 | TypeScript 5.4+ | Zod | Rate Limiter | Helmet
+Admin UI (SSR):       Nunjucks 3.2 Templates | HMAC-SHA256 Signed Cookies | Double-Submit CSRF
+Persistence:          Prisma ORM 5.15 | PostgreSQL 16 (Production) | SQLite (Dev / Test)
+Database Migrations:  Prisma Client & Schema Push (`prisma db push`) | Dynamic Sync (`syncProvider.ts`)
+Workspace & Packages: pnpm 12+ Monorepo Workspace
+Containerization:     Docker Compose | Nginx 1.27 Reverse Proxy | Node 20 Alpine
+Testing & Quality:    TypeScript Compiler (`tsc --noEmit`) | Vitest 1.6 + JSDOM (Frontend & Zero-Jargon Audit)
 ```
 
 ---
@@ -43,7 +44,7 @@ Testing:              Pytest 8.x + pytest-cov (Backend) | Vitest 1.6 + JSDOM (Fr
 
 The system is built as a **Modular Monolith** with four strictly decoupled tiers:
 
-```
+```text
                       +-------------------------------------------------------+
                       |                      WEB CLIENT                       |
                       +-------------------------------------------------------+
@@ -53,8 +54,8 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
                                   |                               |
                                   v                               v
                       +-----------------------+       +-----------------------+
-                      |   React 18 SPA        |       |   Jinja2 Admin Portal |
-                      |   (Vite + Tailwind)   |       |   (FastAPI SSR)       |
+                      |   React 18 SPA        |       |  Nunjucks Admin Portal|
+                      |   (Vite + Tailwind)   |       |  (Express.js SSR)     |
                       +-----------------------+       +-----------------------+
                                   |                               |
                            REST API Calls                    Form Posts
@@ -64,8 +65,8 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
                                                   |
                                                   v
                                       +-----------------------+
-                                      |   FastAPI Application |
-                                      |   Backend Gateway     |
+                                      | Express.js Application|
+                                      | Backend Gateway (TS)  |
                                       +-----------------------+
                                                   |
                      +----------------------------+----------------------------+
@@ -73,14 +74,14 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
                      v                            v                            v
           +--------------------+        +--------------------+        +--------------------+
           |  Domain Services   |        |  Core Middleware   |        | External Services  |
-          |  (Business Logic)  |        |  (CORS, RateLimiter,   |        | (SMTP Email OTP    |
-          |                    |        |   Audit, Errors)   |        |  Delivery)         |
+          |  (Business Logic)  |        |  (CORS, Helmet,    |        | (SMTP Email OTP    |
+          |                    |        |   RateLimit, CSRF) |        |  Delivery)         |
           +--------------------+        +--------------------+        +--------------------+
                      |
                      v
           +--------------------+
           | Repository Layer   |
-          | (Prisma ORM)   |
+          | (Prisma ORM)       |
           +--------------------+
                      |
                      v
@@ -92,9 +93,9 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
 ```
 
 - **Client Presentation**: React 18 SPA handles public job search, seeker dashboard, and employer applicant reviews.
-- **Admin Isolation**: Nunjucks Admin Portal under `/admin` operates on signed HttpOnly session cookies (`batanes_admin_session`) and CSRF tokens.
-- **Domain Services**: Business logic, two-tier recommendations, and profile completeness calculations are centralized in domain services.
-- **Repository Pattern**: All database queries are encapsulated in repository classes.
+- **Admin Isolation**: Nunjucks Admin Portal under `/admin` operates on signed HttpOnly session cookies (`batanes_admin_session`) and CSRF tokens (`batanes_admin_csrf`).
+- **Domain Services**: Business logic, two-tier recommendations, and profile completeness calculations are centralized in domain services (`backend/src/services/`).
+- **Repository Pattern**: All database queries are encapsulated in repository classes (`backend/src/repositories/`).
 
 ---
 
@@ -115,58 +116,60 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
 For rapid onboarding on Windows, run the scripts in `development/scripts/`:
 
 ```cmd
-:: 1. Setup virtualenv, install all dependencies, run migrations
+:: 1. Automated workspace setup: install pnpm packages, generate Prisma client, seed SQLite
 development\scripts\setup.bat
 
-:: 2a. Launch NEW TypeScript backend (port 8000) and frontend (port 5173) concurrently
-development\scripts\start-ts.bat
-:: (or run .\start-ts.bat from root)
-
-:: 2b. OR Launch LEGACY FastAPI backend (port 8000) and frontend (port 5173) concurrently
+:: 2. Launch Express backend (port 8000) and React frontend (port 5173) concurrently
 development\scripts\start.bat
-:: (or development\scripts\start-legacy.bat / .\start-legacy.bat from root)
 
-:: 3. Run all backend and frontend tests
+:: 3. Run typechecks and frontend tests (vitest + zero-jargon contract)
 development\scripts\test.bat
 
 :: 4. Stop all running background dev servers
 development\scripts\stop.bat
-:: (or .\stop.bat from root)
 ```
 
 ---
 
-### Option B: Manual Setup
+### Option B: Manual Setup (Cross-Platform)
 
-#### 1. Backend Setup (Terminal 1)
+#### Prerequisites
+- **Node.js**: `v20.0.0` or higher
+- **pnpm**: `v9.0.0` or higher (`npm install -g pnpm` or `corepack enable`)
+
+#### 1. Install Dependencies & Initialize Database
+From the repository root:
+
 ```bash
-cd backend
-python -m venv venv
-
-# Windows:
-.\venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
-
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Run migrations & seed demo data
-alembic upgrade head
-python -m app.cli seed-data
-
-# Start FastAPI server
-uvicorn app.main:app --reload --port 8000
-```
-- **REST API**: `http://localhost:8000/api/v1`
-- **Swagger Docs**: `http://localhost:8000/docs`
-- **Admin Portal**: `http://localhost:8000/admin`
-
-#### 2. Frontend Setup (Terminal 2)
-```bash
-cd frontend
+# Install workspace dependencies across backend and frontend
 pnpm install
-pnpm dev
+
+# Copy environment variables template if .env does not exist
+cp .env.example .env
+
+# Generate Prisma Client for the active database provider
+pnpm --filter batanes-niche-backend prisma:generate
+
+# Initialize SQLite database schema and seed baseline + demo records
+pnpm db:setup
+```
+
+#### 2. Start Development Servers
+
+**Terminal 1 — Backend (Express.js + TypeScript):**
+```bash
+pnpm dev:backend
+# Or: cd backend && pnpm dev
+```
+- **REST API Base**: `http://localhost:8000/api/v1`
+- **Admin Portal (SSR)**: `http://localhost:8000/admin`
+- **Health Check (Liveness Probe)**: `http://localhost:8000/health`
+- **Readiness Check (DB Probe)**: `http://localhost:8000/ready`
+
+**Terminal 2 — Frontend (React 18 + Vite):**
+```bash
+pnpm dev:frontend
+# Or: cd frontend && pnpm dev
 ```
 - **React Application**: `http://localhost:5173` (proxies `/api` to `http://localhost:8000`)
 
@@ -174,7 +177,7 @@ pnpm dev
 
 ## 6. Database Configuration: SQLite ↔ Supabase/PostgreSQL
 
-The backend is **environment-switchable** — the active database is determined by `.env` only. No code changes are needed.
+The database layer is **environment-switchable** — the active database is controlled entirely through `.env` with no application code changes required.
 
 ### Option A: Run on SQLite (Default Development — Zero Setup)
 
@@ -184,28 +187,23 @@ DB_PROVIDER=sqlite
 DATABASE_URL="file:../../Database/batanes_niche.db"
 ```
 
-Then run the TypeScript backend normally:
-```cmd
-:: From project root
-start-ts.bat
-
-:: Or from terminal (TypeScript backend):
-cd backend
-pnpm db:migrate   # sync schema + push to SQLite + seed demo data
-pnpm dev
+Initialize or migrate SQLite:
+```bash
+pnpm db:setup
+# Or run development\scripts\init-db.bat on Windows
 ```
 
-Verify: `GET http://localhost:8000/ready` → `{ "provider": "sqlite", "status": "ready" }`
+Verify readiness: `GET http://localhost:8000/ready` → `{ "status": "ready", "database": "connected", "provider": "sqlite" }`
 
 ---
 
 ### Option B: Switch to Supabase / PostgreSQL (Production Simulation)
 
-#### Step 1 — Update `backend/.env` (no code changes):
+#### Step 1 — Update `backend/.env` (no code changes needed):
 ```env
 DB_PROVIDER=postgres
 
-# Supabase Transaction Pooler (port 6543) — used by the app:
+# Supabase Transaction Pooler (port 6543) — used at runtime:
 DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
 
 # Supabase Direct Connection (port 5432) — used by Prisma schema push:
@@ -217,40 +215,38 @@ DIRECT_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler
 ```
 
 #### Step 2 — Push schema and seed:
-```cmd
-cd backend
-
-:: Sync schema.prisma provider, push schema, seed demo data
+```bash
 pnpm db:migrate
+# Or: cd backend && pnpm db:migrate
 ```
-This command:
-1. Detects `DB_PROVIDER=postgres` and updates `schema.prisma` to `provider = "postgresql"`
-2. Runs `prisma db push` against your Supabase/PostgreSQL instance
-3. Runs the idempotent TypeScript seed (admin + demo employer + demo seeker + sample jobs)
+This command runs in sequence:
+1. `syncProvider.ts` detects `DB_PROVIDER=postgres`, updates `schema.prisma` datasource provider, and regenerates Prisma Client.
+2. `prisma db push` creates or updates tables on the target PostgreSQL database.
+3. `seed.ts` inserts canonical demo accounts, administrator, and sample vacancies idempotently.
 
-#### Step 3 — Start the server:
-```cmd
-pnpm dev
+#### Step 3 — Start the application:
+```bash
+pnpm dev:backend
 ```
-Verify: `GET http://localhost:8000/ready` → `{ "provider": "postgresql", "status": "ready" }`
+Verify readiness: `GET http://localhost:8000/ready` → `{ "status": "ready", "database": "connected", "provider": "postgresql" }`
 
 > [!NOTE]
-> **Admin sessions are not portable across backends.** When switching database providers (or between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since the admin session cookie signer differs.
+> **Admin sessions after database switch**: When switching database providers (between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since user records and sessions reside in the respective active database.
 
-#### Available database commands (from root or `backend/`):
+#### Available Database Scripts (Root or `backend/`):
 | Command | Purpose |
 |---|---|
-| `pnpm db:setup` | **1-Command Database Setup**: Creates SQLite file/folder if missing, pushes schema, and seeds baseline + sample data idempotently inside transactions |
-| `pnpm db:reset` | Clean wipe/drop all tables & recreate with fresh seed data (dev only, strictly refuses in production) |
+| `pnpm db:setup` | **1-Command Database Setup**: Creates database if missing, pushes schema, and seeds baseline + demo data inside transactions |
+| `pnpm db:reset` | Clean wipe/drop all tables & recreate with fresh seed data (dev only, strictly guarded against production) |
 | `pnpm db:seed` | Run idempotent baseline + sample data seed (skips existing records) |
-| `pnpm db:push` | Sync `schema.prisma` + push schema directly to the active database |
+| `pnpm db:push` | Sync `schema.prisma` provider + push schema directly to the active database |
 | `pnpm db:migrate` | Alias for `pnpm db:setup` |
 | `development\scripts\init-db.bat` | Windows batch 1-click database setup script |
 
 #### CLI Options for `init-db.ts`:
 You can pass flags to `pnpm db:setup -- [options]` or `ts-node development/scripts/init-db.ts [options]`:
 - `--help`, `-h`: Show usage instructions and available options.
-- `--reset`: Drop and recreate the SQLite database cleanly before seeding (guarded against production & remote PostgreSQL).
+- `--reset`: Drop and recreate the database cleanly before seeding (guarded against production & remote PostgreSQL).
 - `--seed-only`: Skip schema push and only insert baseline + sample seeds.
 - `--no-seed`: Push schema only; do not insert seed data.
 - `--db-path <path>`: Specify a custom SQLite file path (default: `Database/batanes_niche.db`).
@@ -271,47 +267,52 @@ You can pass flags to `pnpm db:setup -- [options]` or `ts-node development/scrip
 
 ---
 
-### Backend Test Suite (Pytest + Coverage)
+## 7. Testing & Quality Verification
+
 ```bash
-cd backend
-pytest tests/ --cov=app --cov-report=term-missing
+# 1. Run strict workspace TypeScript typechecks (noEmit)
+pnpm typecheck
+
+# 2. Run frontend Vitest suite & Zero-Jargon UI contract audit
+pnpm test
+
+# 3. Build all workspace packages for production
+pnpm build
 ```
 
-### Frontend Test Suite (Vitest + Jargon Scan)
-```bash
-cd frontend
-pnpm test
-pnpm build
+On Windows, run the automated test script:
+```cmd
+development\scripts\test.bat
 ```
 
 ---
 
 ## 8. Administrative Portal (`/admin`)
 
-The administrative portal is hosted on the Express.js backend under `/admin`:
+The administrative portal is hosted directly on the Express.js backend under `/admin`:
 - **Security**: Authenticated via signed HttpOnly session cookies (`batanes_admin_session`) with a 12-hour timeout.
-- **CSRF Protection**: Enforced on all POST actions via `batanes_admin_csrf`.
+- **CSRF Protection**: Enforced on all state-modifying POST actions via `batanes_admin_csrf`.
 - **Immediate Suspension Guard**: Suspended administrators or users are rejected immediately on every request.
+- **Audit Logging**: Every administrative action (suspension, restore, listing moderation) is recorded to the append-only `audit_logs` table.
 - **Initial Account Creation**:
   ```bash
-  cd backend
   pnpm db:setup
   ```
 
 ---
 
-## 9. Deployment Overview
+## 9. Production Deployment Overview
 
-Production uses **Docker Compose** fronted by **Nginx**:
-- **Nginx**: Terminates SSL, routes `/api/` and `/admin` to Express.js backend, serves static React SPA assets with long-term caching, and handles SPA fallback routing.
-- **PostgreSQL 16**: Enterprise database with automated WAL backups.
-- **Non-Root Containers**: Backend runs under unprivileged user `appuser` (UID 1001).
+Production deployment uses **Docker Compose** fronted by **Nginx**:
+- **Nginx**: Terminates SSL, proxies `/api/` and `/admin` to the Express.js backend, serves static React SPA assets with long-term caching, and handles SPA client-side fallback routing.
+- **Express.js Backend**: Multi-stage Node 20 Alpine container (`docker/backend.Dockerfile`) running under an unprivileged user `appuser` (UID 1001).
+- **PostgreSQL 16**: Containerized enterprise relational database with automated volume backups.
 
-For the complete 19-step production deployment runbook, refer to [`development/setup/PRODUCTION_SETUP.md`](./development/setup/PRODUCTION_SETUP.md).
+For the full 19-step production deployment manual, refer to [`development/setup/PRODUCTION_SETUP.md`](./development/setup/PRODUCTION_SETUP.md).
 
 ---
 
-## 9. Comprehensive Developer Documentation Catalog
+## 10. Comprehensive Developer Documentation Catalog
 
 The full developer documentation package is maintained in `development/Documentation/`:
 
@@ -327,21 +328,19 @@ The full developer documentation package is maintained in `development/Documenta
 | **08** | [**Business Workflows**](./development/Documentation/08-Business-Workflows.md) | End-to-end operational workflows with detailed Mermaid flowcharts (Auth, Jobs, Applications, Moderation). |
 | **09** | [**Recommendation Engine**](./development/Documentation/09-Recommendation-Engine.md) | Deterministic matching algorithm: 70-pt skill score, 30-pt geographic distance score, two-tier ranking formula. |
 | **10** | [**Frontend Architecture**](./development/Documentation/10-Frontend-Architecture.md) | React 18, Vite, TypeScript, Tailwind CSS, routing tables, AuthContext, Axios silent refresh, and HSL design tokens. |
-| **11** | [**Administrative UI**](./development/Documentation/11-Administrative-UI.md) | Server-rendered Jinja2 admin interface (`/admin`), signed session cookies, CSRF protection, and moderation tools. |
+| **11** | [**Administrative UI**](./development/Documentation/11-Administrative-UI.md) | Server-rendered Nunjucks admin interface (`/admin`), signed session cookies, CSRF protection, and moderation tools. |
 | **12** | [**Notifications and Applications**](./development/Documentation/12-Notifications-and-Applications.md) | Application lifecycle state machine, transactional notification coupling, and applicant contact privacy reveal. |
 | **13** | [**Geography and Reference Data**](./development/Documentation/13-Geography-and-Reference-Data.md) | Canonical Batanes geographic hierarchy (3 islands, 6 municipalities, 29 barangays), normalization algorithms, and seeder. |
-| **14** | [**Testing and Quality**](./development/Documentation/14-Testing-and-Quality.md) | Testing architecture, backend pytest suite (10 test modules), frontend Vitest suite, zero-jargon tests, and CI gates. |
+| **14** | [**Testing and Quality**](./development/Documentation/14-Testing-and-Quality.md) | Testing architecture, TypeScript compiler verification (`tsc --noEmit`), frontend Vitest suite, zero-jargon tests, and CI gates. |
 | **15** | [**Deployment and Operations**](./development/Documentation/15-Deployment-and-Operations.md) | Production Docker compose architecture, Nginx reverse proxy routing, PostgreSQL persistence, migrations, and backups. |
 | **16** | [**Data Analysis Reference**](./development/Documentation/16-Data-Analysis-Reference.md) | Analytical guide for researchers: Entity mapping, analytical dimensions, SQL join recipes, and privacy rules. |
-| **17** | [**Developer Guide**](./development/Documentation/17-Developer-Guide.md) | Local environment onboarding, virtualenv setup, configuration, CLI tooling, dev servers, and extension recipes. |
-| **18** | [**Architecture Decisions**](./development/Documentation/18-Architecture-Decisions.md) | 14 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives. |
+| **17** | [**Developer Guide**](./development/Documentation/17-Developer-Guide.md) | Local environment onboarding, pnpm workspace setup, configuration, CLI tooling, dev servers, and extension recipes. |
+| **18** | [**Architecture Decisions**](./development/Documentation/18-Architecture-Decisions.md) | 16 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives. |
 | **19** | [**Skills and Business Type Catalog**](./development/Documentation/19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, and categorization rules. |
 | **20** | [**System Flowcharts**](./development/Documentation/20-System-Flowcharts.md) | Comprehensive standard flowchart suite (User Journeys, Role Workflows, Multi-Tier Architecture Execution). |
 | **21** | [**Developer Architecture Guide**](./development/Documentation/21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code walks, and modification maps. |
-| **22** | [**TypeScript Backend Architecture**](./development/Documentation/22-TypeScript-Backend-Architecture.md) | Specification for the Express.js / TypeScript drop-in backend replacement (`backend/`) and Prisma ORM. |
-| **23** | [**TypeScript Migration Guide**](./development/Documentation/23-TypeScript-Migration-Guide.md) | Full 30-endpoint API contract audit, technology mapping table, security parity, and migration log. |
-| **24** | [**PNPM Migration Guide**](./development/Documentation/24-PNPM-Migration-Guide.md) | Monorepo workspace setup, pnpm topology, `.npmrc` configuration, Dockerfile updates, and verification log. |
-| **25** | [**Database Environment Switching**](./development/Documentation/25-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. |
+| **22** | [**Backend Architecture**](./development/Documentation/22-Backend-Architecture.md) | Architecture specification for the Express.js + TypeScript backend (`backend/`), Prisma ORM, domain services, and repositories. |
+| **23** | [**Database Environment Switching**](./development/Documentation/23-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. |
 
 ---
 
