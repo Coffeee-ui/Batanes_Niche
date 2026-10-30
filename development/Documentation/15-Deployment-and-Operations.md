@@ -173,6 +173,6 @@ gunzip < /opt/backups/batanes_db_20260904_120000.sql.gz | docker compose exec -T
 
 ## 8. Next Steps
 
-- For the full 19-step production deployment manual, see [`development/setup/PRODUCTION_SETUP.md`](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/development/setup/PRODUCTION_SETUP.md).
+- For the full 19-step production deployment manual, see `Batanes_Niche/development/setup/PRODUCTION_SETUP.md`.
 - For data analyst reference and operational reporting SQL, see [**16-Data-Analysis-Reference.md**](./16-Data-Analysis-Reference.md).
 - For local development onboarding, see [**17-Developer-Guide.md**](./17-Developer-Guide.md).

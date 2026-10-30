@@ -398,64 +398,64 @@ ProtectedRoute inspects user.role:
 ## 10. Common Modification Scenarios ("I Want to Change...")
 
 ### Scenario 1: I Want to Change the Login Form
-1. **Frontend View**: Open [LoginPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/auth/LoginPage.tsx). Modify state variables, input elements, or styling.
-2. **Frontend Logic**: Check `handleSubmit` which calls `login()` from [AuthContext.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/contexts/AuthContext.tsx).
-3. **Backend Route**: Open [auth.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/api/v1/auth.ts) at endpoint `POST /login`.
-4. **Backend Logic**: Open [auth_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/auth_service.ts) in `AuthService.authenticate_user()`.
+1. **Frontend View**: Open `Batanes_Niche/frontend/src/pages/auth/LoginPage.tsx`. Modify state variables, input elements, or styling.
+2. **Frontend Logic**: Check `handleSubmit` which calls `login()` from `Batanes_Niche/frontend/src/contexts/AuthContext.tsx`.
+3. **Backend Route**: Open `Batanes_Niche/backend/src/api/v1/auth.ts` at endpoint `POST /login`.
+4. **Backend Logic**: Open `Batanes_Niche/backend/src/services/auth_service.ts` in `AuthService.authenticate_user()`.
 
 ---
 
 ### Scenario 2: I Want to Change the Job Search UI & Filters
-1. **Frontend View**: Open [JobsPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/jobs/JobsPage.tsx). Modify search inputs, dropdown filters, or sort controls.
-2. **Job Card Presentation**: Open [JobCard.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/components/ui/JobCard.tsx) to modify badge presentation, salary format, or layout.
-3. **Frontend API Call**: Open [client.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/api/client.ts) in `jobsApi.list()`.
-4. **Backend Route**: Open [jobs.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/api/v1/jobs.ts) in `list_jobs()`.
-5. **Backend Database Query**: Open [job_repository.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/repositories/job_repository.ts) in `JobRepository.list_active_jobs()`.
+1. **Frontend View**: Open `Batanes_Niche/frontend/src/pages/jobs/JobsPage.tsx`. Modify search inputs, dropdown filters, or sort controls.
+2. **Job Card Presentation**: Open `Batanes_Niche/frontend/src/components/ui/JobCard.tsx` to modify badge presentation, salary format, or layout.
+3. **Frontend API Call**: Open `Batanes_Niche/frontend/src/api/client.ts` in `jobsApi.list()`.
+4. **Backend Route**: Open `Batanes_Niche/backend/src/api/v1/jobs.ts` in `list_jobs()`.
+5. **Backend Database Query**: Open `Batanes_Niche/backend/src/repositories/job_repository.ts` in `JobRepository.list_active_jobs()`.
 
 ---
 
 ### Scenario 3: I Want to Add or Modify Profile Fields
-1. **Frontend Profile View**: Open [ProfilePage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/ProfilePage.tsx). Add input fields to the seeker or employer profile sections.
-2. **Frontend Payload**: Ensure new fields are mapped in `usersApi.updateProfile()` inside [client.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/api/client.ts).
-3. **TypeScript Validation**: Open [user.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/schemas/user.ts) and update `UserProfileUpdate` and `PrivateUserProfile`.
-4. **Backend Business Logic**: Open [user_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/user_service.ts) in `UserService.update_profile()`.
+1. **Frontend Profile View**: Open `Batanes_Niche/frontend/src/pages/ProfilePage.tsx`. Add input fields to the seeker or employer profile sections.
+2. **Frontend Payload**: Ensure new fields are mapped in `usersApi.updateProfile()` inside `Batanes_Niche/frontend/src/api/client.ts`.
+3. **TypeScript Validation**: Open `Batanes_Niche/backend/src/schemas/user.ts` and update `UserProfileUpdate` and `PrivateUserProfile`.
+4. **Backend Business Logic**: Open `Batanes_Niche/backend/src/services/user_service.ts` in `UserService.update_profile()`.
 5. **Completeness Score**: If the field affects profile completeness, update `UserService.calculate_profile_completeness()`.
-6. **Database Entity**: Open [user.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/models/user.ts) to add the column to `User`, `JobSeekerProfile`, or `EmployerProfile`.
+6. **Database Entity**: Open `Batanes_Niche/backend/src/models/user.ts` to add the column to `User`, `JobSeekerProfile`, or `EmployerProfile`.
 7. **Database Migration**: Run `pnpm prisma migrate dev --name "add_field_to_profile"` in `backend/`.
 
 ---
 
 ### Scenario 4: I Want to Modify Job Application Preconditions
-1. **Frontend Button & Modal**: Open [JobDetailPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/jobs/JobDetailPage.tsx). Update `handleApply()` or the application modal.
-2. **Backend Route**: Open [applications.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/api/v1/applications.ts) at `POST /applications`.
-3. **Service Rules & Validation**: Open [application_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/application_service.ts) in `ApplicationService.submit_application()`. Add or adjust precondition checks.
-4. **Repository Check**: Open [application_repository.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/repositories/application_repository.ts) if new query checks are required.
+1. **Frontend Button & Modal**: Open `Batanes_Niche/frontend/src/pages/jobs/JobDetailPage.tsx`. Update `handleApply()` or the application modal.
+2. **Backend Route**: Open `Batanes_Niche/backend/src/api/v1/applications.ts` at `POST /applications`.
+3. **Service Rules & Validation**: Open `Batanes_Niche/backend/src/services/application_service.ts` in `ApplicationService.submit_application()`. Add or adjust precondition checks.
+4. **Repository Check**: Open `Batanes_Niche/backend/src/repositories/application_repository.ts` if new query checks are required.
 
 ---
 
 ### Scenario 5: I Want to Change Notification Messages or Triggers
-1. **Backend Notification Dispatch**: Open [application_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/application_service.ts) where `Notification` objects are created during application submission and status updates.
-2. **Notification Service**: Open [notification_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/notification_service.ts).
-3. **Frontend Presentation**: Open [NotificationsPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/NotificationsPage.tsx) and [Navbar.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/components/layout/Navbar.tsx).
+1. **Backend Notification Dispatch**: Open `Batanes_Niche/backend/src/services/application_service.ts` where `Notification` objects are created during application submission and status updates.
+2. **Notification Service**: Open `Batanes_Niche/backend/src/services/notification_service.ts`.
+3. **Frontend Presentation**: Open `Batanes_Niche/frontend/src/pages/NotificationsPage.tsx` and `Batanes_Niche/frontend/src/components/layout/Navbar.tsx`.
 
 ---
 
 ### Scenario 6: I Want to Adjust the Two-Tier Recommendation Algorithm
-1. **Algorithm Implementation**: Open [recommendation_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/recommendation_service.ts).
+1. **Algorithm Implementation**: Open `Batanes_Niche/backend/src/services/recommendation_service.ts`.
    - Adjust `calculate_skill_score()` (currently 0–70 points).
-   - Adjust `score_distance()` in [geography_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/geography_service.ts) (currently 0–30 points).
+   - Adjust `score_distance()` in `Batanes_Niche/backend/src/services/geography_service.ts` (currently 0–30 points).
    - Adjust tier classification in `rank_candidates()` and `rank_jobs_for_seeker()`.
-2. **Frontend Presentation**: Open [DashboardPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/DashboardPage.tsx) (Seeker recommended jobs) and [CandidatesPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/CandidatesPage.tsx) (Employer candidate recommendations).
-3. **Specification Reference**: Consult [09-Recommendation-Engine.md](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/development/Documentation/09-Recommendation-Engine.md).
+2. **Frontend Presentation**: Open `Batanes_Niche/frontend/src/pages/DashboardPage.tsx` (Seeker recommended jobs) and `Batanes_Niche/frontend/src/pages/CandidatesPage.tsx` (Employer candidate recommendations).
+3. **Specification Reference**: Consult `Batanes_Niche/development/Documentation/09-Recommendation-Engine.md`.
 
 ---
 
 ### Scenario 7: I Want to Work with or Configure Development Demo Mode
-1. **Backend Environment Flag**: Open [backend/.env](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/.env) and toggle `DEMO_MODE=True` or `DEMO_MODE=False`. Note that Demo Mode requires `ENVIRONMENT` to be set to a development tier (`development`, `dev`, `local`, `test`).
-2. **Backend Config Logic**: Open [config.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/core/config.ts) to inspect `is_demo_mode_active` and its production safeguards.
-3. **Authentication Handlers**: Open [auth_service.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/services/auth_service.ts) in `AuthService.demo_authenticate()` and [auth.ts](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/backend/src/api/v1/auth.ts) for `/demo-status` and `/demo-login`.
-4. **Frontend Login UI**: Open [LoginPage.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/pages/auth/LoginPage.tsx) to inspect `#demo-access-section` and button bindings.
-5. **Session Management**: Open [AuthContext.tsx](file:///c:/Users/Jonathea%20Gabotero/Documents/GitHub/Batanes_Niche/frontend/src/contexts/AuthContext.tsx) in `demoLogin()` to see how standard tokens are stored.
+1. **Backend Environment Flag**: Open `Batanes_Niche/backend/.env` and toggle `DEMO_MODE=True` or `DEMO_MODE=False`. Note that Demo Mode requires `ENVIRONMENT` to be set to a development tier (`development`, `dev`, `local`, `test`).
+2. **Backend Config Logic**: Open `Batanes_Niche/backend/src/core/config.ts` to inspect `is_demo_mode_active` and its production safeguards.
+3. **Authentication Handlers**: Open `Batanes_Niche/backend/src/services/auth_service.ts` in `AuthService.demo_authenticate()` and `Batanes_Niche/backend/src/api/v1/auth.ts` for `/demo-status` and `/demo-login`.
+4. **Frontend Login UI**: Open `Batanes_Niche/frontend/src/pages/auth/LoginPage.tsx` to inspect `#demo-access-section` and button bindings.
+5. **Session Management**: Open `Batanes_Niche/frontend/src/contexts/AuthContext.tsx` in `demoLogin()` to see how standard tokens are stored.
 
 ---
 

@@ -1,7 +1,7 @@
 # Repository Cleanup & Backend Consolidation Report
 
 **Date:** 2026-10-30  
-**Repository:** `Batanes_Niche` (`c:\Users\Jonathea Gabotero\Documents\GitHub\Batanes_Niche`)  
+**Repository:** `Batanes_Niche`  
 **Branch:** `cleanup-backend-consolidation`  
 **Engineer:** Antigravity Senior Engineering Assistant  
 
