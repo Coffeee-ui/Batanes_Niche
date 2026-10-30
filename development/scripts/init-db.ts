@@ -12,10 +12,10 @@ import { seedBaselineData } from './seeds/baseline';
 import { seedSampleData } from './seeds/sample';
 
 // ---------------------------------------------------------------------------
-// 1. Environment Loading (Root .env first, then backend-ts/.env)
+// 1. Environment Loading (Root .env first, then backend/.env)
 // ---------------------------------------------------------------------------
 const rootDir = path.resolve(__dirname, '../..');
-const backendTsDir = path.resolve(rootDir, 'backend-ts');
+const backendTsDir = path.resolve(rootDir, 'backend');
 
 const rootEnv = path.resolve(rootDir, '.env');
 const localEnv = path.resolve(backendTsDir, '.env');
@@ -151,9 +151,9 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
   // 4. Ensure Parent Directory Exists
   ensureParentDirectory(filePath);
 
-  // 5. Schema Push (Single Source of Truth: backend-ts/prisma/schema.prisma)
+  // 5. Schema Push (Single Source of Truth: backend/prisma/schema.prisma)
   if (!options.seedOnly) {
-    console.log('\n[DB Setup] Applying schema from backend-ts/prisma/schema.prisma...');
+    console.log('\n[DB Setup] Applying schema from backend/prisma/schema.prisma...');
 
     try {
       // Synchronize schema provider to sqlite if needed

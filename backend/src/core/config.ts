@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Load .env from backend-ts first, fallback to root
+// Load .env from backend first, fallback to root
 const localEnvPath = path.resolve(__dirname, '../../.env');
 const rootEnvPath = path.resolve(__dirname, '../../../.env');
 

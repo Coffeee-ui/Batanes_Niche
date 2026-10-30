@@ -8,7 +8,7 @@ echo ============================================================
 set ROOT_DIR=%~dp0..\..
 
 echo Starting TypeScript Backend Server on http://localhost:8000 ...
-start "Batanes Backend (TypeScript Express)" cmd /k "cd /d "%ROOT_DIR%\backend-ts" && pnpm dev"
+start "Batanes Backend (TypeScript Express)" cmd /k "cd /d "%ROOT_DIR%\backend" && pnpm dev"
 
 echo Starting Frontend Dev Server on http://localhost:5173 ...
 start "Batanes Frontend (Vite)" cmd /k "cd /d "%ROOT_DIR%\frontend" && pnpm dev"

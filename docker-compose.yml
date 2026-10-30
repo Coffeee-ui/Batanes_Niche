@@ -31,7 +31,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-batanes_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-batanes_niche}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-batanes_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-batanes_niche}
       PORT: 8000
     volumes:
       - uploads_data:/app/uploads

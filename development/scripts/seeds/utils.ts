@@ -43,8 +43,8 @@ export function resolveSqlitePaths(customPath?: string): {
     if (path.isAbsolute(sub)) {
       filePath = sub;
     } else {
-      // Relative to backend-ts/prisma
-      filePath = path.resolve(rootDir, 'backend-ts', 'prisma', sub);
+      // Relative to backend/prisma
+      filePath = path.resolve(rootDir, 'backend', 'prisma', sub);
     }
   } else if (raw.startsWith('sqlite:///')) {
     const sub = raw.replace(/^sqlite:\/\/\//, '');

@@ -59,12 +59,12 @@ cd /d "%~dp0..\..\backend"
 call venv\Scripts\activate.bat
 alembic upgrade head
 
-REM 6. Set up Workspace Dependencies (Frontend & Backend-TS)
+REM 6. Set up Workspace Dependencies (Frontend & backend)
 echo.
 echo [4/5] Installing Workspace Dependencies via pnpm...
 cd /d "%~dp0..\.."
 call pnpm install
-cd /d "%~dp0..\..\backend-ts"
+cd /d "%~dp0..\..\backend"
 call pnpm run prisma:generate
 
 REM 7. Initialize SQLite Database & Seed Data

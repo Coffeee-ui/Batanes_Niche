@@ -1,7 +1,7 @@
 {
-  "name": "batanes-niche-backend-ts",
+  "name": "batanes-niche-backend",
   "version": "2.0.0",
-  "description": "TypeScript/Node.js backend replacement for Batanes Niche Job Portal",
+  "description": "TypeScript/Node.js backend for Batanes Niche Job Portal",
   "packageManager": "pnpm@12.4.2",
   "engines": {
     "node": ">=20.0.0",

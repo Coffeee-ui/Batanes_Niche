@@ -3,7 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import dotenv from 'dotenv';
 
-// Load environment variables from backend-ts/.env first, then root .env
+// Load environment variables from backend/.env first, then root .env
 const localEnvPath = path.resolve(__dirname, '../../.env');
 const rootEnvPath = path.resolve(__dirname, '../../../.env');
 

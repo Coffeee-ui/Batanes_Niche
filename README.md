@@ -178,7 +178,7 @@ The backend is **environment-switchable** — the active database is determined 
 
 ### Option A: Run on SQLite (Default Development — Zero Setup)
 
-`backend-ts/.env` (or root `.env`):
+`backend/.env` (or root `.env`):
 ```env
 DB_PROVIDER=sqlite
 DATABASE_URL="file:../../Database/batanes_niche.db"
@@ -190,7 +190,7 @@ Then run the TypeScript backend normally:
 start-ts.bat
 
 :: Or from terminal (TypeScript backend):
-cd backend-ts
+cd backend
 pnpm db:migrate   # sync schema + push to SQLite + seed demo data
 pnpm dev
 ```
@@ -201,7 +201,7 @@ Verify: `GET http://localhost:8000/ready` → `{ "provider": "sqlite", "status":
 
 ### Option B: Switch to Supabase / PostgreSQL (Production Simulation)
 
-#### Step 1 — Update `backend-ts/.env` (no code changes):
+#### Step 1 — Update `backend/.env` (no code changes):
 ```env
 DB_PROVIDER=postgres
 
@@ -218,7 +218,7 @@ DIRECT_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler
 
 #### Step 2 — Push schema and seed:
 ```cmd
-cd backend-ts
+cd backend
 
 :: Sync schema.prisma provider, push schema, seed demo data
 pnpm db:migrate
@@ -237,7 +237,7 @@ Verify: `GET http://localhost:8000/ready` → `{ "provider": "postgresql", "stat
 > [!NOTE]
 > **Admin sessions are not portable across backends.** When switching between the FastAPI and TypeScript backend (or between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since the admin session cookie signer differs.
 
-#### Available database commands (from root or `backend-ts/`):
+#### Available database commands (from root or `backend/`):
 | Command | Purpose |
 |---|---|
 | `pnpm db:setup` | **1-Command Database Setup**: Creates SQLite file/folder if missing, pushes schema, and seeds baseline + sample data idempotently inside transactions |
@@ -342,7 +342,7 @@ The full developer documentation package is maintained in `development/Documenta
 | **19** | [**Skills and Business Type Catalog**](./development/Documentation/19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, and categorization rules. |
 | **20** | [**System Flowcharts**](./development/Documentation/20-System-Flowcharts.md) | Comprehensive standard flowchart suite (User Journeys, Role Workflows, Multi-Tier Architecture Execution). |
 | **21** | [**Developer Architecture Guide**](./development/Documentation/21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code walks, and modification maps. |
-| **22** | [**TypeScript Backend Architecture**](./development/Documentation/22-TypeScript-Backend-Architecture.md) | Specification for the Express.js / TypeScript drop-in backend replacement (`backend-ts/`) and Prisma ORM. |
+| **22** | [**TypeScript Backend Architecture**](./development/Documentation/22-TypeScript-Backend-Architecture.md) | Specification for the Express.js / TypeScript drop-in backend replacement (`backend/`) and Prisma ORM. |
 | **23** | [**TypeScript Migration Guide**](./development/Documentation/23-TypeScript-Migration-Guide.md) | Full 30-endpoint API contract audit, technology mapping table, security parity, and migration log. |
 | **24** | [**PNPM Migration Guide**](./development/Documentation/24-PNPM-Migration-Guide.md) | Monorepo workspace setup, pnpm topology, `.npmrc` configuration, Dockerfile updates, and verification log. |
 | **25** | [**Database Environment Switching**](./development/Documentation/25-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. |

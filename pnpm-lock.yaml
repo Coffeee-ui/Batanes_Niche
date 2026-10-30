@@ -166,7 +166,7 @@ importers:
 
   .: {}
 
-  backend-ts:
+  backend:
     dependencies:
       '@prisma/client':
         specifier: ^5.15.0
