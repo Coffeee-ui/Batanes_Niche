@@ -67,4 +67,7 @@ coverage/
 # Logs
 logs/
 *.log
-
+
+# Build artifacts
+*.tsbuildinfo
+
