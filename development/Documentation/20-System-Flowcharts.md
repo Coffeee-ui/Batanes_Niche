@@ -7,7 +7,7 @@ This document provides visual flowcharts modeling the operational journeys and m
 To serve both non-technical stakeholders (evaluators, municipal partners, administrators) and software engineers, these flowcharts are divided into three distinct levels:
 1. **Level 1 — General User Journey Flowchart**: A non-technical, high-level perspective mapping how users interact with the system without exposing backend internals.
 2. **Level 2 — Specific User Workflows**: Dedicated role-based and task-focused journeys for Job Seekers, Employers, Authentication/Password Reset, Job Applications, Bookmarks, Notifications, Candidate Recommendations, and Administrative Moderation.
-3. **Level 3 — Complete Multi-Tier System Flow**: An end-to-end technical execution pipeline tracing user interactions through the React SPA, Axios client, FastAPI routers, authentication dependencies, domain services, repositories, SQLAlchemy ORM, and the database.
+3. **Level 3 — Complete Multi-Tier System Flow**: An end-to-end technical execution pipeline tracing user interactions through the React SPA, Axios client, Express.js routers, authentication dependencies, domain services, repositories, Prisma ORM, and the database.
 
 ### Standard Flowchart Conventions
 
@@ -501,7 +501,7 @@ flowchart TD
 ## 4. Flowchart 3: Complete Multi-Tier System Flow
 
 > [!NOTE]
-> This comprehensive flowchart models the end-to-end technical architecture. It demonstrates how user gestures propagate through the frontend SPA, cross the network boundary via Axios, trigger FastAPI route controllers and dependency guards, invoke domain services and repositories, execute SQL transactions, and return structured JSON responses that update reactive frontend state.
+> This comprehensive flowchart models the end-to-end technical architecture. It demonstrates how user gestures propagate through the frontend SPA, cross the network boundary via Axios, trigger Express.js route controllers and dependency guards, invoke domain services and repositories, execute SQL transactions, and return structured JSON responses that update reactive frontend state.
 
 ```mermaid
 flowchart TD
@@ -518,28 +518,28 @@ flowchart TD
         HttpRequest["HTTP Request: JSON Body / Headers / Cookies"]
         SecurityHeaders["Security Headers Middleware (nosniff, DENY, HSTS)"]
         LoggingMiddleware["StructuredLoggingMiddleware (Request ID, IP, Latency)"]
-        RateLimiter{"SlowAPI Limiter: Rate Limit Exceeded?"}
+        RateLimiter{"express-rate-limit: Rate Limit Exceeded?"}
     end
 
-    subgraph BackendApiLayer ["3. FASTAPI PRESENTATION TIER (backend/app/api/)"]
+    subgraph BackendApiLayer ["3. EXPRESS.JS PRESENTATION TIER (backend/src/api/)"]
         RouterEntry["APIRouter Dispatcher (app/api/v1/)"]
         DepInjection["Dependency Injection (app/api/deps.py)"]
         AuthGuard{"require_authenticated: Valid JWT & Not in revoked_tokens?"}
         RoleGuard{"Role Guard: require_job_seeker / require_employer / require_admin?"}
-        PydanticValidation{"Pydantic Schema Validation (app/schemas/)"}
+        SchemaValidation{"Pydantic Schema Validation (app/schemas/)"}
     end
 
-    subgraph DomainServiceLayer ["4. DOMAIN SERVICE TIER (backend/app/services/)"]
+    subgraph DomainServiceLayer ["4. DOMAIN SERVICE TIER (backend/src/services/)"]
         ServiceDispatcher["Domain Service (Auth, Job, Application, Recommendation)"]
         BusinessValidation{"Domain Rules & Invariant Validation"}
         GeographyCheck["GeographyService: Canonical Location Validation"]
         TxnCoordinator["Transaction Boundary Coordinator"]
     end
 
-    subgraph RepositoryOrmLayer ["5. DATA ACCESS & ORM TIER (backend/app/repositories/)"]
+    subgraph RepositoryOrmLayer ["5. DATA ACCESS & ORM TIER (backend/src/repositories/)"]
         RepositoryMethod["Repository (UserRepository, JobRepository, ApplicationRepository)"]
-        SqlAlchemyOrm["SQLAlchemy 2.0 ORM Entity (Mapped Model)"]
-        DbSession["SQLAlchemy db.Session (Unit of Work)"]
+        PrismaOrm["Prisma Client ORM Entity"]
+        DbClient["Prisma Database Client"]
     end
 
     subgraph PersistenceLayer ["6. DATABASE PERSISTENCE TIER (Relational Storage)"]
@@ -550,7 +550,7 @@ flowchart TD
     end
 
     subgraph ClientUpdateLayer ["7. RESPONSE & REACTIVE UI UPDATE TIER"]
-        PydanticSerialization["Pydantic Response Model Serialization"]
+        JsonSerialization["JSON Response Serialization"]
         HttpResponse["HTTP Response (200, 201, 400, 401, 403, 404, 429)"]
         ResponseInterceptor{"Response Interceptor: Status 401 & Stored Refresh Token?"}
         TokenRefreshLoop["Call /auth/refresh -> Update In-Memory Token -> Replay Request"]
@@ -580,11 +580,11 @@ flowchart TD
     AuthGuard -- Valid --> RoleGuard
     RoleGuard -- Forbidden Role --> Return403[Return HTTP 403 Forbidden]
     Return403 --> HttpResponse
-    RoleGuard -- Authorized --> PydanticValidation
+    RoleGuard -- Authorized --> SchemaValidation
 
-    PydanticValidation -- Invalid Schema --> Return422[Return HTTP 422 Unprocessable Entity]
+    SchemaValidation -- Invalid Schema --> Return422[Return HTTP 422 Unprocessable Entity]
     Return422 --> HttpResponse
-    PydanticValidation -- Valid Schema --> ServiceDispatcher
+    SchemaValidation -- Valid Schema --> ServiceDispatcher
 
     ServiceDispatcher --> BusinessValidation
     BusinessValidation -- Invariant Violated --> ThrowHttpErr[Raise HTTPException 400 Bad Request]
@@ -593,18 +593,18 @@ flowchart TD
     GeographyCheck --> TxnCoordinator
 
     TxnCoordinator --> RepositoryMethod
-    RepositoryMethod --> SqlAlchemyOrm
-    SqlAlchemyOrm --> DbSession
-    DbSession --> SqlExecution
+    RepositoryMethod --> PrismaOrm
+    PrismaOrm --> DbClient
+    DbClient --> SqlExecution
     SqlExecution --> DbConstraints
     DbConstraints -- Constraint Violated --> RollbackErr[Rollback & Raise Database Error]
     RollbackErr --> HttpResponse
     DbConstraints -- Passed --> CommitRollback
     CommitRollback --> PhysicalDb
     PhysicalDb --> CommitRollback
-    CommitRollback --> PydanticSerialization
+    CommitRollback --> JsonSerialization
 
-    PydanticSerialization --> HttpResponse
+    JsonSerialization --> HttpResponse
     HttpResponse --> ResponseInterceptor
     ResponseInterceptor -- Yes --> TokenRefreshLoop
     TokenRefreshLoop --> RequestInterceptor

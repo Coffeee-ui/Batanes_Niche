@@ -1,6 +1,5 @@
 # 25 — Database Environment Switching
 
-> **Scope**: TypeScript backend (`backend-ts/`) + Python backend (`backend/`).
 > Both backends read the same `.env` variables; only the TypeScript backend performs Prisma schema synchronization automatically.
 
 ---
@@ -55,7 +54,7 @@ session.py (create_engine)
 
 ## Configuration Reference
 
-All variables live in `.env` (root) and/or `backend-ts/.env`.
+All variables live in `.env` (root) and/or `backend/.env`.
 
 ### Required
 
@@ -84,14 +83,14 @@ All variables live in `.env` (root) and/or `backend-ts/.env`.
 ### → SQLite (default)
 
 ```env
-# backend-ts/.env
+# backend/.env
 DB_PROVIDER=sqlite
 DATABASE_URL="file:../../Database/batanes_niche.db"
 ```
 
 ```cmd
 :: From project root — first run
-pnpm --filter batanes-niche-backend-ts db:migrate
+pnpm --filter batanes-niche-backend db:migrate
 
 :: Subsequent runs — just start
 start-ts.bat
@@ -106,7 +105,7 @@ Verify: `GET http://localhost:8000/ready`
 
 ### → PostgreSQL / Supabase
 
-#### Step 1 — Update `backend-ts/.env`
+#### Step 1 — Update `backend/.env`
 
 ```env
 DB_PROVIDER=postgres
@@ -128,7 +127,7 @@ DB_SSL=false
 #### Step 2 — Push schema and seed
 
 ```cmd
-cd backend-ts
+cd backend
 pnpm db:migrate
 ```
 
@@ -152,7 +151,7 @@ Verify: `GET http://localhost:8000/ready`
 
 ## Database Scripts Reference
 
-Run from `backend-ts/` or via root workspace (`pnpm --filter batanes-niche-backend-ts <script>`):
+Run from `backend/` or via root workspace (`pnpm --filter batanes-niche-backend <script>`):
 
 | Script | Command | Description |
 |---|---|---|
@@ -168,7 +167,7 @@ Run from `backend-ts/` or via root workspace (`pnpm --filter batanes-niche-backe
 
 ## `syncProvider.ts` — How It Works
 
-**File**: `backend-ts/src/database/syncProvider.ts`
+**File**: `backend/src/database/syncProvider.ts`
 
 1. Reads `DB_PROVIDER` from `process.env`. If unset, infers from `DATABASE_URL` protocol:
    - `postgresql://` or `postgres://` → `postgres`
@@ -185,7 +184,7 @@ Run from `backend-ts/` or via root workspace (`pnpm --filter batanes-niche-backe
 
 ## `seed.ts` — Idempotent Seed
 
-**File**: `backend-ts/src/database/seed.ts`
+**File**: `backend/src/database/seed.ts`
 
 Seeds the following canonical records (skips any that already exist by username/email):
 
@@ -201,7 +200,7 @@ Also seeds a small set of sample job postings linked to the demo employer. Safe 
 
 ## `reset.ts` — Development Reset
 
-**File**: `backend-ts/src/database/reset.ts`
+**File**: `backend/src/database/reset.ts`
 
 - Refuses to run if `NODE_ENV=production` (exits with a non-zero code and an error message).
 - Deletes all rows from all tables in dependency order.

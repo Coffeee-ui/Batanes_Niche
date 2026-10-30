@@ -7,9 +7,9 @@ This document is the **authoritative 19-step production deployment runbook** for
 ## Architecture Overview
 
 - **Frontend**: Single Page Application compiled to static HTML5/CSS3/JS, served via Nginx with client-side route fallback and caching.
-- **Backend Gateway**: Nginx reverse-proxies `/api/` and `/admin/` to Gunicorn/Uvicorn workers.
-- **Backend API**: FastAPI running asynchronous Python 3.11 with SQLAlchemy 2.0.
-- **Admin Portal**: Server-side rendered Jinja2 templates served directly by FastAPI under `/admin`.
+- **Backend Gateway**: Nginx reverse-proxies `/api/` and `/admin/` to Node.js / Express.js backend.
+- **Backend API**: Express.js running Node.js 20+ LTS with Prisma ORM.
+- **Admin Portal**: Server-side rendered Nunjucks templates served directly by Express.js under `/admin`.
 - **Database**: PostgreSQL 16 with connection pooling and automated WAL archiving/backups.
 - **Security Perimeter**: Non-root container users, SSL/TLS termination, strict CSP, CORS restrictions, rate limiting, and zero tech-jargon leakage.
 
@@ -80,7 +80,7 @@ cat <<EOF > .env
 ENVIRONMENT=production
 DEBUG=False
 SECRET_KEY=${SECRET_KEY}
-DATABASE_URL=postgresql+asyncpg://batanes_user:${POSTGRES_PASSWORD}@db:5432/batanes_niche
+DATABASE_URL=postgresql://batanes_user:${POSTGRES_PASSWORD}@db:5432/batanes_niche
 POSTGRES_DB=batanes_niche
 POSTGRES_USER=batanes_user
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -134,7 +134,7 @@ Verify `docker/nginx.conf` contains the proper upstream proxy definitions, secur
 ### Step 9: Database Migrations Execution
 Execute Alembic migrations to build the 12 approved tables:
 ```bash
-docker compose run --rm backend alembic upgrade head
+docker compose run --rm backend pnpm prisma migrate deploy
 ```
 
 ---
@@ -142,12 +142,8 @@ docker compose run --rm backend alembic upgrade head
 ### Step 10: Initial Admin User Provisioning
 Seed the authoritative system administrator account:
 ```bash
-docker compose run --rm backend python -m app.commands.create_admin \
-  --username admin \
-  --email admin@batanesjobs.ph \
-  --password "$(openssl rand -base64 16)"
-```
-Save the generated credentials securely in a team password manager.
+docker compose run --rm backend pnpm db:setup
+Save the administrative credentials securely in a team password manager.
 
 ---
 
@@ -266,7 +262,8 @@ If a deployment fails:
    ```
 2. Re-run database downgrade if required:
    ```bash
-   docker compose run --rm backend alembic downgrade -1
+   # Roll back migrations if necessary
+   docker compose run --rm backend pnpm prisma migrate resolve
    ```
 3. Rebuild and restart containers:
    ```bash

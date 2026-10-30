@@ -8,12 +8,11 @@ echo ============================================================
 set ROOT_DIR=%~dp0..\..
 
 echo.
-echo [1/2] Running Backend Tests (pytest + coverage)...
-cd /d "%ROOT_DIR%\backend"
-call venv\Scripts\activate.bat
-pytest tests/ --cov=app --cov-report=term-missing
+echo [1/2] Running Workspace Type Checks (tsc)...
+cd /d "%ROOT_DIR%"
+call pnpm typecheck
 if errorlevel 1 (
-    echo [ERROR] Backend tests failed!
+    echo [ERROR] Type checking failed!
     exit /b 1
 )
 

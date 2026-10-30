@@ -2,7 +2,7 @@
 
 ## 1. Relational Database Overview
 
-The **Batanes Niche Job Portal** database schema is implemented with **SQLAlchemy 2.0** and managed via **Alembic migrations** (definitive baseline migration: `cf8c97336bac_initial_12_tables.py`).
+The **Batanes Niche Job Portal** database schema is implemented with **Prisma ORM** and managed via **Prisma migrations** (definitive baseline migration: `cf8c97336bac_initial_12_tables.py`).
 
 The schema comprises **12 core relational tables** categorized into four functional groups:
 1. **Identity & User Profiles**: `users`, `employer_profiles`, `job_seeker_profiles`.
@@ -363,7 +363,7 @@ erDiagram
 | `error_reports` | `username` | VARCHAR(50) | YES | NO | - | INDEXED | User session if known | Private |
 | `error_reports` | `endpoint` | VARCHAR(255) | YES | NO | - | - | HTTP method and path | System |
 | `error_reports` | `error_message` | TEXT | NO | NO | - | - | Exception message | System |
-| `error_reports` | `stack_trace` | TEXT | YES | NO | - | - | Sanitized Python stack trace | System |
+| `error_reports` | `stack_trace` | TEXT | YES | NO | - | - | Sanitized stack trace | System |
 | `error_reports` | `request_data` | TEXT | YES | NO | - | Secrets scrubbed | Sanitized request payload | System |
 | `error_reports` | `created_at` | TIMESTAMP | NO | NO | - | DEFAULT utcnow(), INDEXED | Incident timestamp | System |
 | `audit_logs` | `id` | INTEGER | NO | YES | - | AUTOINCREMENT | Primary surrogate key | System |
@@ -383,5 +383,5 @@ erDiagram
 - For details on how REST API endpoints interact with these entities, see [**05-API-Architecture.md**](./05-API-Architecture.md).
 - To understand how refresh tokens and OTP tokens are validated, see [**06-Authentication-and-Security.md**](./06-Authentication-and-Security.md).
 - For the analytical query patterns and data sensitivity guidelines, see [**16-Data-Analysis-Reference.md**](./16-Data-Analysis-Reference.md).
-- For switching between SQLite and PostgreSQL/Supabase, see [**25-Database-Environment-Switching.md**](./25-Database-Environment-Switching.md).
+- For switching between SQLite and PostgreSQL/Supabase, see [**23-Database-Environment-Switching.md**](./23-Database-Environment-Switching.md).
 

@@ -209,7 +209,7 @@ Implement `AuditService` and `ErrorLoggingService` with automatic recursive scru
 User typos in municipality and barangay names cause broken geographic distance scoring and fragmented search filters.
 
 ### Decision
-Enforce a canonical hierarchy of 3 islands, 6 municipalities, and 29 barangays in `backend/app/core/geography.py`. Validate all profile updates and job postings against this hierarchy, supporting canonical composite aliases (e.g., *Kayhuvokan (Santa Rosa)*).
+Enforce a canonical hierarchy of 3 islands, 6 municipalities, and 29 barangays in `backend/src/core/geography.ts`. Validate all profile updates and job postings against this hierarchy, supporting canonical composite aliases (e.g., *Kayhuvokan (Santa Rosa)*).
 
 ### Consequences
 - **Positive**: Perfect data integrity, reliable distance scoring, clean search facets.
@@ -228,6 +228,38 @@ Enforce explicit database transaction boundaries (`db.commit()` with rollback on
 ### Consequences
 - **Positive**: Zero dropped notifications, strict data consistency, predictable state.
 - **Negative**: A failure in notification creation aborts the application action.
+
+---
+
+## ADR-015: S3-Compatible Object Storage for Offsite PostgreSQL Backups
+
+### Context
+Production operational continuity requires robust offsite disaster recovery for PostgreSQL database dumps, isolated from the primary hosting VM.
+
+### Decision
+Use S3-compatible object storage as the reference implementation for offsite PostgreSQL backups with automated daily dumps (`pg_dump` custom format). Apply a retention rotation policy:
+- Daily backups: 7 days
+- Weekly backups: 4 weeks
+- Monthly backups: 12 months
+Configure using standard environment variables: `BACKUP_S3_BUCKET`, `BACKUP_S3_ENDPOINT`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`. Keep offsite backups operationally decoupled from the runtime request path.
+
+### Consequences
+- **Positive**: Resilient disaster recovery, cloud provider portability, independent data durability.
+- **Negative**: Requires managing secondary storage bucket credentials.
+
+---
+
+## ADR-016: Gmail / Google Workspace SMTP for Production Email Delivery
+
+### Context
+Password reset OTP delivery requires a reliable transactional email mechanism while maintaining developer ergonomics in local/offline environments.
+
+### Decision
+Use Gmail / Google Workspace SMTP (`smtp.gmail.com:587` with STARTTLS) as the reference production email provider via Nodemailer. In local/development environments where credentials are blank, log OTP dispatch safely to console without throwing errors. Maintain provider-independent decoupling between `EmailDeliveryService` and `AuthService`. The password-reset API returns generic HTTP 200 responses to prevent account enumeration.
+
+### Consequences
+- **Positive**: Zero external paid SaaS dependency for prototype/initial deployment; seamless zero-config local testing.
+- **Negative**: Subject to Gmail sending limits (suitable for niche deployment; replaceable by transactional SMTP service if volume scales).
 
 ---
 

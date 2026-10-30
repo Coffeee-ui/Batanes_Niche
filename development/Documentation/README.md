@@ -1,4 +1,4 @@
-# Batanes Niche Job Portal – Developer Documentation Package (Version 2)
+# Batanes Niche Job Portal � Developer Documentation Package (Version 2)
 
 Welcome to the comprehensive technical documentation for the **Batanes Niche Job Portal (Version 2)**. This package provides an in-depth reference for architects, software engineers, devops practitioners, and data analysts working with the codebase.
 
@@ -8,10 +8,7 @@ The system is a production-ready, hyper-localized employment marketplace enginee
 
 ## Documentation Index
 
-The documentation suite is structured into 25 specialized modules, each covering a specific architectural, operational, or business domain.
-
-> [!IMPORTANT]
-> The repository has been migrated to a unified **pnpm workspace** (`pnpm@12.4.2`) with the backend migrated to **TypeScript/Express.js** (`backend-ts/`). See [**23-TypeScript-Migration-Guide.md**](./23-TypeScript-Migration-Guide.md) and [**24-PNPM-Migration-Guide.md**](./24-PNPM-Migration-Guide.md).
+The documentation suite is structured into 23 specialized modules, each covering a specific architectural, operational, or business domain.
 
 | # | Document | Primary Focus & Scope | Target Audience |
 |---|---|---|---|
@@ -25,22 +22,19 @@ The documentation suite is structured into 25 specialized modules, each covering
 | **08** | [**Business Workflows**](./08-Business-Workflows.md) | End-to-end operational workflows with detailed Mermaid flowcharts (Auth, Postings, Applications, Notifications, Admin actions). | System Analysts, Developers |
 | **09** | [**Recommendation Engine**](./09-Recommendation-Engine.md) | Deterministic matching algorithm: 70-point skill score, 30-point geographic distance score, two-tier ranking formula, and calculation examples. | Data Engineers, Core Developers |
 | **10** | [**Frontend Architecture**](./10-Frontend-Architecture.md) | React 18, Vite, TypeScript, Tailwind CSS, routing tables, AuthContext, Axios silent refresh interceptors, and HSL design tokens. | Frontend Engineers, UI/UX Designers |
-| **11** | [**Administrative UI**](./11-Administrative-UI.md) | Backend-owned server-rendered Jinja2 admin interface (`/admin`), signed session cookies, CSRF protection, moderation tools, and audit log viewer. | Backend Engineers, Site Operators |
+| **11** | [**Administrative UI**](./11-Administrative-UI.md) | Backend-owned server-rendered Nunjucks admin interface (`/admin`), signed session cookies, CSRF protection, moderation tools, and audit log viewer. | Backend Engineers, Site Operators |
 | **12** | [**Notifications and Applications**](./12-Notifications-and-Applications.md) | Application lifecycle state machine, transactional notification coupling, duplicate prevention, and applicant contact privacy reveal. | Full-stack Engineers, QA |
 | **13** | [**Geography and Reference Data**](./13-Geography-and-Reference-Data.md) | Canonical Batanes geographic hierarchy (3 islands, 6 municipalities, 29 barangays), normalization algorithms, and seeding CLI. | Backend Devs, Database Maintainers |
-| **14** | [**Testing and Quality**](./14-Testing-and-Quality.md) | Testing architecture, backend pytest suite (10 test modules, in-memory SQLite), frontend Vitest suite, zero-jargon tests, and CI gates. | QA Engineers, Full-stack Devs |
-| **15** | [**Deployment and Operations**](./15-Deployment-and-Operations.md) | Production Docker compose architecture, Nginx reverse proxy routing, PostgreSQL persistence, database migrations, health probes, and backups. | DevOps, Sysadmins, SREs |
+| **14** | [**Testing and Quality**](./14-Testing-and-Quality.md) | Testing architecture, TypeScript compiler verification (`tsc --noEmit`), frontend Vitest suite, zero-jargon tests, and CI gates. | QA Engineers, Full-stack Devs |
+| **15** | [**Deployment and Operations**](./15-Deployment-and-Operations.md) | Production Docker compose architecture, Nginx reverse proxy routing, PostgreSQL persistence, Prisma migrations, health probes, and backups. | DevOps, Sysadmins, SREs |
 | **16** | [**Data Analysis Reference**](./16-Data-Analysis-Reference.md) | Analytical guide for researchers: Entity mapping, analytical dimensions, derived measures, SQL join recipes, and strict privacy exclusions. | Data Analysts, BI Engineers |
-| **17** | [**Developer Guide**](./17-Developer-Guide.md) | Local environment onboarding, virtual environment setup, configuration, CLI tooling, dev servers, and step-by-step recipes for extending the code. | New Engineers, Contributors |
-| **18** | [**Architecture Decisions**](./18-Architecture-Decisions.md) | 14 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives for foundational design choices. | Architects, Lead Developers |
+| **17** | [**Developer Guide**](./17-Developer-Guide.md) | Local environment onboarding, pnpm workspace setup, configuration, CLI tooling, dev servers, and step-by-step recipes for extending the code. | New Engineers, Contributors |
+| **18** | [**Architecture Decisions**](./18-Architecture-Decisions.md) | 16 Architectural Decision Records (ADRs) detailing context, rationale, consequences, and alternatives for foundational design choices. | Architects, Lead Developers |
 | **19** | [**Skills and Business Type Catalog**](./19-Skills-and-Business-Type-Catalog.md) | Standardized taxonomy of occupational skills, business industry sectors, categorization rules, and normalization utilities. | Backend Engineers, Content Curators |
 | **20** | [**System Flowcharts**](./20-System-Flowcharts.md) | Comprehensive standard flowchart suite (Level 1 User Journey, Level 2 Role-specific workflows, Level 3 Multi-tier architecture execution). | Non-technical Audience, All Engineers |
 | **21** | [**Developer Architecture Guide**](./21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code traceability walks, frontend/backend/DB modification maps, and recipes. | New & Contributing Developers |
-| **22** | [**TypeScript Backend Architecture**](./22-TypeScript-Backend-Architecture.md) | Specification for the drop-in TypeScript / Node.js backend replacement (`backend-ts/`), Prisma ORM, Express.js API, and contract parity. | Architects, Backend Engineers |
-| **23** | [**TypeScript Migration Guide**](./23-TypeScript-Migration-Guide.md) | Complete migration log: 30-endpoint API contract audit, technology mapping table, security parity analysis, risk register & resolutions, and updated setup instructions. | Backend Engineers, DevOps |
-| **24** | [**PNPM Migration Guide**](./24-PNPM-Migration-Guide.md) | PNPM monorepo workspace migration log: workspace topology, `.npmrc` configuration, Dockerfile updates, script migration, and verification. | DevOps, All Engineers |
-| **25** | [**Database Environment Switching**](./25-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. | Backend Engineers, DevOps, Database Maintainers |
-
+| **22** | [**Backend Architecture**](./22-Backend-Architecture.md) | Architecture specification for the Express.js + TypeScript backend (`backend/`), Prisma ORM, domain services, repositories, and API contract preservation. | Architects, Backend Engineers |
+| **23** | [**Database Environment Switching**](./23-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ? PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. | Backend Engineers, DevOps, Database Maintainers |
 
 ---
 

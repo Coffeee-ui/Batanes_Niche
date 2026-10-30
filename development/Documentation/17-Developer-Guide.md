@@ -1,17 +1,13 @@
 # 17 - Developer Guide & Extension Manual
 
-> [!IMPORTANT]
-> The backend has been migrated to **TypeScript/Express.js** (`backend-ts/`). The Python backend (`backend/`) is preserved as a reference. The sections below cover **both** backends; start with §2.2a (TypeScript) for new development.
-
 ## 1. System Requirements & Prerequisites
 
 Before setting up the **Batanes Niche Job Portal** locally, ensure your machine satisfies the following prerequisites:
 
 | Tool / Runtime | Minimum Version | Verified Version | Purpose |
 |---|---|---|---|
-| **Node.js** | `20.0.0` (LTS) | `20.x` | Backend-ts runtime (TypeScript/Express.js), Frontend development |
-| **pnpm** | `9.0.0` | `12.x` | Package manager for workspace, backend-ts, and frontend |
-| **Python** | `3.11.0` | `3.11.x` | Legacy Python backend (`backend/`) reference only |
+| **Node.js** | `20.0.0` (LTS) | `20.x` | Backend runtime (TypeScript/Express.js), Frontend development |
+| **pnpm** | `9.0.0` | `12.x` | Package manager for monorepo workspace |
 | **Git** | `2.40.0` | Latest | Version control |
 
 ---
@@ -26,31 +22,29 @@ cd Batanes_Niche
 
 ---
 
-### 2.2a Backend Setup (TypeScript — Active)
+### 2.2 Backend Setup (TypeScript Express + Prisma)
 
 #### Step 1: Install Dependencies
 ```bash
 # From workspace root:
-pnpm install
-
-# Or specifically for backend-ts:
-cd backend-ts
 pnpm install
 ```
 
 #### Step 2: Configure Environment Variables
 Copy and edit the example `.env`:
 ```bash
-# The backend-ts/.env is already scaffolded; edit as needed:
+# From workspace root:
+cp .env.example .env
 ```
+Key configuration items:
 ```env
 ENVIRONMENT=development
-DEBUG=True
+DEBUG=true
 APP_NAME="Batanes Niche Job Portal"
 BASE_URL="http://localhost:8000"
 PORT=8000
 
-# Local SQLite Database (via Prisma) — Default
+# Local SQLite Database (via Prisma) � Default
 DB_PROVIDER=sqlite
 DATABASE_URL="file:../../Database/batanes_niche.db"
 
@@ -64,156 +58,47 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 ADMIN_SESSION_SECRET="batanes-niche-admin-session-local-secret-super-secure-high-entropy-64chars"
 
 # CORS
-ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+ALLOWED_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
 
-# SMTP (Leave empty for simulation mode)
-MAIL_HOST=
+# SMTP (Leave empty for console simulation mode)
+MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=
 MAIL_PASSWORD=
-MAIL_FROM=noreply@batanesjobs.ph
+MAIL_FROM=noreply@batanesniche.ph
 ```
 
-#### Step 3: Sync Database & Seed Demo Data
+#### Step 3: Initialize Database & Seed Demo Data
 ```powershell
-# From project root or backend-ts/:
-pnpm db:migrate
+# From project root:
+pnpm db:setup
 ```
-This syncs the provider in `schema.prisma`, runs `prisma db push`, and populates the database with idempotent demo data. To switch between SQLite and PostgreSQL/Supabase, see [**25-Database-Environment-Switching.md**](./25-Database-Environment-Switching.md).
-
+This applies the Prisma schema, creates the SQLite database, and seeds both baseline reference data and demo accounts. To switch between SQLite and PostgreSQL/Supabase, see [**23-Database-Environment-Switching.md**](./23-Database-Environment-Switching.md).
 
 #### Step 4: Standalone Seed (Optional)
 ```powershell
-# Note: `pnpm db:migrate` automatically runs the seed.
-# To run the idempotent seed independently:
+# To re-seed data without pushing schema:
 pnpm db:seed
 
-# Alternatively, the Python backend CLI can seed the shared database:
-# python -m app.cli seed-data
+# To clean reset the SQLite database:
+pnpm db:reset
 ```
 
-#### Step 5: Start TypeScript Backend Server
+#### Step 5: Start Backend Development Server
 ```powershell
-# Development (ts-node with watch)
-pnpm dev
+# From workspace root:
+pnpm dev:backend
 
-# Or build and run compiled output
-pnpm run build
-pnpm start
+# Or from backend directory:
+cd backend
+pnpm dev
 ```
 - **API Base**: `http://localhost:8000/api/v1`
 - **Admin Portal (Nunjucks SSR)**: `http://localhost:8000/admin`
 - **Health Check**: `http://localhost:8000/health`
 - **Readiness Probe**: `http://localhost:8000/ready`
 
-Quick start (PowerShell one-liner from project root):
-```powershell
-pnpm --filter batanes-niche-backend-ts dev
-```
-
 ---
-
-### 2.2b Backend Setup (Python — Legacy Reference)
-
-#### Step 1: Create and Activate Virtual Environment
-```bash
-cd backend
-python -m venv venv
-
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-
-# Windows Command Prompt:
-.\venv\Scripts\activate.bat
-
-# Linux / macOS:
-source venv/bin/activate
-```
-
-#### Step 2: Install Python Dependencies
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-#### Step 3: Configure Environment Variables
-Create a `.env` file in the project root or backend directory:
-```env
-ENVIRONMENT=development
-DEBUG=True
-APP_NAME="Batanes Niche Job Portal"
-BASE_URL="http://localhost:8000"
-
-# Local SQLite Database
-DATABASE_URL="sqlite:///./batanes_niche.db"
-
-# JWT Authentication
-JWT_SECRET_KEY="batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum"
-JWT_ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=7
-
-# Administrative Session Secret
-ADMIN_SESSION_SECRET="batanes-niche-admin-session-local-secret-super-secure-high-entropy-64chars"
-
-# CORS
-ALLOWED_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
-
-# SMTP (Leave empty for local simulation logging)
-MAIL_USERNAME=""
-MAIL_PASSWORD=""
-```
-
-#### Step 4: Run Database Migrations
-```bash
-alembic upgrade head
-```
-
-#### Step 5: Seed Demonstration Data & Create Admin
-```bash
-# Seed authentic Batanes reference accounts and vacancies
-python -m app.cli seed-data
-
-# (Optional) Provision a custom administrative user
-python -m app.cli create-admin \
-  --username admin \
-  --email admin@batanesniche.ph \
-  --password "AdminSecure123!" \
-  --full-name "Platform Administrator"
-```
-
-#### Step 6: Start Backend Server
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-- **API Base**: `http://localhost:8000/api/v1`
-- **Interactive Swagger Docs**: `http://localhost:8000/docs`
-- **Jinja2 Admin Portal**: `http://localhost:8000/admin`
-- **Health Check**: `http://localhost:8000/health`
-
-Shorcut if already implemented
-```
- Set-Location backend
-.\venv\Scripts\Activate.ps1
-python -m app.cli seed-data
-uvicorn app.main:app --reload --port 8000
-```
-or
-
-```
-Powershell
-Set-Location backend
-.\venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-
-Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing
-
-Invoke-WebRequest -Uri http://127.0.0.1:8000/admin/login -UseBasicParsing
-
-http://127.0.0.1:8000/admin/login
-```
-
----
-
 ### 2.3 Frontend Setup (React 18 + Vite)
 
 Open a separate terminal in the project root:
@@ -234,8 +119,8 @@ For rapid local operations on Windows, pre-configured batch scripts are provided
 
 | Batch Script | Path | Operation Performed |
 |---|---|---|
-| **Setup All** | `development\scripts\setup.bat` | Creates backend-ts node_modules, runs Prisma migrate, and installs all workspace pnpm packages. |
-| **Start All** | `development\scripts\start.bat` | Launches backend-ts (`:8000`) and frontend (`:5173`) in concurrent terminal processes. |
+| **Setup All** | `development\scripts\setup.bat` | Creates backend node_modules, runs Prisma migrate, and installs all workspace pnpm packages. |
+| **Start All** | `development\scripts\start.bat` | Launches backend (`:8000`) and frontend (`:5173`) in concurrent terminal processes. |
 | **Stop All** | `development\scripts\stop.bat` | Terminates active node and vite processes. |
 | **Test All** | `development\scripts\test.bat` | Executes backend test suite followed by frontend Vitest suite. |
 
@@ -245,7 +130,7 @@ For rapid local operations on Windows, pre-configured batch scripts are provided
 
 ### Backend Type Check
 ```bash
-cd backend-ts
+cd backend
 pnpm run typecheck
 ```
 
@@ -261,22 +146,22 @@ pnpm run build
 ## 5. Developer Extension Recipes
 
 ### Recipe 1: Adding a New REST API Endpoint (TypeScript)
-1. **Define Schema**: In `backend-ts/src/schemas/<domain>.ts`, create Zod input and output schemas.
-2. **Implement Repository Method**: In `backend-ts/src/repositories/<domain>Repository.ts`, create the required Prisma query method.
-3. **Implement Domain Rule**: In `backend-ts/src/services/<domain>Service.ts`, implement validation, authorization, and business logic.
-4. **Register Router Endpoint**: In `backend-ts/src/api/v1/<domain>.ts`, create the route handler using the Express Router.
-5. **Write Unit Test**: In `backend-ts/tests/test_<domain>.test.ts`, write positive and negative assertions with Jest/Supertest.
+1. **Define Schema**: In `backend/src/schemas/<domain>.ts`, create Zod input and output schemas.
+2. **Implement Repository Method**: In `backend/src/repositories/<domain>Repository.ts`, create the required Prisma query method.
+3. **Implement Domain Rule**: In `backend/src/services/<domain>Service.ts`, implement validation, authorization, and business logic.
+4. **Register Router Endpoint**: In `backend/src/api/v1/<domain>.ts`, create the route handler using the Express Router.
+5. **Write Unit Test**: In `backend/tests/test_<domain>.test.ts`, write positive and negative assertions with Jest/Supertest.
 
 ### Recipe 2: Adding a New Database Entity
-1. **Update Prisma Schema**: In `backend-ts/prisma/schema.prisma`, add the new model definition.
+1. **Update Prisma Schema**: In `backend/prisma/schema.prisma`, add the new model definition.
 2. **Generate Client & Migration**:
    ```bash
-   cd backend-ts
+   cd backend
    npx prisma migrate dev --name add_<new_entity>_table
    npx prisma generate
    ```
-3. **Create Repository**: Add `backend-ts/src/repositories/<newEntity>Repository.ts`.
-4. **Review Migration**: Inspect `backend-ts/prisma/migrations/` for correctness.
+3. **Create Repository**: Add `backend/src/repositories/<newEntity>Repository.ts`.
+4. **Review Migration**: Inspect `backend/prisma/migrations/` for correctness.
 
 ### Recipe 3: Adding a New Frontend Page
 1. **Create Page Component**: Create `frontend/src/pages/<NewPage>.tsx`.
@@ -331,14 +216,14 @@ When active, Demo Mode provides one-click authentication on the login page for e
 ## 7. Common Pitfalls & Developer Gotchas
 
 1. **Do NOT Invent New Endpoints for Chat**: Version 2 does **not** support real-time chat or WebSockets. Communication relies on the application state machine, persistent in-app notifications, and authorized phone/email.
-2. **Do NOT Hardcode Geography**: Never hardcode Batanes municipalities or barangays in strings. Always reference `backend-ts/src/core/geography.ts` or fetch from `/api/v1/meta/options`.
+2. **Do NOT Hardcode Geography**: Never hardcode Batanes municipalities or barangays in strings. Always reference `backend/src/core/geography.ts` or fetch from `/api/v1/meta/options`.
 3. **Zero Technical Jargon in Public UI**: Do not display system terms like *Express.js*, *Prisma*, *PostgreSQL*, *JWT*, or *Zod* in user-facing components.
-4. **Admin UI Isolation**: Never import React components into Nunjucks templates or vice versa. Admin screens belong strictly in `backend-ts/src/templates/`.
+4. **Admin UI Isolation**: Never import React components into Nunjucks templates or vice versa. Admin screens belong strictly in `backend/src/templates/`.
 
 ---
 
 ## 8. Next Steps
 
-- To review the 14 Architecture Decision Records (ADRs), see [**18-Architecture-Decisions.md**](./18-Architecture-Decisions.md).
+- To review the 16 Architecture Decision Records (ADRs), see [**18-Architecture-Decisions.md**](./18-Architecture-Decisions.md).
 - To examine API contracts, see [**05-API-Architecture.md**](./05-API-Architecture.md).
 - For the full production runbook, see [**15-Deployment-and-Operations.md**](./15-Deployment-and-Operations.md).

@@ -1,8 +1,5 @@
 # 15 - Deployment and Operations
 
-> [!IMPORTANT]
-> The backend container now runs the **TypeScript/Express.js** (`backend-ts/`) implementation. References to `FastAPI`, `Uvicorn`, `Alembic`, and `uvicorn` have been updated accordingly.
-
 ## 1. Production Architecture Topology
 
 The **Batanes Niche Job Portal** is deployed as an orchestrated multi-container application using **Docker Compose** fronted by **Nginx** and backed by **PostgreSQL 16**.
@@ -50,7 +47,7 @@ Nginx operates as the reverse proxy gateway, SSL termination endpoint, and stati
 |---|---|---|
 | `/assets/*` | Nginx local disk | `Cache-Control: public, max-age=31536000, immutable`. Fingerprinted build assets. |
 | `/api/*` | Proxy to `backend:8000` | No cache. Gzip enabled for JSON payloads. Pass `X-Forwarded-For`, `X-Real-IP`. |
-| `/admin*` | Proxy to `backend:8000` | No cache. Server-rendered Jinja2 HTML. Pass `Host`, `Cookie`, `X-Real-IP`. |
+| `/admin*` | Proxy to `backend:8000` | No cache. Server-rendered Nunjucks HTML. Pass `Host`, `Cookie`, `X-Real-IP`. |
 | `/static/*` | Proxy to `backend:8000` | Serves uploaded user avatars and public assets. |
 | `/health` | Nginx internal | Returns HTTP 200 `"healthy\n"`. Internal proxy health check. |
 | `/*` (All other paths) | Nginx local disk | Fallback to `/index.html` (`try_files $uri $uri/ /index.html`). No-cache headers. |
@@ -68,7 +65,7 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
 ## 3. Docker Containerization Architecture
 
-### 3.1 Backend Dockerfile (`docker/backend-ts.Dockerfile`)
+### 3.1 Backend Dockerfile (`docker/backend.Dockerfile`)
 - **Base Image**: `node:20-alpine`.
 - **System Dependencies**: Installs `curl` for container healthchecks and OpenSSL for Prisma.
 - **Security**: Creates an unprivileged system user (`node`) to run the Node.js application.
@@ -86,7 +83,7 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
 ## 4. Production Environment Configuration (`.env`)
 
-The application consumes configuration variables via `backend/app/core/config.py`.
+The application consumes configuration variables via `backend/src/core/config.ts`.
 
 ```env
 # ============================================================

@@ -17,37 +17,37 @@ The administrative interface of the **Batanes Niche Job Portal** is entirely dec
 flowchart TD
     subgraph AdminAuth["Admin Authentication & CSRF Architecture"]
         AdminBrowser["Admin Browser"]
-        FastAPIServer["FastAPI /admin Gateway"]
-        SessionSerializer["itsdangerous URLSafeTimedSerializer"]
+        ExpressServer["Express.js /admin Gateway"]
+        SessionSerializer["Signed HMAC-SHA256 Serializer"]
         DB[(Relational Database)]
 
-        AdminBrowser -->|POST /admin/login| FastAPIServer
-        FastAPIServer -->|Verify bcrypt password & role=='admin'| DB
-        FastAPIServer -->|Sign session payload| SessionSerializer
+        AdminBrowser -->|POST /admin/login| ExpressServer
+        ExpressServer -->|Verify bcrypt password & role=='admin'| DB
+        ExpressServer -->|Sign session payload| SessionSerializer
         SessionSerializer -->|Issue signed HttpOnly cookie| AdminBrowser
         
-        AdminBrowser -->|GET /admin/dashboard| FastAPIServer
-        FastAPIServer -->|Verify signature & check age < 12h| SessionSerializer
-        FastAPIServer -->|Check account_status == 'active'| DB
-        FastAPIServer -->|Render Jinja2 Template| AdminBrowser
+        AdminBrowser -->|GET /admin/dashboard| ExpressServer
+        ExpressServer -->|Verify signature & check age < 12h| SessionSerializer
+        ExpressServer -->|Check account_status == 'active'| DB
+        ExpressServer -->|Render Nunjucks Template| AdminBrowser
 
-        AdminBrowser -->|POST /admin/users/:id/suspend with CSRF| FastAPIServer
-        FastAPIServer -->|Verify CSRF cookie matches form token| FastAPIServer
-        FastAPIServer -->|Execute moderation & write audit log| DB
+        AdminBrowser -->|POST /admin/users/:id/suspend with CSRF| ExpressServer
+        ExpressServer -->|Verify CSRF cookie matches form token| ExpressServer
+        ExpressServer -->|Execute moderation & write audit log| DB
     end
 ```
 
 ### 2.1 Signed Session Cookie (`batanes_admin_session`)
 - Administrative sessions do not use bearer tokens.
 - Authentication is tracked via an `HttpOnly`, `SameSite=Lax` cookie named `batanes_admin_session`.
-- The cookie payload is cryptographically signed and timestamped using `itsdangerous.URLSafeTimedSerializer` with `settings.ADMIN_SESSION_SECRET`.
+- The cookie payload is cryptographically signed and timestamped using `cryptographic HMAC-SHA256 signature (`sign`/`unsign` in `src/admin/auth.ts`)` with `settings.ADMIN_SESSION_SECRET`.
 - **Session Expiration**: Hard limit of **12 hours** (`max_age = 43200` seconds). Expired cookies are automatically rejected.
 - **Immediate Suspension Guard**: On every page request, `verify_admin_session` queries the database for the user record. If `account_status != 'active'`, the session is terminated immediately and redirected to login.
 
 ### 2.2 Double-Submit CSRF Defense (`batanes_admin_csrf`)
 - All state-modifying administrative actions (`POST /admin/*`) are protected against Cross-Site Request Forgery (CSRF).
 - A 32-byte cryptographic token is issued via the `batanes_admin_csrf` cookie and injected into hidden form inputs (`<input type="hidden" name="csrf_token" value="{{ csrf_token }}">`).
-- Handlers verify that the form token strictly matches the cookie value using constant-time string comparison (`secrets.compare_digest`).
+- Handlers verify that the form token strictly matches the cookie value using constant-time string comparison (`crypto.timingSafeEqual`).
 
 ---
 
@@ -82,7 +82,7 @@ flowchart TD
 ### 3.5 System Error Reports (`/admin/errors`)
 - Displays records captured by `ErrorLoggingService`.
 - Shows timestamp, associated username, endpoint, and error message.
-- Clickable modal reveals the sanitized Python stack trace and scrubbed request payload for root-cause debugging.
+- Clickable modal reveals the sanitized stack trace and scrubbed request payload for root-cause debugging.
 
 ### 3.6 Append-Only Audit Trail (`/admin/audit`)
 - Immutable compliance record of all privileged platform events.
@@ -96,15 +96,9 @@ Admin accounts cannot be registered via public registration. They must be provis
 
 ```bash
 # Execute from within the backend directory
-cd backend
-python -m app.cli create-admin \
-  --username sysadmin \
-  --email admin@batanesniche.ph \
-  --password "YourSecureAdminPassword123!" \
-  --full-name "Provincial Administrator"
-```
+pnpm db:setup`r`n```
 
-The CLI:
+The baseline seed script (`development/scripts/seeds/baseline.ts`):
 1. Validates that the username and email are not already registered.
 2. Hashes the password using bcrypt with work factor 12.
 3. Inserts the user with `role = 'admin'` and `account_status = 'active'`.

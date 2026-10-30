@@ -1,7 +1,7 @@
 # Batanes Niche Job Portal (Version 2)
 
-[![Backend Tests](https://img.shields.io/badge/pytest-passing-success.svg)](./backend/tests)
-[![Coverage](https://img.shields.io/badge/coverage-%3E%3D85%25-brightgreen.svg)](./backend)
+[![Backend](https://img.shields.io/badge/typescript-passing-success.svg)](./backend)
+[![Typecheck](https://img.shields.io/badge/typecheck-passing-brightgreen.svg)](./backend)
 [![Frontend Tests](https://img.shields.io/badge/vitest-passing-success.svg)](./frontend/src/test)
 [![Zero Jargon](https://img.shields.io/badge/ui_contract-zero__jargon-blue.svg)](./frontend/src/test/zero_jargon.test.ts)
 
@@ -17,7 +17,7 @@ The **Batanes Niche Job Portal** provides:
 - **Hyper-Local Matching**: Transparent transit accessibility calculations across the 6 municipalities and 29 barangays.
 - **Explainable Recommendations**: A deterministic two-tier matching engine weighting trade skills (0–70 pts) and geographic distance (0–30 pts).
 - **Zero-Jargon Public Experience**: Clean, accessible interfaces tailored for local trade workers and enterprise proprietors without intimidating technical terminology.
-- **Isolated Server-Rendered Administration**: A secure Jinja2 administrative portal completely decoupled from the client-side single-page application.
+- **Isolated Server-Rendered Administration**: A secure Nunjucks administrative portal completely decoupled from the client-side single-page application.
 
 > [!IMPORTANT]
 > **Version 2 Scope Boundaries**:
@@ -29,9 +29,9 @@ The **Batanes Niche Job Portal** provides:
 
 ```
 Frontend (SPA):       React 18.3 | TypeScript 5.5 | Vite 5.3 | Tailwind CSS 3.4 | Axios
-Backend (REST API):   FastAPI 0.111 | Python 3.11 | Pydantic v2 | SlowAPI Rate Limiter
+Backend (REST API):   FastAPI 0.111 | Python 3.11 | Pydantic v2 | RateLimiter Rate Limiter
 Admin UI (SSR):       Jinja2 Templates | Itsdangerous Signed Cookies | Double-Submit CSRF
-Persistence:          SQLAlchemy 2.0 | PostgreSQL 16 (Production) | SQLite (Dev / Test)
+Persistence:          Prisma ORM | PostgreSQL 16 (Production) | SQLite (Dev / Test)
 Database Migrations:  Alembic
 Containerization:     Docker Compose | Nginx 1.27 Reverse Proxy
 Testing:              Pytest 8.x + pytest-cov (Backend) | Vitest 1.6 + JSDOM (Frontend)
@@ -73,14 +73,14 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
                      v                            v                            v
           +--------------------+        +--------------------+        +--------------------+
           |  Domain Services   |        |  Core Middleware   |        | External Services  |
-          |  (Business Logic)  |        |  (CORS, SlowAPI,   |        | (SMTP Email OTP    |
+          |  (Business Logic)  |        |  (CORS, RateLimiter,   |        | (SMTP Email OTP    |
           |                    |        |   Audit, Errors)   |        |  Delivery)         |
           +--------------------+        +--------------------+        +--------------------+
                      |
                      v
           +--------------------+
           | Repository Layer   |
-          | (SQLAlchemy 2.0)   |
+          | (Prisma ORM)   |
           +--------------------+
                      |
                      v
@@ -92,7 +92,7 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
 ```
 
 - **Client Presentation**: React 18 SPA handles public job search, seeker dashboard, and employer applicant reviews.
-- **Admin Isolation**: Jinja2 Admin Portal under `/admin` operates on signed HttpOnly session cookies (`batanes_admin_session`) and CSRF tokens.
+- **Admin Isolation**: Nunjucks Admin Portal under `/admin` operates on signed HttpOnly session cookies (`batanes_admin_session`) and CSRF tokens.
 - **Domain Services**: Business logic, two-tier recommendations, and profile completeness calculations are centralized in domain services.
 - **Repository Pattern**: All database queries are encapsulated in repository classes.
 
@@ -235,7 +235,7 @@ pnpm dev
 Verify: `GET http://localhost:8000/ready` → `{ "provider": "postgresql", "status": "ready" }`
 
 > [!NOTE]
-> **Admin sessions are not portable across backends.** When switching between the FastAPI and TypeScript backend (or between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since the admin session cookie signer differs.
+> **Admin sessions are not portable across backends.** When switching database providers (or between SQLite and PostgreSQL), re-login at `http://localhost:8000/admin` since the admin session cookie signer differs.
 
 #### Available database commands (from root or `backend/`):
 | Command | Purpose |
@@ -288,18 +288,14 @@ pnpm build
 
 ## 8. Administrative Portal (`/admin`)
 
-The administrative portal is hosted on the FastAPI backend under `/admin`:
+The administrative portal is hosted on the Express.js backend under `/admin`:
 - **Security**: Authenticated via signed HttpOnly session cookies (`batanes_admin_session`) with a 12-hour timeout.
 - **CSRF Protection**: Enforced on all POST actions via `batanes_admin_csrf`.
 - **Immediate Suspension Guard**: Suspended administrators or users are rejected immediately on every request.
 - **Initial Account Creation**:
   ```bash
   cd backend
-  python -m app.cli create-admin \
-    --username admin \
-    --email admin@batanesniche.ph \
-    --password "AdminSecure123!" \
-    --full-name "Platform Administrator"
+  pnpm db:setup
   ```
 
 ---
@@ -307,7 +303,7 @@ The administrative portal is hosted on the FastAPI backend under `/admin`:
 ## 9. Deployment Overview
 
 Production uses **Docker Compose** fronted by **Nginx**:
-- **Nginx**: Terminates SSL, routes `/api/` and `/admin` to FastAPI, serves static React SPA assets with long-term caching, and handles SPA fallback routing.
+- **Nginx**: Terminates SSL, routes `/api/` and `/admin` to Express.js backend, serves static React SPA assets with long-term caching, and handles SPA fallback routing.
 - **PostgreSQL 16**: Enterprise database with automated WAL backups.
 - **Non-Root Containers**: Backend runs under unprivileged user `appuser` (UID 1001).
 

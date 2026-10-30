@@ -12,7 +12,7 @@ Security in the **Batanes Niche Job Portal** is engineered with zero trust in cl
 | **Access Tokens** | HMAC-SHA256 (HS256) | High-entropy 64+ char secret key | Signed JWT string passed via `Authorization: Bearer` |
 | **Refresh Tokens** | Raw: CSPRNG 32-byte URL-safe<br/>Stored: SHA-256 | `secrets.token_urlsafe(32)`<br/>`hashlib.sha256()` | 64-character lowercase hex digest in `refresh_tokens.token_hash` |
 | **Password Reset OTP** | Raw: CSPRNG 6-digit numeric<br/>Stored: bcrypt | `secrets.randbelow(900000) + 100000`<br/>Work factor = 10 | Modular Crypt Format in `password_reset_tokens.otp_hash` |
-| **Admin Session Cookie** | Itsdangerous Serializer | HMAC-SHA1 signed + timestamped | Signed cookie `batanes_admin_session` |
+| **Admin Session Cookie** | Signed Cookie Serializer | HMAC-SHA1 signed + timestamped | Signed cookie `batanes_admin_session` |
 | **Admin CSRF Token** | CSPRNG 32-byte hex | `secrets.token_hex(32)` | Double-submit cookie `batanes_admin_csrf` |
 
 ---
@@ -40,7 +40,7 @@ Access tokens are short-lived, stateless credentials issued upon successful logi
 - `iat`: Issued At timestamp (Unix epoch).
 - `exp`: Expiration timestamp (15 minutes from issuance).
 
-### Validation Pipeline (`backend/app/api/deps.py`)
+### Validation Pipeline (`backend/src/middleware/auth.ts`)
 1. Extract token from `Authorization: Bearer <token>` header.
 2. Decode and verify signature with `JWT_SECRET_KEY` and `HS256`.
 3. Verify `exp` claim against current UTC time.
@@ -123,7 +123,7 @@ When an administrator suspends an account (`account_status = 'suspended'`):
 2. Any subsequent attempt to authenticate via `/api/v1/auth/login` returns `HTTP 403 Forbidden`.
 3. Any subsequent attempt to rotate tokens via `/api/v1/auth/refresh` returns `HTTP 401 Unauthorized`.
 4. Any API request presenting an access token belonging to a suspended user is rejected during dependency validation (`HTTP 403 Forbidden`).
-5. In the Jinja2 admin interface, any active session for a suspended user is rejected upon page load.
+5. In the Server-rendered admin interface, any active session for a suspended user is rejected upon page load.
 
 ---
 
@@ -155,7 +155,7 @@ All audit events and unhandled 500 error logs pass through automatic recursive s
 sequenceDiagram
     autonumber
     actor User as User Browser / React SPA
-    participant API as FastAPI Router (/api/v1/auth/login)
+    participant API as Express Router (/api/v1/auth/login)
     participant AuthSvc as AuthService
     participant UserRepo as UserRepository
     participant TokenRepo as TokenRepository
@@ -170,10 +170,10 @@ sequenceDiagram
 
     AuthSvc->>AuthSvc: verify_password(password, user.password_hash)
     alt Invalid Password
-        AuthSvc-->>API: raise HTTPException(401, "Invalid credentials.")
+        AuthSvc-->>API: return res.status(401), "Invalid credentials.")
         API-->>User: HTTP 401 Unauthorized
     else Account Suspended
-        AuthSvc-->>API: raise HTTPException(403, "Account suspended.")
+        AuthSvc-->>API: return res.status(403), "Account suspended.")
         API-->>User: HTTP 403 Forbidden
     else Valid Credentials
         AuthSvc->>AuthSvc: create_access_token(sub=user.id, role=user.role)
@@ -192,7 +192,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor Client as React SPA (Axios Interceptor)
-    participant API as FastAPI Router (/api/v1/auth/refresh)
+    participant API as Express Router (/api/v1/auth/refresh)
     participant AuthSvc as AuthService
     participant TokenRepo as TokenRepository
     participant AuditSvc as AuditService
@@ -210,11 +210,11 @@ sequenceDiagram
         TokenRepo->>DB: UPDATE refresh_tokens SET revoked = True WHERE user_id = ...
         AuthSvc->>AuditSvc: log_event("REFRESH_TOKEN_COMPROMISE_DETECTED")
         AuditSvc->>DB: INSERT INTO audit_logs ...
-        AuthSvc-->>API: raise HTTPException(401, "Refresh token reuse detected.")
+        AuthSvc-->>API: return res.status(401), "Refresh token reuse detected.")
         API-->>Client: HTTP 401 Unauthorized
     else Stored Token Expired
         AuthSvc->>TokenRepo: revoke_refresh_token(db, stored_token)
-        AuthSvc-->>API: raise HTTPException(401, "Refresh token expired.")
+        AuthSvc-->>API: return res.status(401), "Refresh token expired.")
         API-->>Client: HTTP 401 Unauthorized
     else Valid Active Token
         AuthSvc->>TokenRepo: revoke_refresh_token(db, stored_token)
@@ -233,7 +233,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor Client as Authenticated Client
-    participant API as FastAPI Router (/api/v1/auth/logout)
+    participant API as Express Router (/api/v1/auth/logout)
     participant AuthSvc as AuthService
     participant TokenRepo as TokenRepository
     participant DB as Relational Database
@@ -261,7 +261,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as User
-    participant API as FastAPI Router
+    participant API as Express Router
     participant AuthSvc as AuthService
     participant UserRepo as UserRepository
     participant ResetRepo as PasswordResetRepository
@@ -302,9 +302,9 @@ sequenceDiagram
     alt OTP Mismatch
         AuthSvc->>ResetRepo: increment_attempts(db, reset_token)
         alt attempts >= 5
-            AuthSvc-->>API: raise HTTPException(400, "Too many failed attempts. Code invalidated.")
+            AuthSvc-->>API: return res.status(400), "Too many failed attempts. Code invalidated.")
         else attempts < 5
-            AuthSvc-->>API: raise HTTPException(400, "Invalid or expired reset code.")
+            AuthSvc-->>API: return res.status(400), "Invalid or expired reset code.")
         end
         API-->>User: HTTP 400 Bad Request
     else OTP Verified
@@ -325,4 +325,4 @@ sequenceDiagram
 
 - For role capabilities and RBAC authorization matrices, see [**07-User-Roles-and-Permissions.md**](./07-User-Roles-and-Permissions.md).
 - For operational business flowcharts, see [**08-Business-Workflows.md**](./08-Business-Workflows.md).
-- For Jinja2 admin session security and CSRF defense, see [**11-Administrative-UI.md**](./11-Administrative-UI.md).
+- For Server-rendered admin session security and CSRF defense, see [**11-Administrative-UI.md**](./11-Administrative-UI.md).

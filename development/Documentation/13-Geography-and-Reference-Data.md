@@ -73,7 +73,7 @@ The **Batanes Niche Job Portal** is anchored on an authoritative geographic hier
 
 ---
 
-## 3. Normalization & Validation Logic (`backend/app/core/geography.py`)
+## 3. Normalization & Validation Logic (`backend/src/core/geography.ts`)
 
 ### 3.1 Composite Name Matching
 Ivatan barangay names frequently incorporate historical or dialectal identifiers (e.g., *Kayhuvokan (Santa Rosa)*). The system implements flexible parsing:
@@ -82,8 +82,7 @@ Ivatan barangay names frequently incorporate historical or dialectal identifiers
 
 ### 3.2 Island Resolution
 Municipalities map deterministically to their home island:
-```python
-MUNICIPALITY_TO_ISLAND = {
+```typescript`r`nexport const MUNICIPALITY_TO_ISLAND: Record<string, string> = {
     "Basco": "Batan Island",
     "Mahatao": "Batan Island",
     "Ivana": "Batan Island",
@@ -140,13 +139,13 @@ The metadata router exposes a public endpoint returning all canonical options fo
 
 ---
 
-## 5. Seed Data CLI (`python -m app.cli seed-data`)
+## 5. Seed Data (`pnpm db:setup`)
 
 The platform includes an automated reference seeder that populates realistic demonstration accounts and job listings grounded in authentic Ivatan geography:
 
 ```bash
 cd backend
-python -m app.cli seed-data
+pnpm db:setup
 ```
 
 ### Seeded Accounts & Listings
@@ -162,9 +161,9 @@ python -m app.cli seed-data
 ## 6. Procedures for Updating Canonical Geography
 
 If municipal boundaries or barangay classifications are altered by provincial ordinance:
-1. Update dictionary definitions in `backend/app/core/geography.py`.
+1. Update dictionary definitions in `backend/src/core/geography.ts`.
 2. Generate an Alembic data migration if historical rows require renaming.
-3. Run `pytest tests/test_geography.py` to confirm zero regression across validation, distance scoring, and composite alias resolution.
+3. Run `pnpm typecheck` and `pnpm test` to confirm zero regression across validation, distance scoring, and composite alias resolution.
 
 ---
 

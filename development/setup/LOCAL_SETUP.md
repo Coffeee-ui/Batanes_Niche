@@ -1,13 +1,12 @@
 # Batanes Niche Job Portal - Local Setup Guide (Version 2)
 
-Welcome to the **Batanes Niche Job Portal Version 2**. This guide outlines the steps required to set up, run, and develop both the backend and frontend locally.
+Welcome to the **Batanes Niche Job Portal Version 2**. This guide outlines the steps required to set up, run, and develop both the TypeScript backend and React frontend locally.
 
 ---
 
 ## 1. Prerequisites
 
 Ensure you have the following installed on your machine:
-- **Python**: Version 3.11 or higher
 - **Node.js**: Version 20.x or higher (LTS recommended)
 - **pnpm**: Version 9.x or higher (e.g. `pnpm@12.4.2`)
 - **Git**: Latest version
@@ -18,141 +17,115 @@ Ensure you have the following installed on your machine:
 
 ```
 Batanes_Niche/
-├── backend/                  # FastAPI + SQLAlchemy 2.0 Backend
-│   ├── alembic/              # Database schema migrations
-│   ├── app/                  # Application core, domains, repositories, admin
-│   ├── tests/                # Comprehensive pytest suite (43+ tests, >=85% cov)
-│   └── requirements.txt      # Python dependencies
-├── frontend/                 # React 18 + Vite + Tailwind SPA
-│   ├── src/                  # Design tokens, contexts, components, pages
-│   ├── package.json          # Node dependencies & scripts
-│   └── vite.config.ts        # Vite configuration & proxy
-├── docker/                   # Production Docker & Nginx configurations
-├── development/              # Setup, testing, and operational runbooks
-│   ├── setup/                # Local and production setup documentation
-│   ├── testing/              # Testing contracts and execution guides
-│   └── scripts/              # Windows batch utility scripts
-└── docker-compose.yml        # Multi-container orchestration
++-- backend/                  # TypeScript + Express.js + Prisma Backend
+�   +-- prisma/               # Prisma database schema and migrations
+�   +-- src/                  # Core application, API routers, services, repositories
+�   +-- package.json          # Backend dependencies & scripts
++-- frontend/                 # React 18 + Vite + Tailwind SPA
+�   +-- src/                  # Components, pages, contexts, design tokens
+�   +-- package.json          # Frontend dependencies & scripts
+�   +-- vite.config.ts        # Vite configuration & proxy
++-- docker/                   # Production Docker & Nginx configurations
++-- development/              # Setup, testing, and operational runbooks
+�   +-- Documentation/        # Technical architecture documentation
+�   +-- setup/                # Local and production setup documentation
+�   +-- testing/              # Testing contracts and execution guides
+�   +-- scripts/              # Windows batch utility scripts & database seeds
++-- docker-compose.yml        # Multi-container orchestration
 ```
 
 ---
 
-## 3. Backend Setup
+## 3. Fast-Track Setup (Single Command)
 
-### Step 1: Create and Activate Virtual Environment
-Open PowerShell or your command prompt in the project root:
+For Windows environments, run the automated setup script from the repository root:
 
-```bash
-cd backend
-python -m venv venv
-
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-
-# Windows Command Prompt:
-.\venv\Scripts\activate.bat
-
-# Linux/macOS:
-source venv/bin/activate
+```cmd
+development\scripts\setup.bat
 ```
 
-### Step 2: Install Dependencies
+This script automatically:
+1. Installs all workspace dependencies (`pnpm install`)
+2. Generates the Prisma ORM client (`pnpm --filter batanes-niche-backend prisma:generate`)
+3. Sets up the local SQLite database and seeds baseline and demo data (`pnpm db:setup`)
+
+---
+
+## 4. Manual Step-by-Step Setup
+
+### Step 1: Install Workspace Dependencies
+From the repository root:
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+pnpm install
 ```
 
-### Step 3: Configure Environment Variables
-Copy the `.env.example` in the root or create a `.env` file:
+### Step 2: Configure Environment Variables
+Copy `.env.example` to `backend/.env` (or verify `backend/.env` exists):
 ```bash
-cp ../.env.example ../.env
+cp .env.example backend/.env
 ```
-Ensure the `.env` contains:
+
+Default local development values:
 ```env
+PORT=8000
 ENVIRONMENT=development
-DEBUG=True
-SECRET_KEY=dev_secret_key_batanes_niche_minimum_32_chars_long
-DATABASE_URL=sqlite+aiosqlite:///./batanes_niche.db
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-UPLOAD_DIR=./uploads
+DATABASE_URL=file:./dev.db
+JWT_SECRET_KEY=batanes_super_secret_jwt_key_development_only_minimum_32_chars
+ADMIN_SESSION_SECRET=batanes_super_secret_admin_session_key_minimum_32_chars
+CORS_ORIGIN=http://localhost:5173
 ```
 
-### Step 4: Run Database Migrations
+### Step 3: Initialize Database & Seed Data
+Generate the Prisma client and seed the local database:
 ```bash
-alembic upgrade head
+pnpm --filter batanes-niche-backend prisma:generate
+pnpm db:setup
 ```
 
-### Step 5: (Optional) Seed Sample Data
+### Step 4: Start Development Servers
+You can start both backend and frontend concurrently:
 ```bash
-python -m app.commands.seed_data
+development\scripts\start.bat
 ```
 
-### Step 6: Start Backend Development Server
+Or run them in separate terminals:
 ```bash
-uvicorn app.main:app --reload --port 8000
+# Terminal 1 - Backend:
+pnpm --filter batanes-niche-backend dev
+
+# Terminal 2 - Frontend:
+pnpm --filter batanes-niche-frontend dev
 ```
-- **API Base**: `http://localhost:8000/api/v1`
-- **Interactive OpenAPI Documentation**: `http://localhost:8000/docs`
-- **Jinja2 Server-Rendered Admin Portal**: `http://localhost:8000/admin`
+
+- **Frontend Application**: `http://localhost:5173`
+- **Backend API Base**: `http://localhost:8000/api/v1`
+- **Server-Rendered Admin Portal**: `http://localhost:8000/admin`
 - **Health Check**: `http://localhost:8000/health`
 
 ---
 
-## 4. Frontend Setup
+## 5. Automated Operational Scripts
 
-### Step 1: Install Node Packages
-Open a separate terminal in the project root:
-```bash
-cd frontend
-pnpm install
-```
+Located in `development/scripts/`:
 
-### Step 2: Start Frontend Development Server
-```bash
-pnpm dev
-```
-The React SPA will be available at:
-- `http://localhost:5173`
-
-Vite is preconfigured to automatically proxy `/api` requests to `http://127.0.0.1:8000`.
-
----
-
-## 5. Automated Local Scripts (Windows)
-
-For streamlined local development on Windows, batch scripts are provided in `development/scripts/`:
-
-- **Setup Everything**: `development\scripts\setup.bat` (creates venv, installs all workspace deps, generates Prisma client, runs `pnpm db:setup`)
-- **Initialize Database & Seed**: `development\scripts\init-db.bat` or `pnpm db:setup` (1-command SQLite generation, schema sync, and idempotent seeding)
-- **Reset Database**: `pnpm db:reset` or `pnpm db:setup -- --reset` (drops & recreates clean dev database)
-- **Start All Services**: `development\scripts\start-ts.bat` (launches TypeScript backend and Vite frontend concurrently)
+- **Setup Environment**: `development\scripts\setup.bat` (installs deps, generates Prisma, runs `db:setup`)
+- **Initialize / Seed DB**: `pnpm db:setup` or `development\scripts\init-db.bat`
+- **Reset DB**: `pnpm db:reset` (drops & recreates clean local database)
+- **Start All Services**: `development\scripts\start.bat` (launches backend on :8000 and frontend on :5173)
 - **Stop All Services**: `development\scripts\stop.bat` (terminates active dev processes)
-- **Run All Tests**: `development\scripts\test.bat` (executes backend pytest and frontend vitest)
+- **Run Tests & Checks**: `development\scripts\test.bat` (typecheck + vitest)
 
 ---
 
-## 6. Running Local Tests
+## 6. Running Local Tests & Verification
 
-### Backend Tests (pytest + coverage)
 ```bash
-cd backend
-pytest tests/ --cov=app --cov-report=term-missing
-```
+# Verify TypeScript types across all packages
+pnpm typecheck
 
-### Frontend Tests (vitest)
-```bash
-cd frontend
+# Run Vitest test suite
 pnpm test
+
+# Build both backend and frontend for production
+pnpm build
 ```
-
----
-
-## 7. Troubleshooting
-
-- **SQLite locking issues (`sqlite3.OperationalError: database is locked`)**:
-  Ensure background workers or test runners are terminated before re-running migrations.
-- **Port conflicts (8000 or 5173 in use)**:
-  Run `netstat -ano | findstr :8000` and kill the corresponding PID with `taskkill /PID <PID> /F`.
-- **Admin authentication redirect loop**:
-  Verify the user logging into `http://localhost:8000/admin/login` has `role="admin"` in the database.

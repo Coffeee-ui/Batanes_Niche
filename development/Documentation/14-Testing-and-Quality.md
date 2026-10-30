@@ -2,14 +2,14 @@
 
 ## 1. Testing Philosophy & Core Principles
 
-The **Batanes Niche Job Portal** enforces strict software quality guarantees through automated testing across both backend services and frontend components.
+The **Batanes Niche Job Portal** enforces strict software quality guarantees through automated testing and static type validation across both backend services and frontend components.
 
 ### Core Testing Principles
 1. **Root-Cause Verification**:
    - Zero tolerance for masking bugs or swallow-and-ignore patterns (no silent `.catch(() => {})`, no loose `as any` type bypasses, no dummy return values).
-   - Any API schema change must be reflected synchronously across both Pydantic models and TypeScript interfaces.
+   - Any API schema change must be reflected synchronously across TypeScript interfaces and Prisma models.
 2. **Deterministic Isolation**:
-   - Every backend test runs against an isolated in-memory SQLite database (`sqlite:///:memory:`) rebuilt per test transaction.
+   - Backend services compile with strict TypeScript checks (`noImplicitAny`, `strictNullChecks`).
    - Frontend tests mock external network boundaries using Vitest and verify component behavior in a simulated DOM environment.
 3. **Zero-Jargon Public Contract**:
    - Public-facing user interfaces strictly forbid internal system terminology (*FastAPI*, *PostgreSQL*, *JWT*, *SQLAlchemy*, *Alembic*, *Docker*, *WebSockets*).
@@ -17,25 +17,13 @@ The **Batanes Niche Job Portal** enforces strict software quality guarantees thr
 
 ---
 
-## 2. Backend Test Suite (`backend/tests/`)
+## 2. Backend Type Safety & Verification
 
-The backend test suite is built on **Pytest 8.x** with **pytest-cov**, targeting **>= 85% coverage** across all domain services, repositories, and security utilities.
+The TypeScript backend enforces type safety and schema validation via **TypeScript 5.x** and **Prisma ORM Client**:
 
-### Backend Test Modules
-
-| Test File | Test Scope & Assertions |
-|---|---|
-| `test_auth.py` | Public registration for seekers and employers; login credential validation; JWT access token generation; stateful refresh token rotation; duplicate username/email rejection. |
-| `test_jobs.py` | Job posting creation; ownership validation on update and delete; municipality search filters; salary range matching; soft-deletion verification (`deleted_at IS NOT NULL`). |
-| `test_applications.py` | Application submission; self-application prevention; duplicate application prevention (`uq_applications_job_seeker`); status transition state machine; atomic notification generation. |
-| `test_recommendations.py` | Two-tier scoring engine; skill overlap tokenization and substring matching; geographic distance matrix scoring; Tier 1 and Tier 2 ordering and tie-breaking. |
-| `test_admin.py` | Server-rendered Jinja2 admin routes; signed session cookie authentication; CSRF token validation; user account suspension; job listing moderation; audit log inspection. |
-| `test_geography.py` | Canonical geography validation; composite barangay matching (e.g., *Kayhuvokan (Santa Rosa)*); deterministic island resolution; distance score points. |
-| `test_otp.py` | CSPRNG 6-digit OTP generation; bcrypt OTP hashing; 15-minute expiration; attempt counter increment; lockout after 5 failed verification attempts; zero account enumeration. |
-| `test_privacy.py` | Candidate directory sanitization (omission of email and phone); authorized contact reveal to employers upon application submission. |
-| `test_regressions.py` | Refresh token compromise reuse detection; immediate access token JTI blacklisting on logout; active account status checks. |
-| `test_services_coverage.py` | End-to-end domain services: `AuditService` secrets scrubbing; `ErrorLoggingService` 500 error capture; `EmailDeliveryService` simulation; `SavedJobsService` bookmarks. |
-| `test_user.py` | Profile completeness score calculation (0–100 points); profile attribute updates; canonical location validation on profile update. |
+- **Static Type Safety**: `pnpm --filter batanes-niche-backend typecheck` enforces 100% strict type validity across all controllers, services, repositories, and models.
+- **Production Build Validation**: `pnpm --filter batanes-niche-backend build` compiles TypeScript to verified JavaScript in `backend/dist/`.
+- **Database Schema Validation**: `pnpm --filter batanes-niche-backend prisma:generate` validates the Prisma schema against database constraints.
 
 ---
 
@@ -56,37 +44,39 @@ The frontend test suite is implemented with **Vitest 1.6.x** and **@testing-libr
 
 ## 4. Test Execution Guide
 
-### 4.1 Running Backend Tests
+### 4.1 Running All Workspace Tests
 ```bash
-# Navigate to backend directory and activate virtual environment
-cd backend
-.\venv\Scripts\activate
-
-# Run full test suite with coverage report
-pytest tests/ --cov=app --cov-report=term-missing
-
-# Run a specific test module with verbose output
-pytest tests/test_recommendations.py -v
-```
-
-### 4.2 Running Frontend Tests
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Run all component tests once
+# Run all tests across the workspace (Vitest suite)
 pnpm test
 
-# Run tests in interactive watch mode
-pnpm exec vitest
-
-# Verify TypeScript type safety and production build
-pnpm run build
+# Run strict TypeScript type verification across all workspaces
+pnpm typecheck
 ```
 
-### 4.3 Automated Windows Test Script
+### 4.2 Running Backend Checks
+```bash
+# Verify backend TypeScript compilation and types
+pnpm --filter batanes-niche-backend typecheck
+
+# Build backend for production
+pnpm --filter batanes-niche-backend build
+```
+
+### 4.3 Running Frontend Tests
+```bash
+# Run all frontend tests once
+pnpm --filter batanes-niche-frontend test
+
+# Run tests in interactive watch mode
+pnpm --filter batanes-niche-frontend exec vitest
+
+# Verify frontend production build
+pnpm --filter batanes-niche-frontend build
+```
+
+### 4.4 Automated Windows Test Script
 ```cmd
-# Runs both backend and frontend test suites sequentially
+# Runs both backend typecheck/build and frontend test suites sequentially
 development\scripts\test.bat
 ```
 
@@ -94,14 +84,14 @@ development\scripts\test.bat
 
 ## 5. Continuous Integration (CI) Acceptance Gates
 
-Every release build or pull request must pass the following four acceptance gates with zero exceptions:
+Every release build or pull request must pass the following acceptance gates with zero exceptions:
 
 | Gate # | Check / Command | Acceptance Criteria | Failure Action |
 |:---:|---|---|---|
-| **1** | `pytest tests/ --cov=app` | 0 failed tests; **>= 85% coverage** | Block release |
-| **2** | `pnpm test` | 0 failed tests across component tests | Block release |
-| **3** | `pnpm exec vitest run src/test/zero_jargon.test.ts` | 0 jargon violations in user-facing strings | Block release |
-| **4** | `pnpm run build` | Exits with code 0; **0 TypeScript errors** | Block release |
+| **1** | `pnpm typecheck` | 0 TypeScript errors across backend and frontend | Block release |
+| **2** | `pnpm test` | 0 failed tests across all Vitest suites | Block release |
+| **3** | `pnpm --filter batanes-niche-frontend exec vitest run src/test/zero_jargon.test.ts` | 0 jargon violations in user-facing strings | Block release |
+| **4** | `pnpm build` | Exits with code 0; successful production build | Block release |
 
 ---
 

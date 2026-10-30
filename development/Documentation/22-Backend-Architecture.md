@@ -1,8 +1,8 @@
-# 22. TypeScript Backend Architecture & Migration Reference
+# 22. Backend Architecture Specification
 
 ## Executive Summary
 
-This document specifies the architecture, technology stack, data layer, security model, and API contract preservation for the **TypeScript / Node.js Backend (`backend-ts/`)** of the Batanes Niche Job Portal.
+This document specifies the architecture, technology stack, data layer, security model, and API contract preservation for the **TypeScript / Node.js Backend (`backend/`)** of the Batanes Niche Job Portal.
 
 The TypeScript backend is engineered as a bit-for-bit, behaviorally identical drop-in replacement for the original Python/FastAPI backend (`backend/`). It preserves 100% of the public and private API contracts, status codes, request/response JSON schemas, database schemas, and business rules without requiring any modifications to the React single-page frontend.
 
@@ -25,7 +25,7 @@ The TypeScript backend is engineered as a bit-for-bit, behaviorally identical dr
 
 ## 2. Technology Stack Mapping
 
-| Layer / Concern | Python Original (`backend/`) | TypeScript Replacement (`backend-ts/`) | Rationale & Parity Notes |
+| Layer / Concern | Python Original (`backend/`) | TypeScript Replacement (`backend/`) | Rationale & Parity Notes |
 | :--- | :--- | :--- | :--- |
 | **Runtime & Language** | Python 3.11+ | Node.js (v18+) / TypeScript 5.4+ | Strict typing, zero implicit `any`, modern async/await |
 | **HTTP Framework** | FastAPI (ASGI / Starlette) | Express.js 4.x | High-performance, mature ecosystem, middleware flex |
@@ -41,10 +41,10 @@ The TypeScript backend is engineered as a bit-for-bit, behaviorally identical dr
 
 ---
 
-## 3. Directory Structure (`backend-ts/`)
+## 3. Directory Structure (`backend/`)
 
 ```text
-backend-ts/
+backend/
 ├── prisma/
 │   └── schema.prisma           # Exact 12-table Prisma schema with mapping
 ├── src/
@@ -141,7 +141,7 @@ The Prisma schema matches the SQLite and PostgreSQL schemas exactly:
 
 - **Static Type Check**: `npx tsc --noEmit` verifies 100% strict compliance without errors.
 - **Contract Test Suite**: Jest / Supertest suite verifies all 32 REST endpoints and 12 Admin SSR routes.
-- **Frontend Interoperability**: With `backend-ts` listening on `http://localhost:8000`, the React frontend (`http://localhost:5173`) runs all operations seamlessly:
+- **Frontend Interoperability**: With `backend` listening on `http://localhost:8000`, the React frontend (`http://localhost:5173`) runs all operations seamlessly:
   - Guest job preview
   - Job seeker & Employer registration
   - Normal & Demo logins

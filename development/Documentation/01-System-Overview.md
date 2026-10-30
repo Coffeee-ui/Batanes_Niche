@@ -78,7 +78,7 @@ Version 2 represents a robust, production-ready release with the following core 
   - **Tiering**: Candidates with Total Score > 0 are ranked in Tier 1 by Score DESC, then Name/Title ASC; candidates with Score = 0 are placed in Tier 2 sorted alphabetically.
 
 ### 4.7 Dedicated Administrative Portal
-- **Server-Rendered Jinja2 UI**: Completely isolated under `/admin`, independent of the React client-side bundle.
+- **Server-Rendered Server-Rendered Admin UI**: Completely isolated under `/admin`, independent of the React client-side bundle.
 - **Session-Based Security**: Signed HttpOnly cookies (`batanes_admin_session`) and CSRF tokens (`batanes_admin_csrf`) with a 12-hour expiration window.
 - **Moderation Tools**: Search, suspend, and restore users; inspect, disable, and restore job listings; view unhandled 500 error reports; review append-only audit trails.
 
@@ -117,8 +117,8 @@ To maintain stability, reliability, and security within the Batanes operating en
                                   |                               |
                                   v                               v
                       +-----------------------+       +-----------------------+
-                      |   React 18 SPA        |       |   Jinja2 Admin UI     |
-                      |   (Vite + Tailwind)   |       |   (FastAPI SSR)       |
+                      |   React 18 SPA        |       |   Admin UI     |
+                      |   (Vite + Tailwind)   |       |   (Express.js SSR)       |
                       +-----------------------+       +-----------------------+
                                   |                               |
                            REST API Calls                    Form Posts
@@ -128,7 +128,7 @@ To maintain stability, reliability, and security within the Batanes operating en
                                                   |
                                                   v
                                       +-----------------------+
-                                      |   FastAPI Application |
+                                      |   Express.js Application |
                                       |   Backend Gateway     |
                                       +-----------------------+
                                                   |
@@ -137,14 +137,14 @@ To maintain stability, reliability, and security within the Batanes operating en
                      v                            v                            v
           +--------------------+        +--------------------+        +--------------------+
           |  Domain Services   |        |  Core Middleware   |        | External Services  |
-          |  (Business Logic)  |        |  (CORS, SlowAPI,   |        | (SMTP Email OTP    |
+          |  (Business Logic)  |        |  (CORS, express-rate-limit,   |        | (SMTP Email OTP    |
           |                    |        |   Audit, Errors)   |        |  Delivery)         |
           +--------------------+        +--------------------+        +--------------------+
                      |
                      v
           +--------------------+
           | Repository Layer   |
-          | (SQLAlchemy 2.0)   |
+          | (Prisma ORM)   |
           +--------------------+
                      |
                      v
