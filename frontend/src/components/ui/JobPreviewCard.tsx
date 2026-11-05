@@ -37,8 +37,8 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
       id={`job-preview-card-${job.id}`}
       className="card p-6 flex flex-col justify-between transition-all duration-200 hover:shadow-md group"
       style={{
-        background: 'hsl(var(--color-surface))',
-        border: '1px solid hsl(var(--color-border-subtle))',
+        backgroundColor: 'hsl(var(--surface))',
+        border: '1px solid hsl(var(--border))',
       }}
     >
       <div>
@@ -47,20 +47,13 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: 'hsl(var(--color-primary) / 0.1)',
-              color: 'hsl(var(--color-primary))',
+              background: 'hsl(var(--highlight))',
+              color: 'hsl(var(--foreground))',
             }}
           >
-            <Briefcase className="w-5 h-5" />
+            <Briefcase className="w-5 h-5 text-primary" />
           </div>
-          <span
-            className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
-            style={{
-              background: 'hsl(var(--color-bg-alt))',
-              color: 'hsl(var(--color-text-muted))',
-              border: '1px solid hsl(var(--color-border-subtle))',
-            }}
-          >
+          <span className="badge badge-muted text-xs">
             Preview
           </span>
         </div>
@@ -70,7 +63,7 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
           className="text-lg font-bold mb-3 line-clamp-2 transition-colors duration-150"
           style={{
             fontFamily: 'Outfit, sans-serif',
-            color: 'hsl(var(--color-text))',
+            color: 'hsl(var(--foreground))',
             wordBreak: 'break-word',
           }}
           title={job.title}
@@ -80,18 +73,18 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
 
         {/* Salary */}
         <div className="mb-4">
-          <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: 'hsl(var(--color-text-faint))' }}>
+          <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
             Salary
           </p>
-          <div className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'hsl(var(--color-text))' }}>
-            <Banknote className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--color-primary))' }} />
+          <div className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+            <Banknote className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
             <span>{formatSalary(job.salary_min, job.salary_max)}</span>
           </div>
         </div>
 
         {/* Required Skills */}
         <div className="mb-6">
-          <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'hsl(var(--color-text-faint))' }}>
+          <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
             Required Skills
           </p>
           {rawSkills.length > 0 ? (
@@ -107,7 +100,7 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
               ))}
             </div>
           ) : (
-            <p className="text-xs italic" style={{ color: 'hsl(var(--color-text-faint))' }}>
+            <p className="text-xs italic" style={{ color: 'hsl(var(--muted-foreground))' }}>
               No specific skills listed
             </p>
           )}
@@ -117,14 +110,14 @@ export default function JobPreviewCard({ job }: JobPreviewCardProps) {
       {/* Footer / CTA */}
       <div
         className="pt-4 mt-auto space-y-3"
-        style={{ borderTop: '1px solid hsl(var(--color-border-subtle))' }}
+        style={{ borderTop: '1px solid hsl(var(--border))' }}
       >
         {!isAuthenticated && (
           <div
             className="flex items-center gap-1.5 text-xs font-medium"
-            style={{ color: 'hsl(var(--color-text-muted))' }}
+            style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: 'hsl(var(--color-warning))' }} />
+            <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: 'hsl(var(--warning-foreground))' }} />
             <span>Sign up or log in to view full job details.</span>
           </div>
         )}

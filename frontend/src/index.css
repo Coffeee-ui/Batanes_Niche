@@ -1,325 +1,115 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ============================================================
-   Batanes Niche – Global Design System
+   Batanes Jobs – Day & Night Master Design Tokens
    ============================================================ */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* =========================================================
-   COLOR QUICK REFERENCE
-   =========================================================
-   Primary brand / main action:     --color-primary
-   Primary button text:             --color-primary-foreground
-   Secondary brand / ocean teal:    --color-secondary
-   Secondary button / badge text:   --color-secondary-foreground
-   Page canvas background:          --color-background (alias: --color-bg)
-   Main content text:               --color-foreground (alias: --color-text)
-   Card & modal surfaces:           --color-surface
-   Surface foreground text:         --color-surface-foreground
-   Muted / secondary text:          --color-muted-foreground (alias: --color-text-muted)
-   Subtle hints & timestamps:       --color-text-faint
-   Container & input borders:       --color-border, --color-border-subtle
-   Focus ring outline:              --color-ring
-   Error / destructive actions:     --color-danger (alias: --color-destructive)
-   Error button text:               --color-danger-foreground
-   Success statuses:                --color-success, --color-success-foreground
-   Warning / attention states:      --color-warning, --color-warning-text
-   Information banners:             --color-info, --color-info-foreground
-   Hero search input (on gradient): --color-hero-input-bg, --color-hero-input-text
-   Dark theme overrides:            [data-theme='dark'] (see Section 8 below)
-
-   IMPORTANT RULE:
-   Change semantic tokens here instead of adding ad-hoc colors
-   or inline hex/RGB values directly inside React components.
-   ========================================================= */
-
-/* ----- CSS Custom Properties (Light Theme — Default) ----- */
+/* ----- CSS Custom Properties (Day Mode — Default) ----- */
 :root {
-  /* =========================================================
-     1. BRAND & PRIMARY COLORS
-     ========================================================= */
-  /*
-   * PRIMARY
-   * Main brand and action color (vivid ocean blue).
-   * Used by: Primary action buttons (.btn-primary), active navigation links,
-   *          interactive link hover states, focus indicator outlines,
-   *          primary badges, and progress bars.
-   * Visual consequence: Changing this modifies the central brand accent
-   *                     and all high-priority call-to-action buttons across the site.
-   * Pair with: --color-primary-foreground for guaranteed readable text/icons.
-   */
-  --color-primary: 214 89% 52%;
+  /* Master Tokens (Day Hex / HSL) */
+  --background: 42 100% 95%;              /* #FFF8E7 Warm Daylight Cream */
+  --surface: 0 0% 100%;                   /* #FFFFFF Pure White Cards */
+  --border: 45 67% 83%;                   /* #F1E3B8 Warm Sand Border */
+  --foreground: 214 12% 12%;              /* #1A1D21 Dark Charcoal */
+  --muted-foreground: 214 9% 32%;         /* #4A5058 Medium Slate Grey */
+  --primary: 45 100% 48%;                 /* #F5B700 Amber Yellow Primary */
+  --primary-hover: 43 100% 43%;           /* #D99C00 Amber Hover */
+  --primary-foreground: 214 12% 12%;      /* #1A1D21 Charcoal (Never White on Yellow) */
+  --header: 214 12% 12%;                  /* #1A1D21 Dark Charcoal Header */
+  --header-foreground: 210 12% 80%;       /* #C5CBD1 Light Slate Header Text */
+  --tertiary-soft: 140 44% 89%;           /* #D8F0E0 Soft Green Badge Background */
+  --tertiary-foreground: 149 56% 16%;     /* #124028 Dark Green Badge Text */
+  --warning-soft: 30 100% 91%;            /* #FFE8D1 Soft Peach/Orange Pending Bg */
+  --warning-foreground: 29 100% 27%;      /* #8A4300 Deep Amber Pending Text */
+  --neutral-soft: 210 12% 94%;            /* #EDEFF1 Neutral Tag Background */
+  --neutral-foreground: 212 11% 23%;      /* #343A41 Neutral Tag Text */
+  --link: 214 12% 12%;                    /* #1A1D21 Link Color */
+  --highlight: 45 100% 88%;               /* #FFF1C2 Card & Active Chip Highlight */
 
-  /*
-   * PRIMARY DARK
-   * Darker ocean blue shade used for hover and pressed states of primary actions.
-   * Used by: Hover state of links, button gradients, and active dropdown items.
-   */
-  --color-primary-dark: 214 89% 42%;
-
-  /*
-   * PRIMARY FOREGROUND
-   * Text and icon color displayed on top of --color-primary backgrounds.
-   * Used by: .btn-primary text, active navigation pill labels, primary badges.
-   * Visual consequence: Keeps text crisp and readable on primary buttons.
-   */
-  --color-primary-foreground: 0 0% 100%;
-
-  /* =========================================================
-     2. SECONDARY & ACCENT COLORS
-     ========================================================= */
-  /*
-   * SECONDARY
-   * Coastal teal/sea tone representing the Batanes landscape.
-   * Used by: Primary button gradient endpoints, secondary branding accents,
-   *          and hero section visual elements.
-   * Pair with: --color-secondary-foreground.
-   */
-  --color-secondary: 168 76% 42%;
-
-  /*
-   * SECONDARY FOREGROUND
-   * Text and icon color displayed on top of --color-secondary backgrounds.
-   */
-  --color-secondary-foreground: 0 0% 100%;
-
-  /*
-   * ACCENT
-   * Golden sunrise amber tone for highlights, badges, and attention points.
-   */
-  --color-accent: 35 95% 58%;
-
-  /*
-   * ACCENT FOREGROUND
-   * Dark readable text on top of golden amber accents.
-   */
-  --color-accent-foreground: 215 25% 12%;
-
-  /* =========================================================
-     3. BACKGROUND & CANVAS COLORS
-     ========================================================= */
-  /*
-   * BACKGROUND (Canvas)
-   * The fundamental application viewport background color.
-   * Used by: <body> background, page layout wrappers.
-   * Visual consequence: Changing this alters the foundation tone of the whole app.
-   * In Light Mode: A very pale cool-grey/blue tint (214 22% 97%) preventing glare.
-   * In Dark Mode: Shifts to deep obsidian (222 27% 9%).
-   * Pair with: --color-foreground.
-   */
-  --color-background: 214 22% 97%;
-  --color-bg: var(--color-background); /* Legacy compatibility alias */
-
-  /*
-   * BACKGROUND ALT / MUTED
-   * A stepped tone visually distinct from both the page canvas and white cards.
-   * Used by: Alternating sections, authentication card backing, input fields,
-   *          and page footer background.
-   */
-  --color-bg-alt: 214 18% 93%;
-  --color-muted: var(--color-bg-alt); /* Semantic alias */
-
-  /* =========================================================
-     4. SURFACE & CARD COLORS
-     ========================================================= */
-  /*
-   * SURFACE
-   * Foreground panel surface color for content elevation.
-   * Used by: Cards (.card), modals (.modal, ConfirmDialog), dropdown menus,
-   *          dialog popups, and toast notifications.
-   * Visual consequence: Determines the background of all elevated UI cards.
-   * In Light Mode: Pure white (0 0% 100%) so cards clearly lift above the canvas.
-   * In Dark Mode: Deep elevated slate (222 25% 14%).
-   * Pair with: --color-surface-foreground (or --color-foreground).
-   */
-  --color-surface: 0 0% 100%;
-  --color-surface-hover: 214 20% 98%;
-  --color-surface-foreground: var(--color-foreground);
-
-  /*
-   * HERO SEARCH INPUT SURFACE & TEXT
-   * High-contrast pairing specifically engineered for the landing page hero search bar
-   * which rests over the dark ocean gradient banner.
-   * In Light Mode: Crisp white container with dark charcoal text.
-   * In Dark Mode: Elevated dark slate container with bright legible text.
-   */
-  --color-hero-input-bg: 0 0% 100%;
-  --color-hero-input-text: 215 25% 12%;
-  --color-hero-input-placeholder: 215 12% 48%;
-
-  /* =========================================================
-     5. TEXT & FOREGROUND COLORS
-     ========================================================= */
-  /*
-   * FOREGROUND (Primary Text)
-   * The dominant text color for high-emphasis content.
-   * Used by: Headings (h1-h6), card titles, navigation labels, table text,
-   *          and general body copy.
-   * Visual consequence: Controls primary reading contrast against surfaces.
-   * In Light Mode: Near-black charcoal (215 25% 12%) for WCAG AAA contrast.
-   * In Dark Mode: Crisp off-white (210 20% 92%).
-   */
-  --color-foreground: 215 25% 12%;
-  --color-text: var(--color-foreground); /* Legacy compatibility alias */
-
-  /*
-   * MUTED FOREGROUND (Secondary Text)
-   * Medium contrast grey text for supporting information.
-   * Used by: Company names, section descriptions, form labels, metadata chips.
-   * In Light Mode: Slate grey (215 18% 38%) exceeding 4.5:1 WCAG AA contrast.
-   * In Dark Mode: Soft grey (210 14% 64%).
-   */
-  --color-muted-foreground: 215 18% 38%;
-  --color-text-muted: var(--color-muted-foreground); /* Legacy compatibility alias */
-
-  /*
-   * FAINT TEXT
-   * Subtle low-emphasis text for tertiary information.
-   * Used by: Timestamps ("Posted 3 days ago"), placeholder hints, inactive icons.
-   * In Light Mode: 215 12% 52% (~4.1:1 on white).
-   * In Dark Mode: 210 10% 48% (~4.2:1 on dark surface).
-   */
-  --color-text-faint: 215 12% 52%;
-
-  /* =========================================================
-     6. BORDER, INPUT & FOCUS RING COLORS
-     ========================================================= */
-  /*
-   * BORDER
-   * Structural boundary lines separating content containers.
-   * Used by: Card hover borders, input outlines, table dividers, dialog lines.
-   */
-  --color-border: 214 20% 83%;
-
-  /*
-   * BORDER SUBTLE
-   * Soft, low-contrast boundary line for resting card containers.
-   * Used by: Default .card border, navbar bottom rule, divider rules (<hr>).
-   */
-  --color-border-subtle: 214 20% 89%;
-
-  /*
-   * INPUT
-   * Default resting background color for form inputs and select dropdowns.
-   */
-  --color-input: var(--color-bg-alt);
-
-  /*
-   * RING
-   * Accent outline color for focused interactive elements (:focus-visible).
-   */
-  --color-ring: var(--color-primary);
-
-  /* =========================================================
-     7. STATUS & FEEDBACK COLORS
-     ========================================================= */
-  /*
-   * SUCCESS
-   * Positive verification, active status, accepted applications.
-   * Used by: .badge-success, .status-dot-active, success toast icon.
-   */
-  --color-success: 145 63% 42%;
-  --color-success-foreground: 0 0% 100%;
-
-  /*
-   * WARNING
-   * Pending status, alerts requiring review, cautionary badges.
-   * Used by: .badge-warning background, pending application status.
-   */
-  --color-warning: 38 95% 55%;
-  --color-warning-foreground: var(--color-warning-text);
-
-  /*
-   * WARNING TEXT
-   * Calibrated text color for rendering legible labels on warning backgrounds.
-   * In Light Mode: Deep amber (35 75% 34%) for high contrast on pale amber bg.
-   * In Dark Mode: Bright golden amber (35 90% 68%).
-   */
-  --color-warning-text: 35 75% 34%;
-
-  /*
-   * DANGER / DESTRUCTIVE
-   * Errors, failed actions, application rejection, close/withdraw buttons.
-   * Used by: .btn-danger, .badge-danger, ErrorBanner, toast error icon.
-   * Pair with: --color-danger-foreground for white button text.
-   */
-  --color-danger: 3 87% 56%;
+  /* Legacy Compatibility Aliases */
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--header);
+  --color-secondary-foreground: var(--header-foreground);
+  --color-accent: var(--primary);
+  --color-accent-foreground: var(--primary-foreground);
+  --color-background: var(--background);
+  --color-bg: var(--background);
+  --color-bg-alt: var(--neutral-soft);
+  --color-muted: var(--neutral-soft);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--neutral-soft);
+  --color-surface-foreground: var(--foreground);
+  --color-foreground: var(--foreground);
+  --color-text: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-text-faint: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border);
+  --color-input: var(--surface);
+  --color-ring: var(--primary);
+  --color-success: var(--tertiary-foreground);
+  --color-success-foreground: var(--tertiary-soft);
+  --color-warning: var(--warning-foreground);
+  --color-warning-foreground: var(--warning-soft);
+  --color-warning-text: var(--warning-foreground);
+  --color-danger: 0 72% 51%;
   --color-danger-foreground: 0 0% 100%;
-  --color-destructive: var(--color-danger);
-  --color-destructive-foreground: var(--color-danger-foreground);
+  --color-hero-input-bg: var(--surface);
+  --color-hero-input-text: var(--foreground);
+  --color-hero-input-placeholder: var(--muted-foreground);
 
-  /*
-   * INFO
-   * Informational notices, tips, neutral status updates.
-   * Used by: Toast info alerts, informational banner borders and icons.
-   */
-  --color-info: 199 89% 48%;
-  --color-info-foreground: 0 0% 100%;
+  /* Shadows calibrated for warm depth */
+  --shadow-sm: 0 1px 3px 0 rgb(26 29 33 / 0.05), 0 1px 2px -1px rgb(26 29 33 / 0.03);
+  --shadow-md: 0 4px 16px -2px rgb(26 29 33 / 0.08), 0 2px 6px -2px rgb(26 29 33 / 0.04);
+  --shadow-lg: 0 10px 30px -4px rgb(26 29 33 / 0.10), 0 4px 12px -4px rgb(26 29 33 / 0.05);
+  --shadow-glow: 0 0 0 3px hsl(var(--primary) / 0.35);
 
-  /* =========================================================
-     8. SHADOWS, RADII & TRANSITIONS
-     ========================================================= */
-  /* Shadows — calibrated for card elevation */
-  --shadow-sm: 0 1px 4px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 16px -2px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 40px -4px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.07);
-  --shadow-glow: 0 0 0 3px hsl(var(--color-primary) / 0.20);
-
-  /* Radii */
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
 
-  /* Transitions */
-  --transition-fast: 120ms ease;
+  --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
-  --transition-slow: 350ms ease;
 }
 
-/* =========================================================
-   9. DARK THEME OVERRIDES
-   =========================================================
-   Applied when <html data-theme="dark"> is active.
-   Overrides surface lightness, borders, and typography to maintain
-   optimal readability and WCAG AA contrast against dark backgrounds.
-   ========================================================= */
-[data-theme='dark'] {
-  /* Canvas & Surrounding */
-  --color-background: 222 27% 9%;       /* Deep dark canvas */
-  --color-bg: var(--color-background);
-  --color-bg-alt: 222 25% 12%;          /* Stepped dark section backing */
-  --color-muted: var(--color-bg-alt);
+/* ----- Night Mode Overrides ----- */
+.dark, [data-theme='dark'] {
+  --background: 217 49% 8%;              /* #0B1320 Deep Slate Navy */
+  --surface: 217 44% 14%;                 /* #142033 Slate Blue Surface */
+  --border: 214 35% 22%;                 /* #25364D Slate Navy Border */
+  --foreground: 212 43% 93%;             /* #E6EDF5 Ice White Text */
+  --muted-foreground: 212 23% 69%;        /* #9FB0C3 Muted Slate Text */
+  --primary: 46 84% 68%;                 /* #F2D36B Softer Moon Yellow */
+  --primary-hover: 46 73% 59%;           /* #E3BF4A Moon Yellow Hover */
+  --primary-foreground: 210 33% 9%;      /* #101820 Deep Slate Text on Yellow */
+  --header: 215 54% 7%;                  /* #08101B Darkest Midnight Header */
+  --header-foreground: 212 23% 69%;      /* #9FB0C3 Slate Blue Header Text */
+  --tertiary-soft: 167 51% 14%;          /* #12372F Teal Pine Badge Bg */
+  --tertiary-foreground: 161 60% 73%;    /* #8FE3C8 Bright Teal Badge Text */
+  --warning-soft: 35 33% 17%;            /* #3B2F1E Muted Amber Night Bg */
+  --warning-foreground: 35 83% 75%;     /* #F4C98B Warm Amber Night Text */
+  --neutral-soft: 215 38% 19%;           /* #1E2D42 Slate Dark Tag Bg */
+  --neutral-foreground: 211 30% 83%;     /* #C5D2E0 Soft Ice Tag Text */
+  --link: 212 43% 93%;                   /* #E6EDF5 Link Color */
+  --highlight: 214 35% 21%;              /* #223247 Night Active Highlight */
 
-  /* Surfaces & Containers */
-  --color-surface: 222 25% 14%;         /* Elevated dark slate cards */
-  --color-surface-hover: 222 25% 17%;   /* Card hover feedback */
-
-  /* Hero Input on Dark Banner */
-  --color-hero-input-bg: 222 25% 16%;   /* Dark slate container */
-  --color-hero-input-text: 210 20% 95%; /* Crisp off-white text */
-  --color-hero-input-placeholder: 210 12% 65%;
-
-  /* Structural Boundaries */
-  --color-border: 222 20% 26%;          /* Distinct card/input borders */
-  --color-border-subtle: 222 20% 20%;   /* Soft resting boundaries */
-
-  /* Typography Hierarchy */
-  --color-foreground: 210 20% 92%;      /* High-contrast off-white body text */
-  --color-text: var(--color-foreground);
-  --color-muted-foreground: 210 14% 64%;/* Legible secondary labels */
-  --color-text-muted: var(--color-muted-foreground);
-  --color-text-faint: 210 10% 48%;      /* Readable metadata timestamps */
-
-  /* Status Text Adaptation */
-  --color-warning-text: 35 90% 68%;     /* Bright golden amber readable on dark warning bg */
+  --color-danger: 0 72% 51%;
+  --color-danger-foreground: 0 0% 100%;
 }
 
-/* ----- Base Resets ----- */
-*, *::before, *::after { box-sizing: border-box; }
+/* Base Resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 html {
   scroll-behavior: smooth;
@@ -330,59 +120,58 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: hsl(var(--color-bg));
-  color: hsl(var(--color-text));
-  transition: background-color var(--transition-slow), color var(--transition-slow);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  transition: background-color var(--transition-base), color var(--transition-base);
   line-height: 1.6;
 }
 
-/* ----- Typography ----- */
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -0.02em;
-  color: hsl(var(--color-text));
+  color: hsl(var(--foreground));
 }
 
 a {
-  color: hsl(var(--color-primary));
+  color: hsl(var(--link));
   text-decoration: none;
   transition: color var(--transition-fast);
 }
-a:hover { color: hsl(var(--color-primary-dark)); }
 
-/* ----- Scrollbar ----- */
+/* Custom Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--color-border)); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--color-text-faint)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
-/* ----- Focus Ring ----- */
+/* Focus Ring */
 :focus-visible {
-  outline: 2px solid hsl(var(--color-primary));
+  outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* ----- Utility Components ----- */
+/* Component Layer */
 @layer components {
   /* Cards */
   .card {
-    @apply rounded-xl transition-all duration-200;
-    background-color: hsl(var(--color-surface));
-    border: 1px solid hsl(var(--color-border-subtle));
+    @apply rounded-2xl transition-all duration-200;
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
     box-shadow: var(--shadow-sm);
   }
   .card:hover {
     box-shadow: var(--shadow-md);
-    border-color: hsl(var(--color-border));
   }
 
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-lg px-4 py-2.5 text-sm transition-all duration-150 cursor-pointer select-none;
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl px-4 py-2.5 text-sm transition-all duration-150 cursor-pointer select-none;
+    min-height: 44px;
     border: none;
     outline: none;
   }
@@ -391,79 +180,72 @@ a:hover { color: hsl(var(--color-primary-dark)); }
 
   .btn-primary {
     @apply btn;
-    color: hsl(var(--color-primary-foreground));
-    background: linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)));
-    box-shadow: 0 2px 8px hsl(var(--color-primary) / 0.35);
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.08);
-    box-shadow: 0 4px 16px hsl(var(--color-primary) / 0.45);
+    background-color: hsl(var(--primary-hover));
     transform: translateY(-1px);
   }
   .btn-primary:active:not(:disabled) { transform: translateY(0); }
 
   .btn-secondary {
     @apply btn;
-    background-color: hsl(var(--color-bg-alt));
-    color: hsl(var(--color-text));
-    border: 1px solid hsl(var(--color-border));
+    background-color: hsl(var(--surface));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
   }
   .btn-secondary:hover:not(:disabled) {
-    background-color: hsl(var(--color-surface-hover));
-    border-color: hsl(var(--color-primary) / 0.4);
+    background-color: hsl(var(--neutral-soft));
+  }
+
+  .btn-outline {
+    @apply btn-secondary;
   }
 
   .btn-ghost {
     @apply btn;
     background: transparent;
-    color: hsl(var(--color-text-muted));
+    color: hsl(var(--muted-foreground));
   }
   .btn-ghost:hover:not(:disabled) {
-    background-color: hsl(var(--color-surface-hover));
-    color: hsl(var(--color-text));
+    background-color: hsl(var(--neutral-soft));
+    color: hsl(var(--foreground));
   }
 
   .btn-danger {
     @apply btn;
     color: hsl(var(--color-danger-foreground));
-    background: hsl(var(--color-danger));
-    box-shadow: 0 2px 8px hsl(var(--color-danger) / 0.25);
+    background-color: hsl(var(--color-danger));
   }
   .btn-danger:hover:not(:disabled) {
-    filter: brightness(1.08);
+    filter: brightness(1.1);
     transform: translateY(-1px);
   }
 
   /* Form inputs */
   .input {
-    @apply w-full rounded-lg px-4 py-3 text-sm font-medium transition-all duration-150;
-    background-color: hsl(var(--color-bg-alt));
-    border: 1.5px solid hsl(var(--color-border));
-    color: hsl(var(--color-text));
+    @apply w-full rounded-xl px-4 py-3 text-sm font-medium transition-all duration-150;
+    min-height: 44px;
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
   }
-  .input::placeholder { color: hsl(var(--color-text-faint)); }
+  .input::placeholder { color: hsl(var(--muted-foreground)); }
   .input:focus {
     outline: none;
-    border-color: hsl(var(--color-primary));
-    background-color: hsl(var(--color-surface));
+    border-color: hsl(var(--primary));
     box-shadow: var(--shadow-glow);
   }
 
-  /* Select — extends .input with a custom accessible chevron arrow.
-     Use <select className="input select"> (or the standalone .select class)
-     on all <select> elements so the native OS arrow is replaced by a
-     theme-aware SVG that stays readable in both Light and Dark Mode. */
+  /* Select */
   .select {
     @apply input;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    /* Reserve space on the right for the custom arrow */
     padding-right: 2.5rem;
-    /* Custom SVG chevron — colour tracks --color-text-muted so it is clearly
-       visible but visually secondary, in both Light and Dark Mode.
-       The SVG is URL-encoded to avoid Base64 overhead. */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234A5058' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 1rem 1rem;
@@ -471,131 +253,101 @@ a:hover { color: hsl(var(--color-primary-dark)); }
   }
   .select:focus {
     outline: none;
-    border-color: hsl(var(--color-primary));
-    background-color: hsl(var(--color-surface));
+    border-color: hsl(var(--primary));
     box-shadow: var(--shadow-glow);
   }
 
-  /* Dark Mode — swap chevron to the lighter muted text colour */
-  [data-theme='dark'] .select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  .dark .select, [data-theme='dark'] .select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239FB0C3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   }
 
   .label {
     @apply block text-sm font-semibold mb-1.5;
-    color: hsl(var(--color-text));
+    color: hsl(var(--foreground));
   }
 
   /* Badges */
   .badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
   }
   .badge-primary {
     @apply badge;
-    background: hsl(var(--color-primary) / 0.12);
-    color: hsl(var(--color-primary));
+    background-color: hsl(var(--highlight));
+    color: hsl(var(--foreground));
   }
-  .badge-success {
+  .badge-success, .badge-tertiary {
     @apply badge;
-    background: hsl(var(--color-success) / 0.12);
-    color: hsl(var(--color-success));
+    background-color: hsl(var(--tertiary-soft));
+    color: hsl(var(--tertiary-foreground));
   }
   .badge-warning {
     @apply badge;
-    background: hsl(var(--color-warning) / 0.12);
-    color: hsl(var(--color-warning-text));
+    background-color: hsl(var(--warning-soft));
+    color: hsl(var(--warning-foreground));
   }
   .badge-danger {
     @apply badge;
-    background: hsl(var(--color-danger) / 0.12);
+    background-color: hsl(var(--color-danger) / 0.15);
     color: hsl(var(--color-danger));
   }
   .badge-muted {
     @apply badge;
-    background: hsl(var(--color-border));
-    color: hsl(var(--color-text-muted));
+    background-color: hsl(var(--neutral-soft));
+    color: hsl(var(--neutral-foreground));
   }
 
-  /* Section container */
+  /* Interactive Chips */
+  .chip {
+    @apply inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer select-none border border-transparent;
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    min-height: 36px;
+  }
+  .chip:hover {
+    border-color: hsl(var(--primary));
+  }
+  .chip-active {
+    background-color: hsl(var(--highlight)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--foreground)) !important;
+    font-weight: 600;
+  }
+
+  /* Container */
   .container-page {
     @apply max-w-6xl mx-auto px-4 sm:px-6;
   }
 
-  /* Glassmorphism surface */
-  .glass {
-    background: hsl(var(--color-surface) / 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--color-border-subtle));
-  }
-
-  /* Gradient text */
-  .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
   /* Skeleton loader */
   .skeleton {
-    @apply rounded-lg animate-pulse;
-    background: hsl(var(--color-border));
+    @apply rounded-xl animate-pulse;
+    background-color: hsl(var(--border) / 0.5);
   }
 
   /* Divider */
   .divider {
     @apply my-6;
     border: none;
-    border-top: 1px solid hsl(var(--color-border-subtle));
+    border-top: 1px solid hsl(var(--border));
   }
-
-  /* Status dot */
-  .status-dot {
-    @apply inline-block w-2 h-2 rounded-full;
-  }
-  .status-dot-active { background: hsl(var(--color-success)); }
-  .status-dot-warning { background: hsl(var(--color-warning)); }
-  .status-dot-error { background: hsl(var(--color-danger)); }
 }
 
-/* ----- Animations ----- */
+/* Animations */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to   { background-position: 200% 0; }
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
-.animate-fade-in   { animation: fade-in 300ms ease forwards; }
-.animate-slide-in  { animation: slide-in-right 300ms ease forwards; }
-.animate-scale-in  { animation: scale-in 200ms ease forwards; }
-
-/* Staggered children */
-.stagger-children > * { animation: fade-in 300ms ease both; }
-.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
-.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
-.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
-
-/* Toast / notification enter */
-.toast-enter {
-  animation: slide-in-right 250ms ease forwards;
-}
-
-/* Page transition */
-.page-enter {
-  animation: fade-in 250ms ease forwards;
-}
+.animate-fade-in  { animation: fade-in 200ms ease forwards; }
+.animate-scale-in { animation: scale-in 180ms ease forwards; }
+.animate-slide-in { animation: slide-in-right 200ms ease forwards; }
+.toast-enter      { animation: slide-in-right 200ms ease forwards; }

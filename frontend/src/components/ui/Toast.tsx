@@ -37,15 +37,15 @@ export default function ToastProvider() {
   const remove = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const icons = {
-    success: <CheckCircle className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--color-success))' }} />,
-    error: <AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--color-danger))' }} />,
-    info: <Info className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--color-primary))' }} />,
+    success: <CheckCircle className="w-4 h-4 shrink-0 text-tertiary" />,
+    error: <AlertCircle className="w-4 h-4 shrink-0 text-danger" />,
+    info: <Info className="w-4 h-4 shrink-0 text-primary" />,
   };
 
   const borders = {
-    success: 'hsl(var(--color-success))',
-    error: 'hsl(var(--color-danger))',
-    info: 'hsl(var(--color-primary))',
+    success: 'hsl(var(--tertiary-foreground))',
+    error: 'hsl(var(--danger))',
+    info: 'hsl(var(--primary))',
   };
 
   return (
@@ -56,24 +56,24 @@ export default function ToastProvider() {
       {toasts.map(t => (
         <div
           key={t.id}
-          className="toast-enter pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl max-w-sm"
+          className="toast-enter pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-2xl max-w-sm"
           role="alert"
           style={{
-            background: 'hsl(var(--color-surface))',
-            border: `1px solid hsl(var(--color-border))`,
+            backgroundColor: 'hsl(var(--surface))',
+            border: `1px solid hsl(var(--border))`,
             borderLeft: `4px solid ${borders[t.type]}`,
             boxShadow: 'var(--shadow-lg)',
             minWidth: '280px',
           }}
         >
           {icons[t.type]}
-          <p className="text-sm flex-1" style={{ color: 'hsl(var(--color-text))' }}>{t.message}</p>
+          <p className="text-sm flex-1 text-foreground">{t.message}</p>
           <button
             onClick={() => remove(t.id)}
-            className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+            className="shrink-0 opacity-50 hover:opacity-100 transition-opacity text-muted-foreground"
             aria-label="Dismiss"
           >
-            <X className="w-3.5 h-3.5" style={{ color: 'hsl(var(--color-text-muted))' }} />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ))}

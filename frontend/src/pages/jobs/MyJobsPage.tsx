@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Briefcase, Users, MapPin, Edit3, Trash2, Eye, MoreVertical, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { jobsApi, extractError } from '../../api/client';
 import type { Job } from '../../types';
 import { PageSpinner, EmptyState, ConfirmDialog } from '../../components/ui';
 import { toastSuccess, toastError } from '../../components/ui/Toast';
 
 export default function MyJobsPage() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState<'active' | 'closed'>('active');
   const [closeId, setCloseId] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
-  const [actionMenuId, setActionMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     jobsApi.myJobs({ page_size: 50 })
@@ -36,115 +36,146 @@ export default function MyJobsPage() {
     }
   };
 
+  const filteredJobs = jobs.filter(j => tab === 'active' ? j.status === 'active' : j.status !== 'active');
+
   if (loading) return <div className="container-page py-12"><PageSpinner /></div>;
 
   return (
-    <div className="container-page py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container-page py-8 space-y-6">
+      {/* Title & Post a Job Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black mb-1" style={{ color: 'hsl(var(--color-text))' }}>My Job Listings</h1>
-          <p className="text-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>
-            {jobs.length} listing{jobs.length !== 1 ? 's' : ''}
-            {' · '}
-            {jobs.filter(j => j.status === 'active').length} active
+          <h1 className="text-3xl font-black text-foreground mb-1">
+            My jobs
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your openings and see who applied.
           </p>
         </div>
-        <Link to="/jobs/post" id="btn-post-new-job" className="btn btn-primary text-sm">
-          <Briefcase className="w-4 h-4" /> Post New Job
-        </Link>
+        <button
+          onClick={() => navigate('/jobs/post')}
+          id="btn-post-new-job"
+          className="btn btn-primary text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm self-start sm:self-auto"
+        >
+          Post a job
+        </button>
+      </div>
+
+      {/* Tabs: Active / Closed */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setTab('active')}
+          className={`chip ${tab === 'active' ? 'chip-active' : ''}`}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('closed')}
+          className={`chip ${tab === 'closed' ? 'chip-active' : ''}`}
+        >
+          Closed
+        </button>
       </div>
 
       {error && (
-        <div
-          className="rounded-xl p-4 mb-6 flex items-center gap-3 text-sm"
-          style={{
-            background: 'hsl(var(--color-danger) / 0.08)',
-            border: '1px solid hsl(var(--color-danger) / 0.25)',
-            color: 'hsl(var(--color-danger))',
-          }}
-        >
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span>{error}</span>
+        <div className="card p-4 text-xs text-danger border-danger/30">
+          {error}
         </div>
       )}
 
-      {jobs.length === 0 ? (
+      {filteredJobs.length === 0 ? (
         <EmptyState
-          icon={<Briefcase className="w-8 h-8" />}
-          title="No job listings yet"
-          description="Post your first job to start finding qualified Ivatan candidates."
-          action={<Link to="/jobs/post" className="btn btn-primary">Post a Job</Link>}
+          title={tab === 'active' ? 'No active jobs' : 'No closed jobs'}
+          description={tab === 'active' ? 'You have no active listings open for applications.' : 'No listings have been closed yet.'}
+          action={
+            tab === 'active' ? (
+              <button onClick={() => navigate('/jobs/post')} className="btn btn-primary text-xs font-bold">
+                Post a job
+              </button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="space-y-4">
-          {jobs.map(job => (
-            <div key={job.id} id={`my-job-${job.id}`} className="card p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
+          {filteredJobs.map(job => {
+            const count = job.application_count ?? 0;
+            const postedDate = new Date(job.created_at);
+            const now = new Date();
+            const diffDays = Math.max(0, Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24)));
+            const postedText = diffDays === 0 ? 'Posted today' : diffDays === 1 ? 'Posted 1 day ago' : `Posted ${diffDays} days ago`;
+
+            return (
+              <div key={job.id} id={`my-job-${job.id}`} className="card p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Job Details */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="badge badge-muted text-xs">
+                        {job.employment_type}
+                      </span>
+                      <span className={`badge ${job.status === 'active' ? 'badge-success' : 'badge-muted'}`}>
+                        {job.status === 'active' ? 'Active' : 'Closed'}
+                      </span>
+                    </div>
+
+                    <Link to={`/jobs/${job.id}`}>
+                      <h2 className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                        {job.title}
+                      </h2>
+                    </Link>
+
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span>{job.municipality}</span>
+                      <span>·</span>
+                      <span>{job.employment_type}</span>
+                      <span>·</span>
+                      <span>{postedText}</span>
+                    </p>
+                  </div>
+
+                  {/* Actions on right */}
+                  <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+                    <Link
+                      to={`/applications?jobId=${job.id}`}
+                      id={`btn-view-applicants-${job.id}`}
+                      className="badge badge-warning text-xs font-semibold py-1.5 px-3 hover:opacity-90 transition-opacity"
+                    >
+                      {count} {count === 1 ? 'applicant' : 'applicants'}
+                    </Link>
+
                     <Link
                       to={`/jobs/${job.id}`}
-                      className="text-base font-bold hover:underline"
-                      style={{ color: 'hsl(var(--color-text))' }}
+                      id={`btn-view-job-${job.id}`}
+                      className="btn btn-secondary text-xs px-4 py-2 font-semibold"
                     >
-                      {job.title}
+                      View
                     </Link>
-                    <span className={`badge ${job.status === 'active' ? 'badge-success' : 'badge-muted'}`}>
-                      {job.status}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />{job.municipality}
-                    </span>
-                    <span>{job.employment_type}</span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />{job.application_count ?? 0} applicant{job.application_count !== 1 ? 's' : ''}
-                    </span>
-                    <span>Posted {new Date(job.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    to={`/applications?jobId=${job.id}`}
-                    id={`btn-view-applicants-${job.id}`}
-                    className="btn btn-secondary text-xs py-2 px-3"
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    Applicants ({job.application_count ?? 0})
-                  </Link>
-                  <Link
-                    to={`/jobs/${job.id}`}
-                    id={`btn-view-job-${job.id}`}
-                    className="btn btn-ghost p-2"
-                    aria-label="View job"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Link>
-                  {job.status === 'active' && (
-                    <button
-                      id={`btn-close-job-${job.id}`}
-                      onClick={() => setCloseId(job.id)}
-                      className="btn btn-ghost p-2 text-danger"
-                      aria-label="Close job"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                    {job.status === 'active' && (
+                      <button
+                        id={`btn-close-job-${job.id}`}
+                        onClick={() => setCloseId(job.id)}
+                        className="btn btn-secondary text-xs px-4 py-2 font-semibold text-danger border-border hover:bg-danger/10"
+                      >
+                        Close job
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
+      {/* Close Job Dialog */}
       <ConfirmDialog
         isOpen={closeId !== null}
-        title="Close Job Listing?"
+        title="Close job opening?"
         message="This will mark the job as closed. It will no longer appear in searches, and no new applications will be accepted."
-        confirmLabel="Close Listing"
+        confirmLabel="Close job"
         danger
         loading={closing}
         onConfirm={handleClose}

@@ -47,6 +47,42 @@ export default {
         },
 
         /*
+         * HEADER
+         * Maps CSS variables: --header, --header-foreground
+         */
+        header: {
+          DEFAULT: 'hsl(var(--header) / <alpha-value>)',
+          foreground: 'hsl(var(--header-foreground) / <alpha-value>)',
+        },
+
+        /*
+         * TERTIARY / GREEN BADGE
+         * Maps CSS variables: --tertiary-soft, --tertiary-foreground
+         */
+        tertiary: {
+          DEFAULT: 'hsl(var(--tertiary-foreground) / <alpha-value>)',
+          soft: 'hsl(var(--tertiary-soft) / <alpha-value>)',
+          foreground: 'hsl(var(--tertiary-foreground) / <alpha-value>)',
+        },
+
+        /*
+         * NEUTRAL TAG
+         * Maps CSS variables: --neutral-soft, --neutral-foreground
+         */
+        neutral: {
+          DEFAULT: 'hsl(var(--neutral-soft) / <alpha-value>)',
+          soft: 'hsl(var(--neutral-soft) / <alpha-value>)',
+          foreground: 'hsl(var(--neutral-foreground) / <alpha-value>)',
+        },
+
+        /*
+         * HIGHLIGHT & LINK
+         * Maps CSS variables: --highlight, --link
+         */
+        highlight: 'hsl(var(--highlight) / <alpha-value>)',
+        link: 'hsl(var(--link) / <alpha-value>)',
+
+        /*
          * ACCENT
          * Maps CSS variables: --color-accent, --color-accent-foreground
          * Enables utilities: bg-accent, text-accent

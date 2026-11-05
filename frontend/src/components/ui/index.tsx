@@ -11,7 +11,7 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
   return (
     <Loader2
       className={`animate-spin ${sizes[size]} ${className}`}
-      style={{ color: 'hsl(var(--color-primary))' }}
+      style={{ color: 'hsl(var(--primary))' }}
     />
   );
 }
@@ -21,7 +21,7 @@ export function PageSpinner() {
     <div className="flex items-center justify-center min-h-64 py-20">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="lg" />
-        <p className="text-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>Loading…</p>
+        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
       </div>
     </div>
   );
@@ -36,24 +36,24 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+    <div className="card flex flex-col items-center justify-center py-16 px-4 text-center my-4">
       {icon && (
         <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-          style={{ background: 'hsl(var(--color-bg-alt))' }}
+          className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+          style={{ background: 'hsl(var(--neutral-soft))' }}
         >
-          <div style={{ color: 'hsl(var(--color-text-faint))' }}>{icon}</div>
+          <div style={{ color: 'hsl(var(--muted-foreground))' }}>{icon}</div>
         </div>
       )}
-      <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--color-text))' }}>
+      <h3 className="text-lg font-bold mb-1.5" style={{ color: 'hsl(var(--foreground))' }}>
         {title}
       </h3>
       {description && (
-        <p className="text-sm max-w-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>
+        <p className="text-sm max-w-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
           {description}
         </p>
       )}
-      {action && <div className="mt-6">{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -99,12 +99,7 @@ interface ErrorBannerProps {
 export function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   return (
     <div
-      className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg text-sm"
-      style={{
-        background: 'hsl(var(--color-danger) / 0.08)',
-        border: '1px solid hsl(var(--color-danger) / 0.25)',
-        color: 'hsl(var(--color-danger))',
-      }}
+      className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl text-sm mb-4 bg-danger/10 border border-danger/25 text-danger"
     >
       <span>{message}</span>
       {onRetry && (
@@ -145,14 +140,10 @@ export function ConfirmDialog({
   React.useEffect(() => {
     if (!isOpen) return;
 
-    // Save triggering element for focus restore
     previousActiveElementRef.current = document.activeElement as HTMLElement | null;
-
-    // Lock background scrolling
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Focus inside modal
     const focusTimer = setTimeout(() => {
       const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -164,13 +155,10 @@ export function ConfirmDialog({
       }
     }, 50);
 
-    // Escape key listener & focus trap
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (!loading) {
-          onCancel();
-        }
+        if (!loading) onCancel();
         return;
       }
 
@@ -211,13 +199,6 @@ export function ConfirmDialog({
 
   if (!isOpen) return null;
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!loading) {
-      onCancel();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -226,40 +207,40 @@ export function ConfirmDialog({
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-desc"
     >
-      {/* Full-screen backdrop preventing background clicks */}
       <div
         className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-xs"
         style={{ pointerEvents: 'auto' }}
-        onClick={handleBackdropClick}
+        onClick={e => {
+          e.stopPropagation();
+          if (!loading) onCancel();
+        }}
       />
 
-      {/* Modal Dialog Box */}
       <div
         ref={dialogRef}
         tabIndex={-1}
         className="relative rounded-2xl p-6 w-full max-w-md animate-scale-in outline-none"
         style={{
-          background: 'hsl(var(--color-surface))',
-          boxShadow: 'var(--shadow-xl)',
-          border: '1px solid hsl(var(--color-border-subtle))',
+          backgroundColor: 'hsl(var(--surface))',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid hsl(var(--border))',
           pointerEvents: 'auto',
           zIndex: 51,
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header with Title and visible Close (X) button */}
         <div className="flex items-start justify-between gap-3 mb-2">
           <h2
             id="confirm-dialog-title"
             className="text-lg font-bold"
-            style={{ color: 'hsl(var(--color-text))' }}
+            style={{ color: 'hsl(var(--foreground))' }}
           >
             {title}
           </h2>
           <button
             onClick={onCancel}
             disabled={loading}
-            className="p-1 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 -mr-1 -mt-1 text-muted"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors -mr-1 -mt-1"
             aria-label="Close dialog"
             id="btn-modal-close-x"
           >
@@ -267,16 +248,14 @@ export function ConfirmDialog({
           </button>
         </div>
 
-        {/* Message */}
         <p
           id="confirm-dialog-desc"
           className="text-sm leading-relaxed mb-6"
-          style={{ color: 'hsl(var(--color-text-muted))' }}
+          style={{ color: 'hsl(var(--muted-foreground))' }}
         >
           {message}
         </p>
 
-        {/* Actions */}
         <div className="flex gap-3 justify-end items-center">
           <button
             id="btn-modal-cancel"
@@ -316,16 +295,16 @@ export function ProgressBar({ value, max = 100, color, label, showPercent }: Pro
     <div>
       {(label || showPercent) && (
         <div className="flex justify-between items-center mb-1.5">
-          {label && <span className="text-xs font-medium" style={{ color: 'hsl(var(--color-text-muted))' }}>{label}</span>}
-          {showPercent && <span className="text-xs font-semibold" style={{ color: 'hsl(var(--color-text))' }}>{pct}%</span>}
+          {label && <span className="text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</span>}
+          {showPercent && <span className="text-xs font-bold" style={{ color: 'hsl(var(--foreground))' }}>{pct}%</span>}
         </div>
       )}
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'hsl(var(--color-border))' }}>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'hsl(var(--neutral-soft))' }}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${pct}%`,
-            background: color || 'linear-gradient(90deg, hsl(var(--color-primary)), hsl(var(--color-secondary)))',
+            background: color || 'hsl(var(--tertiary-foreground))',
           }}
         />
       </div>

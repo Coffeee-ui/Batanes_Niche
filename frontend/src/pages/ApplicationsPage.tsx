@@ -2,20 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Send, Clock, MapPin, Mail, Phone, FileText, CheckCircle,
-  XCircle, AlertCircle, Briefcase, User, ExternalLink, Filter, RotateCcw
+  XCircle, AlertCircle, Briefcase, User, ExternalLink, Filter, RotateCcw, ChevronRight
 } from 'lucide-react';
 import { applicationsApi, jobsApi, extractError } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import type { Application, Job } from '../types';
 import { PageSpinner, EmptyState, ConfirmDialog } from '../components/ui';
 import { toastSuccess, toastError } from '../components/ui/Toast';
-
-const statusColors: Record<string, string> = {
-  pending: 'badge-warning',
-  accepted: 'badge-success',
-  rejected: 'badge-danger',
-  withdrawn: 'badge-muted',
-};
 
 type ModalAction = 'accept' | 'reject' | 'withdraw' | 'reopen';
 
@@ -164,64 +157,110 @@ export default function ApplicationsPage() {
     switch (type) {
       case 'accept':
         return {
-          title: 'Accept Applicant?',
-          message: `Are you sure you want to accept ${applicantName} for '${jobTitle}'? The applicant will be notified immediately.`,
+          title: 'Accept Candidate',
+          message: `Are you sure you want to accept ${applicantName} for '${jobTitle}'? The candidate will be notified immediately.`,
           confirmLabel: 'Accept Candidate',
           danger: false,
         };
       case 'reject':
         return {
-          title: 'Reject Application?',
-          message: `Are you sure you want to reject ${applicantName}'s application for '${jobTitle}'?`,
+          title: 'Reject Application',
+          message: `Are you sure you want to decline ${applicantName}'s application for '${jobTitle}'?`,
           confirmLabel: 'Reject Application',
           danger: true,
         };
       case 'withdraw':
         return {
-          title: 'Withdraw Application?',
+          title: 'Withdraw Application',
           message: isEmployer
             ? `Withdraw ${applicantName}'s application for '${jobTitle}'?`
-            : `Are you sure you want to withdraw your application for '${jobTitle}'? You will be able to reapply later if the job listing remains active.`,
+            : `Are you sure you want to withdraw your application for '${jobTitle}'? You may reapply later if the job is still active.`,
           confirmLabel: 'Withdraw Application',
           danger: true,
         };
       case 'reopen':
         return {
-          title: 'Reset to Pending?',
+          title: 'Reset to Pending',
           message: `Reset application for ${applicantName} back to pending evaluation status?`,
-          confirmLabel: 'Reset to Pending',
+          confirmLabel: 'Reset Status',
           danger: false,
         };
     }
   }, [actionModal, isEmployer]);
 
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+            <CheckCircle className="w-3 h-3" />
+            Accepted
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-danger/15 text-danger border border-danger/30">
+            <XCircle className="w-3 h-3" />
+            Rejected
+          </span>
+        );
+      case 'withdrawn':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-neutral text-muted border border-border">
+            Withdrawn
+          </span>
+        );
+      case 'pending':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-foreground border border-primary/40">
+            <Clock className="w-3 h-3 text-foreground" />
+            Pending
+          </span>
+        );
+    }
+  };
+
   if (loading && applications.length === 0) {
     return <div className="container-page py-12"><PageSpinner /></div>;
   }
+
+  const tabs = [
+    { id: '', label: 'All', count: applications.length },
+    { id: 'pending', label: 'Pending', count: applications.filter(a => a.status === 'pending').length },
+    { id: 'accepted', label: 'Accepted', count: applications.filter(a => a.status === 'accepted').length },
+    { id: 'rejected', label: 'Rejected', count: applications.filter(a => a.status === 'rejected').length },
+    { id: 'withdrawn', label: 'Withdrawn', count: applications.filter(a => a.status === 'withdrawn').length },
+  ];
 
   return (
     <div className="container-page py-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-black mb-1" style={{ color: 'hsl(var(--color-text))' }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
             {isEmployer ? 'Job Applicants' : 'My Applications'}
           </h1>
-          <p className="text-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>
+          <p className="text-sm text-muted">
             {applications.length} total application{applications.length !== 1 ? 's' : ''}
-            {isEmployer && selectedJobId && (
-              <span> · Filtered by job posting</span>
-            )}
+            {isEmployer && selectedJobId && <span> · Filtered by selected job</span>}
           </p>
         </div>
         <div>
           {isEmployer ? (
-            <Link to="/jobs/my" id="btn-back-to-my-jobs" className="btn btn-secondary text-sm">
-              <Briefcase className="w-4 h-4" /> Manage My Jobs
+            <Link
+              to="/jobs/my"
+              id="btn-back-to-my-jobs"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral transition-colors shadow-xs"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-muted" /> Manage my job listings
             </Link>
           ) : (
-            <Link to="/jobs" className="btn btn-primary text-sm">
-              <Send className="w-4 h-4" /> Find Jobs
+            <Link
+              to="/jobs"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-xs"
+            >
+              <Send className="w-3.5 h-3.5" /> Browse open jobs
             </Link>
           )}
         </div>
@@ -229,65 +268,60 @@ export default function ApplicationsPage() {
 
       {/* Error alert banner */}
       {error && (
-        <div
-          className="rounded-xl p-4 mb-6 flex items-center gap-3 text-sm"
-          style={{
-            background: 'hsl(var(--color-danger) / 0.08)',
-            border: '1px solid hsl(var(--color-danger) / 0.25)',
-            color: 'hsl(var(--color-danger))',
-          }}
-        >
+        <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-6 flex items-center gap-3 text-sm text-danger">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Filters row */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      {/* Filters & Status Tabs */}
+      <div className="bg-surface border border-border rounded-2xl p-4 mb-6 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+        {/* Status filter tabs */}
+        <div className="flex gap-2 flex-wrap items-center">
+          {tabs.map(tab => {
+            const isActive = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id || 'all'}
+                id={`filter-${tab.id || 'all'}`}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-primary text-foreground font-bold shadow-xs'
+                    : 'bg-background text-muted hover:text-foreground border border-border'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[11px] ${
+                  isActive ? 'bg-foreground/15 text-foreground' : 'bg-neutral text-muted'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Employer Job selector */}
         {isEmployer && employerJobs.length > 0 && (
-          <div className="sm:w-64">
+          <div className="min-w-[220px]">
             <label htmlFor="filter-job-select" className="sr-only">Filter by Job</label>
-            <div className="relative">
-              <select
-                id="filter-job-select"
-                className="input select text-xs py-2 w-full font-medium"
-                value={selectedJobId}
-                onChange={e => handleJobFilterChange(e.target.value)}
-              >
-                <option value="">All Job Listings ({employerJobs.length})</option>
-                {employerJobs.map(j => (
-                  <option key={j.id} value={j.id}>
-                    {j.title} ({j.application_count ?? 0})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              id="filter-job-select"
+              className="w-full px-4 py-2 rounded-full border border-border bg-background text-foreground text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+              value={selectedJobId}
+              onChange={e => handleJobFilterChange(e.target.value)}
+            >
+              <option value="">All Job Listings ({employerJobs.length})</option>
+              {employerJobs.map(j => (
+                <option key={j.id} value={j.id}>
+                  {j.title} ({j.application_count ?? 0})
+                </option>
+              ))}
+            </select>
           </div>
         )}
-
-        {/* Status filter tabs */}
-        <div className="flex gap-2 flex-wrap flex-1 items-center">
-          {['', 'pending', 'accepted', 'rejected', 'withdrawn'].map(s => (
-            <button
-              key={s || 'all'}
-              id={`filter-${s || 'all'}`}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
-              style={
-                statusFilter === s
-                  ? { background: 'linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)))', color: 'white' }
-                  : { background: 'hsl(var(--color-bg-alt))', color: 'hsl(var(--color-text-muted))', border: '1px solid hsl(var(--color-border))' }
-              }
-            >
-              {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
-              <span className="ml-1.5 opacity-70">
-                {s ? applications.filter(a => a.status === s).length : applications.length}
-              </span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Applications list */}
@@ -297,10 +331,14 @@ export default function ApplicationsPage() {
           title={statusFilter ? `No ${statusFilter} applications` : 'No applications found'}
           description={
             isEmployer
-              ? (statusFilter ? 'Try selecting a different status filter.' : 'No candidates have applied to this listing yet.')
-              : (statusFilter ? 'Try selecting a different filter.' : 'Start applying to jobs in Batanes!')
+              ? (statusFilter ? 'Try selecting a different status filter.' : 'No candidates have applied to your active listings yet.')
+              : (statusFilter ? 'Try selecting a different filter.' : 'Start discovering opportunities across the islands of Batanes!')
           }
-          action={!isEmployer && !statusFilter ? <Link to="/jobs" className="btn btn-primary">Browse Jobs</Link> : undefined}
+          action={!isEmployer && !statusFilter ? (
+            <Link to="/jobs" className="px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs">
+              Browse Jobs
+            </Link>
+          ) : undefined}
         />
       ) : isEmployer ? (
         /* EMPLOYER VIEW: Full Candidate Profiles */
@@ -309,40 +347,41 @@ export default function ApplicationsPage() {
             const applicant = app.applicant;
             const applicantName = applicant?.full_name || app.seeker_name || 'Applicant';
             const skills = applicant?.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+            const initials = applicantName
+              .split(' ')
+              .map(p => p[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join('')
+              .toUpperCase() || 'A';
 
             return (
               <div
                 key={app.id}
                 id={`application-${app.id}`}
-                className="card p-6 transition-all hover:shadow-md"
+                className="bg-surface border border-border rounded-2xl p-6 shadow-sm hover:border-primary/50 transition-all"
               >
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                   {/* Left: Applicant details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-4 mb-3">
                       {/* Avatar */}
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-lg shrink-0"
-                        style={{ background: 'linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)))' }}
-                      >
-                        {applicantName.charAt(0).toUpperCase()}
+                      <div className="w-12 h-12 rounded-full bg-header text-primary border border-border flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
+                        {initials}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <h2 className="text-lg font-bold truncate" style={{ color: 'hsl(var(--color-text))' }}>
+                          <h2 className="text-lg font-bold text-foreground truncate">
                             {applicantName}
                           </h2>
-                          <span className={`badge ${statusColors[app.status]}`}>
-                            {app.status}
-                          </span>
+                          {renderStatusBadge(app.status)}
                         </div>
-                        <p className="text-xs mt-0.5 flex items-center gap-1 font-medium" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                          <Briefcase className="w-3.5 h-3.5" />
-                          Applied for:{' '}
+                        <p className="text-xs text-muted mt-1 flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5 text-muted" />
+                          <span>Applied for: </span>
                           <Link
                             to={`/jobs/${app.job_id}`}
-                            className="font-semibold underline underline-offset-2 hover:text-primary"
-                            style={{ color: 'hsl(var(--color-text))' }}
+                            className="font-bold text-foreground hover:underline"
                           >
                             {app.job?.title || app.job_title || 'Position'}
                           </Link>
@@ -351,31 +390,31 @@ export default function ApplicationsPage() {
                     </div>
 
                     {/* Authorized Contact info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 my-4 p-3.5 rounded-xl text-xs" style={{ background: 'hsl(var(--color-bg-alt))' }}>
-                      <div className="flex items-center gap-2" style={{ color: 'hsl(var(--color-text))' }}>
-                        <Mail className="w-4 h-4 text-primary shrink-0" />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-4 p-3.5 rounded-xl bg-background border border-border/60 text-xs">
+                      <div className="flex items-center gap-2 text-foreground truncate">
+                        <Mail className="w-3.5 h-3.5 text-muted shrink-0" />
                         <span className="truncate">{applicant?.email || 'Email not provided'}</span>
                       </div>
-                      <div className="flex items-center gap-2" style={{ color: 'hsl(var(--color-text))' }}>
-                        <Phone className="w-4 h-4 text-primary shrink-0" />
+                      <div className="flex items-center gap-2 text-foreground">
+                        <Phone className="w-3.5 h-3.5 text-muted shrink-0" />
                         <span>{applicant?.phone_number || 'Phone not provided'}</span>
                       </div>
-                      <div className="flex items-center gap-2" style={{ color: 'hsl(var(--color-text))' }}>
-                        <MapPin className="w-4 h-4 text-primary shrink-0" />
+                      <div className="flex items-center gap-2 text-foreground">
+                        <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
                         <span>{applicant?.municipality || 'Batanes'}, {applicant?.island || 'Batan Island'}</span>
                       </div>
                     </div>
 
                     {/* Background details: Experience, Education */}
-                    <div className="flex flex-wrap gap-4 text-xs mb-3" style={{ color: 'hsl(var(--color-text-muted))' }}>
+                    <div className="flex flex-wrap gap-4 text-xs text-muted mb-3">
                       {applicant?.experience_years !== undefined && (
                         <span>
-                          <strong>Experience:</strong> {applicant.experience_years} year{applicant.experience_years !== 1 ? 's' : ''}
+                          <strong className="text-foreground">Experience:</strong> {applicant.experience_years} year{applicant.experience_years !== 1 ? 's' : ''}
                         </span>
                       )}
                       {applicant?.education && (
                         <span>
-                          <strong>Education:</strong> {applicant.education}
+                          <strong className="text-foreground">Education:</strong> {applicant.education}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
@@ -388,7 +427,7 @@ export default function ApplicationsPage() {
                     {skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {skills.map(s => (
-                          <span key={s} className="badge badge-primary text-xs py-0.5 px-2">
+                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral text-foreground border border-border/50">
                             {s}
                           </span>
                         ))}
@@ -397,19 +436,16 @@ export default function ApplicationsPage() {
 
                     {/* Bio */}
                     {applicant?.bio && (
-                      <p className="text-xs mb-3 line-clamp-2" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                        <em>"{applicant.bio}"</em>
+                      <p className="text-xs text-muted italic mb-3 line-clamp-2">
+                        "{applicant.bio}"
                       </p>
                     )}
 
                     {/* Cover Letter */}
                     {app.cover_letter && (
-                      <div
-                        className="mt-3 p-3 rounded-lg text-xs leading-relaxed"
-                        style={{ background: 'hsl(var(--color-surface))', border: '1px solid hsl(var(--color-border))' }}
-                      >
-                        <p className="font-semibold mb-1" style={{ color: 'hsl(var(--color-text))' }}>Cover Letter:</p>
-                        <p className="whitespace-pre-wrap" style={{ color: 'hsl(var(--color-text-muted))' }}>{app.cover_letter}</p>
+                      <div className="mt-3 p-3.5 rounded-xl bg-neutral/50 border border-border text-xs leading-relaxed">
+                        <p className="font-bold text-foreground mb-1">Cover Note:</p>
+                        <p className="text-muted whitespace-pre-wrap">{app.cover_letter}</p>
                       </div>
                     )}
 
@@ -420,23 +456,23 @@ export default function ApplicationsPage() {
                           href={app.resume_url || applicant?.resume_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
                         >
-                          <FileText className="w-3.5 h-3.5" /> View Resume Document <ExternalLink className="w-3 h-3" />
+                          <FileText className="w-3.5 h-3.5" /> View resume attachment <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                     )}
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex flex-row lg:flex-col gap-2 shrink-0 lg:min-w-36 justify-end items-stretch">
+                  <div className="flex flex-row lg:flex-col gap-2 shrink-0 lg:min-w-36 justify-end items-stretch pt-2 lg:pt-0">
                     {app.status === 'pending' && (
                       <>
                         <button
                           id={`btn-accept-applicant-${app.id}`}
                           type="button"
                           onClick={() => openActionModal(app, 'accept')}
-                          className="btn btn-primary text-xs py-2 px-3 flex items-center justify-center gap-1.5"
+                          className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-xs"
                         >
                           <CheckCircle className="w-3.5 h-3.5" /> Accept
                         </button>
@@ -444,7 +480,7 @@ export default function ApplicationsPage() {
                           id={`btn-reject-applicant-${app.id}`}
                           type="button"
                           onClick={() => openActionModal(app, 'reject')}
-                          className="btn btn-secondary text-xs py-2 px-3 flex items-center justify-center gap-1.5 text-danger"
+                          className="px-4 py-2 rounded-full border border-border bg-surface text-danger font-semibold text-xs hover:bg-danger/10 transition-colors flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-3.5 h-3.5" /> Reject
                         </button>
@@ -456,7 +492,7 @@ export default function ApplicationsPage() {
                         id={`btn-revert-applicant-${app.id}`}
                         type="button"
                         onClick={() => openActionModal(app, 'reopen')}
-                        className="btn btn-secondary text-xs py-2 px-3 flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted hover:text-foreground font-semibold text-xs hover:bg-neutral transition-colors flex items-center justify-center gap-1.5"
                       >
                         <RotateCcw className="w-3.5 h-3.5" /> Re-evaluate
                       </button>
@@ -467,7 +503,7 @@ export default function ApplicationsPage() {
                         id={`btn-reconsider-applicant-${app.id}`}
                         type="button"
                         onClick={() => openActionModal(app, 'reopen')}
-                        className="btn btn-secondary text-xs py-2 px-3 flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted hover:text-foreground font-semibold text-xs hover:bg-neutral transition-colors flex items-center justify-center gap-1.5"
                       >
                         <RotateCcw className="w-3.5 h-3.5" /> Reconsider
                       </button>
@@ -475,7 +511,7 @@ export default function ApplicationsPage() {
 
                     {app.status === 'withdrawn' && (
                       <span className="text-xs font-medium text-center py-2 text-muted">
-                        Withdrawn by candidate
+                        Withdrawn by applicant
                       </span>
                     )}
                   </div>
@@ -485,48 +521,65 @@ export default function ApplicationsPage() {
           })}
         </div>
       ) : (
-        /* JOB SEEKER VIEW: Submitted Applications */
-        <div className="space-y-4">
+        /* JOB SEEKER VIEW: Clean Card-Table Hybrid List */
+        <div className="space-y-3">
           {filtered.map(app => (
-            <div key={app.id} id={`application-${app.id}`} className="card p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+            <div
+              key={app.id}
+              id={`application-${app.id}`}
+              className="bg-surface border border-border rounded-2xl p-5 shadow-sm hover:border-primary/50 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
                   <Link
                     to={`/jobs/${app.job_id}`}
-                    className="text-base font-semibold hover:underline"
-                    style={{ color: 'hsl(var(--color-text))' }}
+                    className="text-base font-bold text-foreground hover:underline truncate"
                   >
-                    {app.job_title}
+                    {app.job_title || app.job?.title || 'Job Listing'}
                   </Link>
-                  {app.company_name && (
-                    <p className="text-sm mt-0.5" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                      {app.company_name}
-                    </p>
-                  )}
-                  {app.cover_letter && (
-                    <p className="text-xs mt-2 line-clamp-2" style={{ color: 'hsl(var(--color-text-faint))' }}>
-                      "{app.cover_letter}"
-                    </p>
-                  )}
-                  <p className="text-xs mt-3 flex items-center gap-1" style={{ color: 'hsl(var(--color-text-faint))' }}>
-                    <Clock className="w-3 h-3" />
-                    Applied {new Date(app.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
+                  {renderStatusBadge(app.status)}
                 </div>
 
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  <span className={`badge ${statusColors[app.status]}`}>{app.status}</span>
-                  {(app.status === 'pending' || app.status === 'accepted') && (
-                    <button
-                      id={`btn-withdraw-${app.id}`}
-                      type="button"
-                      onClick={() => openActionModal(app, 'withdraw')}
-                      className="text-xs font-medium hover:underline text-danger"
-                    >
-                      Withdraw
-                    </button>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                  {app.company_name && (
+                    <span className="font-semibold text-foreground/80">{app.company_name}</span>
                   )}
+                  {app.job?.municipality && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {app.job.municipality}, {app.job.island}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Applied {new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
                 </div>
+
+                {app.cover_letter && (
+                  <p className="text-xs text-muted/70 italic mt-2 line-clamp-1">
+                    "{app.cover_letter}"
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                {(app.status === 'pending' || app.status === 'accepted') && (
+                  <button
+                    id={`btn-withdraw-${app.id}`}
+                    type="button"
+                    onClick={() => openActionModal(app, 'withdraw')}
+                    className="px-3.5 py-1.5 rounded-full border border-border text-danger hover:bg-danger/10 text-xs font-semibold transition-colors"
+                  >
+                    Withdraw
+                  </button>
+                )}
+                <Link
+                  to={`/jobs/${app.job_id}`}
+                  className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all inline-flex items-center gap-1"
+                >
+                  View details <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
           ))}

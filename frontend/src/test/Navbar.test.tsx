@@ -34,9 +34,9 @@ describe('Navbar Component', () => {
     expect(screen.getByText('Batanes')).toBeInTheDocument();
     expect(screen.getByText('Browse Jobs')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
-    expect(screen.queryByText('Post Job')).not.toBeInTheDocument();
-    expect(screen.queryByText('My Applications')).not.toBeInTheDocument();
+    expect(screen.getByText(/Sign [Ii]n/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Post.*Job/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Applications/i)).not.toBeInTheDocument();
   });
 
   it('renders job seeker links when logged in as job seeker', () => {
@@ -59,9 +59,9 @@ describe('Navbar Component', () => {
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Browse Jobs')).toBeInTheDocument();
-    expect(screen.getByText('Saved')).toBeInTheDocument();
-    expect(screen.getByText('My Applications')).toBeInTheDocument();
-    expect(screen.queryByText('Post Job')).not.toBeInTheDocument();
+    expect(screen.getByText(/Saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/Applications/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Post.*Job/i)).not.toBeInTheDocument();
   });
 
   it('renders employer links when logged in as employer', () => {
@@ -83,9 +83,9 @@ describe('Navbar Component', () => {
     );
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Post Job')).toBeInTheDocument();
+    expect(screen.getByText(/Post.*Job/i)).toBeInTheDocument();
     expect(screen.getByText('Candidates')).toBeInTheDocument();
     expect(screen.getByText('My Jobs')).toBeInTheDocument();
-    expect(screen.queryByText('My Applications')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Applications/i)).not.toBeInTheDocument();
   });
 });

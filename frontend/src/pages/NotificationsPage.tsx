@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, CheckCheck, Clock, AlertCircle } from 'lucide-react';
+import { Bell, CheckCheck, Clock, AlertCircle, ChevronRight } from 'lucide-react';
 import { notificationsApi, extractError } from '../api/client';
 import type { Notification } from '../types';
 import { PageSpinner, EmptyState } from '../components/ui';
@@ -21,8 +21,14 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     notificationsApi.list()
-      .then(data => { setNotifications(data || []); setError(''); })
-      .catch((err: unknown) => { setError(extractError(err)); setNotifications([]); })
+      .then(data => {
+        setNotifications(data || []);
+        setError('');
+      })
+      .catch((err: unknown) => {
+        setError(extractError(err));
+        setNotifications([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -39,41 +45,46 @@ export default function NotificationsPage() {
     }
   };
 
-  const unread = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  if (loading) return <div className="container-page py-12"><PageSpinner /></div>;
+  if (loading) {
+    return (
+      <div className="container-page py-12">
+        <PageSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="container-page py-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-black mb-1" style={{ color: 'hsl(var(--color-text))' }}>Notifications</h1>
-          <p className="text-sm" style={{ color: 'hsl(var(--color-text-muted))' }}>
-            {unread > 0 ? `${unread} unread notification${unread !== 1 ? 's' : ''}` : 'All caught up'}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
+            Notifications
+          </h1>
+          <p className="text-sm text-muted">
+            {unreadCount > 0
+              ? `${unreadCount} unread update${unreadCount !== 1 ? 's' : ''}`
+              : 'You are all caught up'}
           </p>
         </div>
-        {unread > 0 && (
+        {unreadCount > 0 && (
           <button
             id="btn-mark-all-read"
+            type="button"
             onClick={handleMarkAll}
             disabled={markingAll}
-            className="btn btn-secondary text-sm gap-2"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral transition-colors shadow-xs"
           >
-            <CheckCheck className="w-4 h-4" />
+            <CheckCheck className="w-4 h-4 text-muted" />
             Mark all read
           </button>
         )}
       </div>
 
       {error && (
-        <div
-          className="rounded-xl p-4 mb-6 flex items-center gap-3 text-sm"
-          style={{
-            background: 'hsl(var(--color-danger) / 0.08)',
-            border: '1px solid hsl(var(--color-danger) / 0.25)',
-            color: 'hsl(var(--color-danger))',
-          }}
-        >
+        <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-6 flex items-center gap-3 text-sm text-danger">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
@@ -83,47 +94,66 @@ export default function NotificationsPage() {
         <EmptyState
           icon={<Bell className="w-8 h-8" />}
           title="No notifications"
-          description="You're all caught up! Notifications about applications, jobs, and more will appear here."
+          description="Updates about applications, postings, and local opportunities will appear here."
         />
       ) : (
-        <div className="space-y-2">
-          {notifications.map(n => (
-            <div
-              key={n.id}
-              id={`notification-${n.id}`}
-              className="card p-4 transition-all duration-200"
-              style={!n.is_read ? { borderLeft: '3px solid hsl(var(--color-primary))' } : {}}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-xl shrink-0">{typeIcons[n.type] || '🔔'}</span>
+        <div className="bg-surface border border-border rounded-2xl divide-y divide-border overflow-hidden shadow-sm">
+          {notifications.map(n => {
+            const isUnread = !n.is_read;
+            return (
+              <div
+                key={n.id}
+                id={`notification-${n.id}`}
+                className={`p-4 sm:p-5 transition-colors relative flex items-start gap-4 ${
+                  isUnread ? 'bg-highlight/30 hover:bg-highlight/40' : 'hover:bg-neutral/40'
+                }`}
+              >
+                {/* Unread Accent Indicator */}
+                {isUnread && (
+                  <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />
+                )}
+
+                {/* Icon Circle */}
+                <div className="w-10 h-10 rounded-full bg-header text-primary border border-border flex items-center justify-center text-lg shrink-0 shadow-xs">
+                  {typeIcons[n.type] || '🔔'}
+                </div>
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold" style={{ color: 'hsl(var(--color-text))' }}>
+                    <h2 className="text-sm font-bold text-foreground">
                       {n.title}
-                      {!n.is_read && (
-                        <span
-                          className="ml-2 inline-block w-2 h-2 rounded-full"
-                          style={{ background: 'hsl(var(--color-primary))' }}
-                        />
-                      )}
-                    </p>
+                    </h2>
+                    {isUnread && (
+                      <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />
+                    )}
                   </div>
-                  <p className="text-sm mt-1" style={{ color: 'hsl(var(--color-text-muted))' }}>{n.message}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <p className="text-xs flex items-center gap-1" style={{ color: 'hsl(var(--color-text-faint))' }}>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    {n.message}
+                  </p>
+                  <div className="flex items-center justify-between gap-3 mt-3 text-xs">
+                    <span className="text-[11px] text-muted flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {new Date(n.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </p>
+                      {new Date(n.created_at).toLocaleDateString('en-PH', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </span>
                     {n.link && (
-                      <Link to={n.link} className="text-xs font-medium" style={{ color: 'hsl(var(--color-primary))' }}>
-                        View →
+                      <Link
+                        to={n.link}
+                        className="font-bold text-xs text-foreground hover:underline inline-flex items-center gap-1"
+                      >
+                        View details <ChevronRight className="w-3 h-3" />
                       </Link>
                     )}
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

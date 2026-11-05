@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ToastProvider from './components/ui/Toast';
@@ -36,14 +37,14 @@ function NotFoundPage() {
     <div className="container-page py-24 text-center">
       <h1
         className="text-8xl font-black mb-4"
-        style={{ fontFamily: 'Outfit, sans-serif', color: 'hsl(var(--color-primary))' }}
+        style={{ fontFamily: 'Outfit, sans-serif', color: 'hsl(var(--primary))' }}
       >
         404
       </h1>
-      <p className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--color-text))' }}>
+      <p className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--foreground))' }}>
         Page not found
       </p>
-      <p className="text-sm mb-8" style={{ color: 'hsl(var(--color-text-muted))' }}>
+      <p className="text-sm mb-8" style={{ color: 'hsl(var(--muted-foreground))' }}>
         The page you're looking for doesn't exist or has been moved.
       </p>
       <Link to="/" className="btn btn-primary">Go Home</Link>
@@ -55,16 +56,16 @@ function NotFoundPage() {
 function AboutPage() {
   return (
     <div className="container-page py-16 max-w-3xl">
-      <h1 className="text-4xl font-black mb-6" style={{ color: 'hsl(var(--color-text))' }}>
-        About <span className="gradient-text">Batanes Niche</span>
+      <h1 className="text-4xl font-black mb-6" style={{ color: 'hsl(var(--foreground))' }}>
+        About Batanes Jobs
       </h1>
-      <div className="prose text-sm leading-relaxed space-y-4" style={{ color: 'hsl(var(--color-text-muted))' }}>
+      <div className="prose text-sm leading-relaxed space-y-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
         <p>
-          Batanes Niche is a hyper-localized employment platform built exclusively for the
+          Batanes Jobs is a hyper-localized employment platform built exclusively for the
           Batanes province of the Philippines — the northernmost tip of the archipelago.
         </p>
         <p>
-          Unlike national job boards, every listing on Batanes Niche is located within the
+          Unlike national job boards, every listing on Batanes Jobs is located within the
           six municipalities of Batanes: Basco, Itbayat, Ivana, Mahatao, Sabtang, and Uyugan.
           Our platform exists so that Ivatans can find meaningful work at home, without having
           to leave their province.
@@ -81,14 +82,14 @@ function AboutPage() {
 function PrivacyPage() {
   return (
     <div className="container-page py-16 max-w-3xl">
-      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--color-text))' }}>Privacy Policy</h1>
-      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--color-text-muted))' }}>
+      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--foreground))' }}>Privacy Policy</h1>
+      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
         <p>
-          Batanes Niche collects personal information (name, email, location, skills) solely for the purpose of
+          Batanes Jobs collects personal information (name, email, location, skills) solely for the purpose of
           facilitating employment connections within Batanes, Philippines.
         </p>
         <p>
-          <strong style={{ color: 'hsl(var(--color-text))' }}>Contact privacy:</strong> A job seeker's email and phone number are never displayed
+          <strong style={{ color: 'hsl(var(--foreground))' }}>Contact privacy:</strong> A job seeker's email and phone number are never displayed
           publicly. They are only revealed to an employer after the seeker has applied to one of that employer's active job listings.
         </p>
         <p>
@@ -96,7 +97,7 @@ function PrivacyPage() {
           industry-standard encryption and access controls.
         </p>
         <p>
-          You may request deletion of your account and all associated data by contacting us at privacy@batanesniche.ph.
+          You may request deletion of your account and all associated data by contacting us at privacy@batanesjobs.ph.
         </p>
       </div>
     </div>
@@ -106,10 +107,10 @@ function PrivacyPage() {
 function TermsPage() {
   return (
     <div className="container-page py-16 max-w-3xl">
-      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--color-text))' }}>Terms of Service</h1>
-      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--color-text-muted))' }}>
+      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--foreground))' }}>Terms of Service</h1>
+      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
         <p>
-          By using Batanes Niche, you agree to use the platform lawfully and only for its intended purpose of
+          By using Batanes Jobs, you agree to use the platform lawfully and only for its intended purpose of
           facilitating employment within the Batanes province.
         </p>
         <p>
@@ -117,7 +118,7 @@ function TermsPage() {
           Job seekers agree not to submit false information in their profiles or applications.
         </p>
         <p>
-          Batanes Niche reserves the right to suspend accounts that violate these terms, at its sole discretion.
+          Batanes Jobs reserves the right to suspend accounts that violate these terms, at its sole discretion.
         </p>
         <p>
           These terms are governed by the laws of the Republic of the Philippines.
@@ -132,69 +133,71 @@ function TermsPage() {
 // ============================================================
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider />
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><PageSpinner /></div>}>
-          <Routes>
-            {/* Public routes — no layout wrapper needed for auth pages */}
-            <Route path="/login"          element={<LoginPage />} />
-            <Route path="/register"       element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider />
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><PageSpinner /></div>}>
+            <Routes>
+              {/* Public routes — no layout wrapper needed for auth pages */}
+              <Route path="/login"          element={<LoginPage />} />
+              <Route path="/register"       element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-            {/* All other routes use the Navbar+Footer layout */}
-            <Route element={<Layout />}>
-              <Route index element={<LandingPage />} />
-              <Route path="/about"   element={<AboutPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms"   element={<TermsPage />} />
+              {/* All other routes use the Navbar+Footer layout */}
+              <Route element={<Layout />}>
+                <Route index element={<LandingPage />} />
+                <Route path="/about"   element={<AboutPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms"   element={<TermsPage />} />
 
-              {/* Public job browsing — job seekers and guests only; employers are redirected */}
-              <Route path="/jobs" element={<JobsPageGuard />} />
+                {/* Public job browsing — job seekers and guests only; employers are redirected */}
+                <Route path="/jobs" element={<JobsPageGuard />} />
 
-              {/* Protected: any authenticated user — backend & component enforce ownership for employers */}
-              <Route path="/jobs/:id" element={
-                <ProtectedRoute><JobDetailPage /></ProtectedRoute>
-              } />
-              {/* Legacy notification link redirect */}
-              <Route path="/employer" element={<Navigate to="/jobs/my" replace />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute><DashboardPage /></ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute><ProfilePage /></ProtectedRoute>
-              } />
-              <Route path="/notifications" element={
-                <ProtectedRoute><NotificationsPage /></ProtectedRoute>
-              } />
+                {/* Protected: any authenticated user — backend & component enforce ownership for employers */}
+                <Route path="/jobs/:id" element={
+                  <ProtectedRoute><JobDetailPage /></ProtectedRoute>
+                } />
+                {/* Legacy notification link redirect */}
+                <Route path="/employer" element={<Navigate to="/jobs/my" replace />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute><ProfilePage /></ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute><NotificationsPage /></ProtectedRoute>
+                } />
 
-              {/* Protected: any authenticated user — backend returns role-appropriate data */}
-              <Route path="/applications" element={
-                <ProtectedRoute><ApplicationsPage /></ProtectedRoute>
-              } />
+                {/* Protected: any authenticated user — backend returns role-appropriate data */}
+                <Route path="/applications" element={
+                  <ProtectedRoute><ApplicationsPage /></ProtectedRoute>
+                } />
 
-              {/* Protected: job seeker only */}
-              <Route path="/saved-jobs" element={
-                <ProtectedRoute role="job_seeker"><SavedJobsPage /></ProtectedRoute>
-              } />
+                {/* Protected: job seeker only */}
+                <Route path="/saved-jobs" element={
+                  <ProtectedRoute role="job_seeker"><SavedJobsPage /></ProtectedRoute>
+                } />
 
-              {/* Protected: employer only */}
-              <Route path="/jobs/post" element={
-                <ProtectedRoute role="employer"><PostJobPage /></ProtectedRoute>
-              } />
-              <Route path="/jobs/my" element={
-                <ProtectedRoute role="employer"><MyJobsPage /></ProtectedRoute>
-              } />
-              <Route path="/candidates" element={
-                <ProtectedRoute role="employer"><CandidatesPage /></ProtectedRoute>
-              } />
+                {/* Protected: employer only */}
+                <Route path="/jobs/post" element={
+                  <ProtectedRoute role="employer"><PostJobPage /></ProtectedRoute>
+                } />
+                <Route path="/jobs/my" element={
+                  <ProtectedRoute role="employer"><MyJobsPage /></ProtectedRoute>
+                } />
+                <Route path="/candidates" element={
+                  <ProtectedRoute role="employer"><CandidatesPage /></ProtectedRoute>
+                } />
 
-              {/* 404 */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </AuthProvider>
-    </BrowserRouter>
+                {/* 404 */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

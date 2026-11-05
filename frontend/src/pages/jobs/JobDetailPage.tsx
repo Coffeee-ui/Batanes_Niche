@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  MapPin, Banknote, Clock, Briefcase, Users, BookmarkCheck, Bookmark,
-  ChevronLeft, Send, Building2, AlertCircle, CheckCircle, X
+  BookmarkCheck, Bookmark, ChevronLeft, Send, Users, CheckCircle, X
 } from 'lucide-react';
 import { jobsApi, applicationsApi, savedJobsApi, extractError } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,9 +12,9 @@ import { toastSuccess, toastError } from '../../components/ui/Toast';
 function formatSalary(min?: number, max?: number): string {
   if (!min && !max) return 'Salary negotiable';
   const fmt = (n: number) => `₱${n.toLocaleString()}`;
-  if (min && max) return `${fmt(min)} – ${fmt(max)} / month`;
-  if (min) return `From ${fmt(min)} / month`;
-  return `Up to ${fmt(max!)} / month`;
+  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+  if (min) return `From ${fmt(min)}`;
+  return `Up to ${fmt(max!)}`;
 }
 
 export default function JobDetailPage() {
@@ -55,7 +54,7 @@ export default function JobDetailPage() {
       } else {
         await savedJobsApi.save(job!.id);
         setSaved(true);
-        toastSuccess('Job saved!');
+        toastSuccess('Job saved successfully!');
       }
     } catch (err) {
       toastError(extractError(err));
@@ -91,245 +90,235 @@ export default function JobDetailPage() {
   );
 
   const skills = job.required_skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-  const isSeeker = user?.role === 'job_seeker';
+  const isSeeker = !user || user.role === 'job_seeker';
   const isEmployer = user?.role === 'employer' && user.id === job.employer_id;
+  const companyName = job.company_name || job.employer_name || 'Local employer';
+
+  // Determine relative posted time
+  const postedDate = new Date(job.created_at);
+  const now = new Date();
+  const diffDays = Math.max(0, Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const postedText = diffDays === 0 ? 'Posted today' : diffDays === 1 ? 'Posted 1 day ago' : `Posted ${diffDays} days ago`;
 
   return (
-    <div className="container-page py-8">
-      {/* Back */}
-      <button
-        onClick={() => navigate(-1)}
-        id="btn-back-to-jobs"
-        className="btn btn-ghost text-sm mb-6 -ml-2"
-      >
-        <ChevronLeft className="w-4 h-4" /> Back
-      </button>
+    <div className="container-page py-8 space-y-6">
+      {/* Breadcrumb */}
+      <div className="text-xs text-muted-foreground flex items-center gap-2">
+        <Link to="/jobs" className="hover:text-foreground">Browse jobs</Link>
+        <span>/</span>
+        <span className="text-foreground font-medium truncate max-w-sm">{job.title}</span>
+      </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Main Job Card */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Header Card */}
-          <div className="card p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                {/* Company logo placeholder */}
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-xl font-black text-white"
-                  style={{ background: 'linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)))' }}
-                >
-                  {(job.company_name || job.employer_name || job.title || 'J').charAt(0)}
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black mb-1" style={{ color: 'hsl(var(--color-text))' }}>
-                    {job.title}
-                  </h1>
-                  <p className="text-sm font-medium" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                    {job.company_name || job.employer_name || 'Batanes Employer'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status badge */}
-              <span className={`badge shrink-0 ${job.status === 'active' ? 'badge-success' : 'badge-muted'}`}>
-                {job.status}
+          <div className="card p-8 space-y-6">
+            {/* Top Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="badge badge-muted">
+                {job.employment_type}
+              </span>
+              <span className="badge badge-success">
+                Hiring
               </span>
             </div>
 
-            {/* Meta Details */}
-            <div
-              className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6"
-              style={{ borderTop: '1px solid hsl(var(--color-border-subtle))' }}
-            >
-              {[
-                { icon: <MapPin className="w-4 h-4" />, label: 'Location', value: job.barangay ? `${job.barangay}, ${job.municipality}` : `${job.municipality}, ${job.island}` },
-                { icon: <Briefcase className="w-4 h-4" />, label: 'Type', value: job.employment_type },
-                { icon: <Banknote className="w-4 h-4" />, label: 'Salary', value: formatSalary(job.salary_min, job.salary_max) },
-                { icon: <Clock className="w-4 h-4" />, label: 'Posted', value: new Date(job.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) },
-                ...(job.application_count !== undefined ? [{ icon: <Users className="w-4 h-4" />, label: 'Applicants', value: `${job.application_count}` }] : []),
-              ].map(item => (
-                <div key={item.label}>
-                  <div className="flex items-center gap-2 mb-1" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                    {item.icon}
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </div>
-                  <p className="text-sm font-semibold" style={{ color: 'hsl(var(--color-text))' }}>{item.value}</p>
-                </div>
-              ))}
+            {/* Title & Metadata */}
+            <div>
+              <h1 className="text-3xl font-black text-foreground mb-2">
+                {job.title}
+              </h1>
+              <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-medium text-foreground">{companyName}</span>
+                <span>·</span>
+                <span>{job.municipality}</span>
+                <span>·</span>
+                <span>{job.employment_type}</span>
+                <span>·</span>
+                <span>{formatSalary(job.salary_min, job.salary_max)}</span>
+                <span>·</span>
+                <span>{postedText}</span>
+              </p>
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="card p-6">
-            <h2 className="text-lg font-bold mb-4" style={{ color: 'hsl(var(--color-text))' }}>
-              Job Description
-            </h2>
-            <div
-              className="text-sm leading-relaxed whitespace-pre-wrap"
-              style={{ color: 'hsl(var(--color-text-muted))' }}
-            >
-              {job.description}
-            </div>
-          </div>
-
-          {/* Required Skills */}
-          {skills.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-bold mb-4" style={{ color: 'hsl(var(--color-text))' }}>
-                Required Skills
+            {/* About the Job */}
+            <div className="pt-6 border-t border-border space-y-3">
+              <h2 className="text-base font-bold text-foreground">
+                About the job
               </h2>
-              <div className="flex flex-wrap gap-2">
-                {skills.map(skill => (
-                  <span key={skill} className="badge badge-primary text-sm">{skill}</span>
-                ))}
+              <div className="text-sm leading-relaxed text-foreground whitespace-pre-line">
+                {job.description}
               </div>
             </div>
-          )}
+
+            {/* Required Skills */}
+            {skills.length > 0 && (
+              <div className="pt-6 border-t border-border space-y-3">
+                <h2 className="text-base font-bold text-foreground">
+                  Skills
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {skills.map(skill => (
+                    <span key={skill} className="badge badge-muted text-xs py-1.5 px-3">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Apply Card */}
-          <div
-            className="card p-5 sticky top-20"
-          >
+        {/* Right Sticky Sidebar ("Apply for this job") */}
+        <aside className="space-y-6 lg:sticky lg:top-24">
+          <div className="card p-6 space-y-5">
+            <h2 className="text-base font-bold text-foreground">
+              Apply for this job
+            </h2>
+
             {applied ? (
-              <div className="text-center py-4">
-                <CheckCircle className="w-10 h-10 mx-auto mb-3" style={{ color: 'hsl(var(--color-success))' }} />
-                <p className="font-semibold mb-1" style={{ color: 'hsl(var(--color-text))' }}>Application Sent!</p>
-                <p className="text-xs" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                  The employer will review your profile.
+              <div className="text-center py-4 bg-tertiary-soft/40 rounded-xl p-4">
+                <CheckCircle className="w-8 h-8 text-tertiary mx-auto mb-2" />
+                <p className="font-bold text-sm text-foreground mb-1">Application Sent</p>
+                <p className="text-xs text-muted-foreground">
+                  The employer has received your details.
                 </p>
-                <Link to="/applications" className="btn btn-secondary w-full mt-4 text-sm">
+                <Link to="/applications" className="btn btn-secondary w-full mt-3 text-xs">
                   View My Applications
                 </Link>
               </div>
             ) : isEmployer ? (
-              <div>
-                <p className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--color-text))' }}>
-                  Your Listing
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground mb-2">
+                  This is your job listing.
                 </p>
-                <Link to={`/applications?jobId=${job.id}`} id="btn-view-applicants" className="btn btn-primary w-full text-sm">
-                  <Users className="w-4 h-4" /> View Applicants
-                </Link>
-                <Link to={`/jobs/${job.id}/edit`} id="btn-edit-job" className="btn btn-secondary w-full text-sm mt-2">
-                  Edit Job
+                <Link
+                  to={`/applications?jobId=${job.id}`}
+                  id="btn-view-applicants"
+                  className="btn btn-primary w-full text-xs font-bold"
+                >
+                  <Users className="w-4 h-4" /> View Applicants ({job.application_count ?? 0})
                 </Link>
               </div>
             ) : (
-              <>
-                <p className="text-sm font-semibold mb-1" style={{ color: 'hsl(var(--color-text))' }}>
-                  Interested in this role?
+              <div className="space-y-4">
+                {/* Profile completeness hint */}
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your profile is {user?.profile_completeness ?? 70}% complete. A complete profile helps employers notice you.
                 </p>
-                <p className="text-xs mb-4" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                  Apply now — your profile will be shared with the employer.
-                </p>
-                {job.status === 'active' ? (
-                  <>
-                    <button
-                      id="btn-apply-now"
-                      onClick={() => isAuthenticated ? setShowApplyModal(true) : navigate('/login', { state: { from: `/jobs/${id}` } })}
-                      className="btn btn-primary w-full text-sm"
-                    >
-                      <Send className="w-4 h-4" />
-                      {isAuthenticated ? 'Apply Now' : 'Sign In to Apply'}
-                    </button>
-                    {isSeeker && (
-                      <button
-                        id="btn-save-job-detail"
-                        onClick={handleSave}
-                        disabled={savingJob}
-                        className="btn btn-secondary w-full text-sm mt-2"
-                      >
-                        {savingJob ? <Spinner size="sm" /> : saved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                        {saved ? 'Saved' : 'Save Job'}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div
-                    className="px-4 py-3 rounded-lg text-sm text-center font-medium"
-                    style={{ background: 'hsl(var(--color-border))', color: 'hsl(var(--color-text-muted))' }}
-                  >
-                    This listing is closed
-                  </div>
-                )}
-              </>
-            )}
-          </div>
 
-          {/* Company Info Card */}
-          <div className="card p-5">
-            <h3 className="text-sm font-bold mb-3" style={{ color: 'hsl(var(--color-text))' }}>
-              About the Employer
-            </h3>
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
-                style={{ background: 'linear-gradient(135deg, hsl(var(--color-primary) / 0.7), hsl(var(--color-secondary) / 0.7))' }}
-              >
-                {(job.company_name || job.employer_name || job.title || 'J').charAt(0)}
+                {/* Primary Yellow CTA */}
+                <button
+                  id="btn-apply-now"
+                  onClick={() => isAuthenticated ? setShowApplyModal(true) : navigate('/login', { state: { from: `/jobs/${id}` } })}
+                  className="btn btn-primary w-full text-xs font-bold"
+                >
+                  Apply now
+                </button>
+
+                {/* Secondary Save Button */}
+                {isSeeker && (
+                  <button
+                    id="btn-save-job-detail"
+                    onClick={handleSave}
+                    disabled={savingJob}
+                    className="btn btn-secondary w-full text-xs font-semibold"
+                  >
+                    {saved ? (
+                      <><BookmarkCheck className="w-4 h-4 text-primary fill-primary" /> Saved</>
+                    ) : (
+                      <><Bookmark className="w-4 h-4 text-muted-foreground" /> Save job</>
+                    )}
+                  </button>
+                )}
               </div>
+            )}
+
+            {/* Divider */}
+            <div className="border-t border-border pt-4 space-y-4">
               <div>
-                <p className="text-sm font-semibold" style={{ color: 'hsl(var(--color-text))' }}>
-                  {job.company_name || job.employer_name || 'Batanes Employer'}
+                <p className="text-xs font-bold text-foreground mb-1">Location</p>
+                <p className="text-xs text-muted-foreground">
+                  {job.barangay ? `${job.barangay}, ${job.municipality}` : job.municipality}, Batanes
                 </p>
-                <p className="text-xs flex items-center gap-1" style={{ color: 'hsl(var(--color-text-muted))' }}>
-                  <MapPin className="w-3 h-3" /> {job.municipality}, Batanes
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-foreground mb-1">Contact</p>
+                <p className="text-xs text-muted-foreground">
+                  Shared after you apply.
                 </p>
               </div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
 
-      {/* Apply Modal */}
+      {/* Apply Modal Window */}
       {showApplyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setShowApplyModal(false)} />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            onClick={() => setShowApplyModal(false)}
+          />
           <div
             className="relative rounded-2xl p-6 w-full max-w-lg animate-scale-in"
-            style={{ background: 'hsl(var(--color-surface))', boxShadow: 'var(--shadow-lg)' }}
+            style={{
+              backgroundColor: 'hsl(var(--surface))',
+              border: '1px solid hsl(var(--border))',
+              boxShadow: 'var(--shadow-lg)',
+              zIndex: 51,
+            }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold" style={{ color: 'hsl(var(--color-text))' }}>
+              <h2 className="text-lg font-bold text-foreground">
                 Apply for: {job.title}
               </h2>
-              <button onClick={() => setShowApplyModal(false)} className="btn-ghost p-1 rounded">
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                aria-label="Close"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm mb-4" style={{ color: 'hsl(var(--color-text-muted))' }}>
-              Your profile will be sent to <strong>{job.company_name || job.employer_name}</strong>.
-              You may add a cover letter below.
+
+            <p className="text-xs text-muted-foreground mb-4">
+              Your profile information will be shared with <strong>{companyName}</strong>. You may optionally add a cover letter below.
             </p>
+
             <div className="mb-4">
-              <label htmlFor="cover-letter" className="label">
-                Cover Letter <span style={{ color: 'hsl(var(--color-text-faint))' }}>(optional)</span>
+              <label htmlFor="cover-letter" className="label text-xs">
+                Cover Letter (optional)
               </label>
               <textarea
                 id="cover-letter"
-                className="input resize-none"
-                rows={5}
-                placeholder="Briefly introduce yourself and why you're a great fit…"
+                className="input text-sm resize-none"
+                rows={4}
+                placeholder="Briefly introduce yourself and why you're interested in this role…"
                 value={coverLetter}
                 onChange={e => setCoverLetter(e.target.value)}
                 maxLength={1000}
               />
-              <p className="text-xs text-right mt-1" style={{ color: 'hsl(var(--color-text-faint))' }}>
+              <p className="text-[11px] text-right mt-1 text-muted-foreground">
                 {coverLetter.length}/1000
               </p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowApplyModal(false)} className="btn btn-secondary flex-1">
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="btn btn-secondary text-xs px-4"
+              >
                 Cancel
               </button>
               <button
                 id="btn-confirm-apply"
                 onClick={handleApply}
                 disabled={applying}
-                className="btn btn-primary flex-1"
+                className="btn btn-primary text-xs px-5 font-bold"
               >
-                {applying ? <Spinner size="sm" /> : <><Send className="w-4 h-4" /> Submit Application</>}
+                {applying ? <Spinner size="sm" /> : <><Send className="w-3.5 h-3.5" /> Submit Application</>}
               </button>
             </div>
           </div>

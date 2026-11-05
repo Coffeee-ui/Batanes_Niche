@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { metaApi } from '../../api/client';
 
 interface SkillSelectorProps {
@@ -10,94 +10,133 @@ interface SkillSelectorProps {
   optional?: boolean;
 }
 
-const OTHER = 'Other';
+const DEFAULT_POPULAR_SKILLS = [
+  'Customer service',
+  'Booking',
+  'Cooking',
+  'Driving',
+  'Tour guiding',
+  'Housekeeping',
+  'Carpentry',
+  'Boat operation',
+];
 
 function normalize(value: string) {
   return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }
 
 export default function SkillSelector({ id, label, values, onChange, optional = true }: Readonly<SkillSelectorProps>) {
-  const [skills, setSkills] = useState<string[]>([]);
-  const [selected, setSelected] = useState('');
-  const [otherSelected, setOtherSelected] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState<string[]>(DEFAULT_POPULAR_SKILLS);
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const [customValue, setCustomValue] = useState('');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     metaApi.options()
-      .then(options => { if (mounted) setSkills(options.skills || []); })
-      .finally(() => { if (mounted) setLoading(false); });
+      .then(options => {
+        if (mounted && options.skills && options.skills.length > 0) {
+          // Merge unique skills
+          const combined = Array.from(new Set([...DEFAULT_POPULAR_SKILLS, ...options.skills]));
+          setAvailableSkills(combined);
+        }
+      })
+      .catch(() => {});
     return () => { mounted = false; };
   }, []);
 
-  const addValue = (rawValue: string) => {
-    const value = rawValue.trim().replace(/\s+/g, ' ');
-    if (!value || normalize(value) === normalize(OTHER)) return;
-    const canonical = skills.find(skill => normalize(skill) === normalize(value));
-    const resolved = canonical || value;
-    if (!values.some(existing => normalize(existing) === normalize(resolved))) {
-      onChange([...values, resolved]);
+  const toggleSkill = (skill: string) => {
+    const isSelected = values.some(v => normalize(v) === normalize(skill));
+    if (isSelected) {
+      onChange(values.filter(v => normalize(v) !== normalize(skill)));
+    } else {
+      onChange([...values, skill]);
     }
   };
 
-  const handleSelection = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-    setSelected('');
-    if (value === OTHER) {
-      setOtherSelected(true);
-      setCustomValue('');
-      return;
+  const addCustomSkill = () => {
+    const trimmed = customValue.trim().replace(/\s+/g, ' ');
+    if (!trimmed) return;
+    if (!values.some(v => normalize(v) === normalize(trimmed))) {
+      onChange([...values, trimmed]);
+      if (!availableSkills.some(s => normalize(s) === normalize(trimmed))) {
+        setAvailableSkills(prev => [...prev, trimmed]);
+      }
     }
-    setOtherSelected(false);
-    addValue(value);
-  };
-
-  const addCustom = () => {
-    addValue(customValue);
     setCustomValue('');
-    setSelected('');
-    setOtherSelected(false);
+    setShowOtherInput(false);
   };
 
   return (
-    <div>
-      <label htmlFor={id} className="label text-xs">
-        {label} {!optional && <span style={{ color: 'hsl(var(--color-danger))' }}>*</span>}
+    <div id={id} className="space-y-2">
+      <label className="label text-xs">
+        {label} {!optional && <span className="text-danger">*</span>}
       </label>
-      <select id={id} className="input select text-sm" value={selected} onChange={handleSelection} disabled={loading}>
-        <option value="">{loading ? 'Loading skills…' : 'Select a skill to add…'}</option>
-        {skills.filter(skill => !values.some(value => normalize(value) === normalize(skill))).map(skill => (
-          <option key={skill} value={skill}>{skill}</option>
-        ))}
-        <option value={OTHER}>{OTHER}</option>
-      </select>
-      {otherSelected && (
-        <div className="flex gap-2 mt-2">
+
+      {/* Selectable Skill Chips */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {availableSkills.map(skill => {
+          const isSelected = values.some(v => normalize(v) === normalize(skill));
+          return (
+            <button
+              key={skill}
+              type="button"
+              onClick={() => toggleSkill(skill)}
+              className={`chip ${isSelected ? 'chip-active' : ''}`}
+            >
+              <span>{skill}</span>
+              {isSelected && <X className="w-3 h-3 ml-1.5 opacity-60 hover:opacity-100" />}
+            </button>
+          );
+        })}
+
+        {/* Other / Custom Chip */}
+        <button
+          type="button"
+          onClick={() => setShowOtherInput(prev => !prev)}
+          className={`chip ${showOtherInput ? 'border-primary' : ''}`}
+        >
+          <Plus className="w-3 h-3 mr-1 text-muted-foreground" />
+          <span>Other…</span>
+        </button>
+      </div>
+
+      {/* Custom Skill Input */}
+      {showOtherInput && (
+        <div className="flex gap-2 mt-2 pt-2 animate-fade-in max-w-md">
           <input
             id={`${id}-custom`}
+            type="text"
             className="input text-sm"
+            placeholder="Type a skill and press Enter"
             value={customValue}
-            onChange={event => setCustomValue(event.target.value)}
-            onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addCustom(); } }}
-            placeholder="Enter a specific skill"
-            maxLength={100}
+            onChange={e => setCustomValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomSkill();
+              }
+            }}
+            maxLength={60}
+            autoFocus
           />
-          <button type="button" className="btn btn-secondary text-sm shrink-0" onClick={addCustom} disabled={!customValue.trim()}>
+          <button
+            type="button"
+            className="btn btn-primary text-xs px-4 shrink-0"
+            onClick={addCustomSkill}
+            disabled={!customValue.trim()}
+          >
             Add
           </button>
-        </div>
-      )}
-      {values.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {values.map(value => (
-            <span key={value} className="badge badge-primary">
-              {value}
-              <button type="button" aria-label={`Remove ${value}`} onClick={() => onChange(values.filter(item => item !== value))}>
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+          <button
+            type="button"
+            className="btn btn-secondary text-xs px-3 shrink-0"
+            onClick={() => {
+              setShowOtherInput(false);
+              setCustomValue('');
+            }}
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>
