@@ -12,7 +12,7 @@ export default function BatanesScene({ className = '', variant = 'auto' }: Batan
 
   return (
     <div
-      className={`relative w-full overflow-hidden select-none pointer-events-none ${className}`}
+      className={`relative w-full overflow-hidden select-none pointer-events-none h-32 sm:h-44 md:h-56 ${className}`}
       role="img"
       aria-label={night ? 'Night in Batanes with crescent moon, stars, rolling hills and Basco lighthouse' : 'Day in Batanes with sun, rolling green hills and Basco lighthouse'}
     >
@@ -20,9 +20,8 @@ export default function BatanesScene({ className = '', variant = 'auto' }: Batan
         viewBox="0 0 1440 260"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="none"
-        className="w-full h-auto block"
-        style={{ minHeight: '160px' }}
+        preserveAspectRatio="xMidYMid slice"
+        className="w-full h-full block"
       >
         {night ? (
           /* Night Mode: Deep sky, crescent moon, stars, beam, dark teal-navy hills */

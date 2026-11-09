@@ -170,20 +170,37 @@ export class JobService {
     });
   }
 
+  static async countActiveJobs(
+    municipality?: string | null,
+    island?: string | null,
+    keyword?: string | null,
+    employmentType?: string | null,
+    category?: string | null
+  ): Promise<number> {
+    return JobRepository.countActiveJobs(municipality, island, keyword, employmentType, category);
+  }
+
   static async listActiveJobs(
     municipality?: string | null,
     island?: string | null,
     keyword?: string | null,
     employmentType?: string | null,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
+    sort?: string | null,
+    category?: string | null
   ): Promise<JobOut[]> {
-    const jobs = await JobRepository.listActiveJobs(municipality, island, keyword, employmentType, limit, offset);
+    const jobs = await JobRepository.listActiveJobs(municipality, island, keyword, employmentType, limit, offset, sort, category);
     return jobs.map(j => this.toJobOut(j));
   }
 
-  static async listActiveJobsPreview(limit: number = 50, offset: number = 0): Promise<JobPreviewOut[]> {
-    const jobs = await JobRepository.listActiveJobs(null, null, null, null, limit, offset);
+  static async listActiveJobsPreview(
+    limit: number = 50,
+    offset: number = 0,
+    sort?: string | null,
+    category?: string | null
+  ): Promise<JobPreviewOut[]> {
+    const jobs = await JobRepository.listActiveJobs(null, null, null, null, limit, offset, sort, category);
     return jobs.map(j => this.toJobPreviewOut(j));
   }
 

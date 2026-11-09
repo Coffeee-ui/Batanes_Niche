@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ============================================================
    Batanes Jobs – Day & Night Master Design Tokens
@@ -29,6 +28,16 @@
   --neutral-foreground: 212 11% 23%;      /* #343A41 Neutral Tag Text */
   --link: 214 12% 12%;                    /* #1A1D21 Link Color */
   --highlight: 45 100% 88%;               /* #FFF1C2 Card & Active Chip Highlight */
+
+  /* Category Tints (Day Mode) */
+  --tint-yellow: 45 100% 90%;
+  --tint-yellow-foreground: 42 95% 24%;
+  --tint-mint: 140 44% 89%;
+  --tint-mint-foreground: 149 56% 16%;
+  --tint-peach: 30 100% 91%;
+  --tint-peach-foreground: 29 100% 27%;
+  --tint-periwinkle: 225 70% 92%;
+  --tint-periwinkle-foreground: 225 60% 25%;
 
   /* Legacy Compatibility Aliases */
   --color-primary: var(--primary);
@@ -102,6 +111,16 @@
   --link: 212 43% 93%;                   /* #E6EDF5 Link Color */
   --highlight: 214 35% 21%;              /* #223247 Night Active Highlight */
 
+  /* Category Tints (Night Mode) */
+  --tint-yellow: 46 45% 20%;
+  --tint-yellow-foreground: 46 84% 68%;
+  --tint-mint: 167 51% 14%;
+  --tint-mint-foreground: 161 60% 73%;
+  --tint-peach: 35 33% 17%;
+  --tint-peach-foreground: 35 83% 75%;
+  --tint-periwinkle: 225 35% 20%;
+  --tint-periwinkle-foreground: 220 75% 75%;
+
   --color-danger: 0 72% 51%;
   --color-danger-foreground: 0 0% 100%;
 }
@@ -116,6 +135,8 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -125,6 +146,8 @@ body {
   color: hsl(var(--foreground));
   transition: background-color var(--transition-base), color var(--transition-base);
   line-height: 1.6;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* Typography */
@@ -147,6 +170,15 @@ a {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* Hide scrollbar for clean horizontal swiping on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* Focus Ring */
 :focus-visible {
@@ -225,7 +257,7 @@ a {
 
   /* Form inputs */
   .input {
-    @apply w-full rounded-xl px-4 py-3 text-sm font-medium transition-all duration-150;
+    @apply w-full rounded-xl px-4 py-3 text-base sm:text-sm font-medium transition-all duration-150;
     min-height: 44px;
     background-color: hsl(var(--surface));
     border: 1px solid hsl(var(--border));
@@ -298,11 +330,11 @@ a {
 
   /* Interactive Chips */
   .chip {
-    @apply inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer select-none border border-transparent;
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer select-none border border-transparent;
     background-color: hsl(var(--surface));
     border: 1px solid hsl(var(--border));
     color: hsl(var(--foreground));
-    min-height: 36px;
+    min-height: 44px;
   }
   .chip:hover {
     border-color: hsl(var(--primary));
@@ -351,3 +383,13 @@ a {
 .animate-scale-in { animation: scale-in 180ms ease forwards; }
 .animate-slide-in { animation: slide-in-right 200ms ease forwards; }
 .toast-enter      { animation: slide-in-right 200ms ease forwards; }
+
+/* Reduced-motion: cut all animations to near-zero (A11Y-04) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

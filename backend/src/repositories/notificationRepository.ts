@@ -16,6 +16,14 @@ export class NotificationRepository {
     });
   }
 
+  static async markRead(notificationId: number, userId: number): Promise<boolean> {
+    const res = await prisma.notification.updateMany({
+      where: { id: notificationId, user_id: userId, is_read: false },
+      data: { is_read: true },
+    });
+    return res.count > 0;
+  }
+
   static async markAllRead(userId: number): Promise<number> {
     const res = await prisma.notification.updateMany({
       where: { user_id: userId, is_read: false },

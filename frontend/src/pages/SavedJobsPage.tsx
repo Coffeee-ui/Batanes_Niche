@@ -48,7 +48,7 @@ export default function SavedJobsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
             Saved Jobs
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {savedJobs.length} position{savedJobs.length !== 1 ? 's' : ''} saved for later application
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function SavedJobsPage() {
                 isSaved={true}
                 onSaveToggle={handleSaveToggle}
               />
-              <p className="text-[11px] text-muted/70 px-2 mt-1.5 flex items-center gap-1">
+              <p className="text-[11px] text-muted-foreground px-2 mt-1.5 flex items-center gap-1">
                 Saved on {new Date(saved_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </div>

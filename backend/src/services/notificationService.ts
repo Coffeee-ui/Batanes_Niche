@@ -37,6 +37,10 @@ export class NotificationService {
     return list.map(this.toNotificationOut);
   }
 
+  static async markRead(notificationId: number, userId: number): Promise<boolean> {
+    return NotificationRepository.markRead(notificationId, userId);
+  }
+
   static async markAllRead(userId: number): Promise<number> {
     return NotificationRepository.markAllRead(userId);
   }

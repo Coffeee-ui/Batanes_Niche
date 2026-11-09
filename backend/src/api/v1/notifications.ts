@@ -32,3 +32,23 @@ notificationsRouter.put(
     }
   }
 );
+
+
+// PUT /:id/read (mark single notification read)
+notificationsRouter.put(
+  '/:id/read',
+  requireAuthenticated,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        res.status(400).json({ message: 'Invalid notification ID' });
+        return;
+      }
+      await NotificationService.markRead(id, req.user!.id);
+      res.status(200).json({ message: 'Notification marked as read.' });
+    } catch (err) {
+      next(err);
+    }
+  }
+);

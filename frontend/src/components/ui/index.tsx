@@ -1,5 +1,10 @@
-import React from 'react';
-import { Loader2, X } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Loader2 } from 'lucide-react';
+import Modal from './Modal';
+import CategoryIcon, { CategoryTile, CategoryBadge, getCategoryMeta } from './CategoryIcon';
+
+export { Modal, CategoryIcon, CategoryTile, CategoryBadge, getCategoryMeta };
+export type { ModalProps } from './Modal';
 
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -91,6 +96,80 @@ export function JobCardSkeleton() {
   );
 }
 
+export function DashboardSkeleton() {
+  return (
+    <div className="container-page py-8 space-y-8 animate-pulse">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-10 w-32 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card p-6 h-28 space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-8 w-12" />
+        </div>
+        <div className="card p-6 h-28 space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-8 w-12" />
+        </div>
+        <div className="card p-6 h-28 space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-8 w-12" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-4">
+          <Skeleton className="h-6 w-36" />
+          <JobCardSkeleton />
+          <JobCardSkeleton />
+        </div>
+        <div className="card p-6 space-y-4">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-2 w-full rounded-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function JobDetailSkeleton() {
+  return (
+    <div className="container-page py-8 space-y-6 animate-pulse">
+      <Skeleton className="h-4 w-24" />
+      <div className="card p-6 sm:p-8 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-8 w-3/4 max-w-md" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-11 w-36 rounded-xl" />
+        </div>
+        <div className="flex gap-2 pt-2 flex-wrap">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-6 w-32 rounded-full" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 card p-6 sm:p-8 space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-full" count={6} />
+        </div>
+        <div className="card p-6 space-y-4">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" count={4} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ErrorBannerProps {
   message: string;
   onRetry?: () => void;
@@ -115,6 +194,10 @@ export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: string;
+  summaryCard?: {
+    jobTitle?: string;
+    employer?: string;
+  };
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
@@ -127,157 +210,111 @@ export function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  summaryCard,
+  danger = false,
+  confirmLabel,
+  cancelLabel,
   onConfirm,
   onCancel,
-  danger = false,
   loading = false,
 }: ConfirmDialogProps) {
-  const dialogRef = React.useRef<HTMLDivElement>(null);
-  const previousActiveElementRef = React.useRef<HTMLElement | null>(null);
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const focusTimer = setTimeout(() => {
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable && focusable.length > 0) {
-        focusable[0].focus();
-      } else {
-        dialogRef.current?.focus();
-      }
-    }, 50);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        if (!loading) onCancel();
-        return;
-      }
-
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      clearTimeout(focusTimer);
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-      if (previousActiveElementRef.current && typeof previousActiveElementRef.current.focus === 'function') {
-        previousActiveElementRef.current.focus();
-      }
-    };
-  }, [isOpen, loading, onCancel]);
-
-  if (!isOpen) return null;
+  const resolvedConfirmLabel = confirmLabel ?? (danger ? 'Yes, proceed' : 'Yes, continue');
+  const resolvedCancelLabel = cancelLabel ?? (danger ? 'No, keep it' : 'No, go back');
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-desc"
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        if (!loading) onCancel();
+      }}
+      title={title}
+      titleId="confirm-dialog-title"
+      descriptionId="confirm-dialog-desc"
+      initialFocusRef={danger ? cancelBtnRef : confirmBtnRef}
+      asBottomSheet
     >
-      <div
-        className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-xs"
-        style={{ pointerEvents: 'auto' }}
-        onClick={e => {
-          e.stopPropagation();
-          if (!loading) onCancel();
-        }}
-      />
-
-      <div
-        ref={dialogRef}
-        tabIndex={-1}
-        className="relative rounded-2xl p-6 w-full max-w-md animate-scale-in outline-none"
-        style={{
-          backgroundColor: 'hsl(var(--surface))',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid hsl(var(--border))',
-          pointerEvents: 'auto',
-          zIndex: 51,
-        }}
-        onClick={e => e.stopPropagation()}
+      <p
+        id="confirm-dialog-desc"
+        className="text-sm leading-relaxed mb-4 text-muted-foreground"
       >
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <h2
-            id="confirm-dialog-title"
-            className="text-lg font-bold"
-            style={{ color: 'hsl(var(--foreground))' }}
-          >
-            {title}
-          </h2>
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors -mr-1 -mt-1"
-            aria-label="Close dialog"
-            id="btn-modal-close-x"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {message}
+      </p>
 
-        <p
-          id="confirm-dialog-desc"
-          className="text-sm leading-relaxed mb-6"
-          style={{ color: 'hsl(var(--muted-foreground))' }}
+      {summaryCard && (
+        <div
+          className="rounded-xl p-3.5 mb-6 border"
+          style={{
+            backgroundColor: 'hsl(var(--neutral-soft))',
+            borderColor: 'hsl(var(--border))',
+          }}
         >
-          {message}
-        </p>
-
-        <div className="flex gap-3 justify-end items-center">
-          <button
-            id="btn-modal-cancel"
-            type="button"
-            className="btn btn-secondary text-sm px-4 py-2"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            {cancelLabel}
-          </button>
-          <button
-            id="btn-modal-confirm"
-            type="button"
-            className={`btn text-sm px-4 py-2 ${danger ? 'btn-danger' : 'btn-primary'}`}
-            onClick={onConfirm}
-            disabled={loading}
-          >
-            {loading ? <Spinner size="sm" /> : confirmLabel}
-          </button>
+          {summaryCard.jobTitle && (
+            <p className="font-bold text-sm text-foreground">
+              {summaryCard.jobTitle}
+            </p>
+          )}
+          {summaryCard.employer && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {summaryCard.employer}
+            </p>
+          )}
         </div>
+      )}
+
+      {/* Mobile (< md): stacked full-width buttons (confirm first, then cancel) */}
+      <div className="flex md:hidden flex-col gap-2.5 mt-6 w-full">
+        <button
+          ref={danger ? undefined : confirmBtnRef}
+          id="btn-modal-confirm-mobile"
+          type="button"
+          className={`btn w-full text-sm py-3 font-bold rounded-xl min-h-[44px] ${
+            danger ? 'btn-danger' : 'btn-primary'
+          }`}
+          onClick={onConfirm}
+          disabled={loading}
+        >
+          {loading ? <Spinner size="sm" /> : resolvedConfirmLabel}
+        </button>
+        <button
+          ref={danger ? cancelBtnRef : undefined}
+          id="btn-modal-cancel-mobile"
+          type="button"
+          className="btn btn-secondary w-full text-sm py-3 font-semibold rounded-xl min-h-[44px]"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          {resolvedCancelLabel}
+        </button>
       </div>
-    </div>
+
+      {/* Desktop (>= md): right-aligned side by side (cancel first, then confirm) */}
+      <div className="hidden md:flex gap-3 justify-end items-center mt-6">
+        <button
+          ref={danger ? cancelBtnRef : undefined}
+          id="btn-modal-cancel"
+          type="button"
+          className="btn btn-secondary text-sm px-5 py-2.5 min-h-[44px]"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          {resolvedCancelLabel}
+        </button>
+        <button
+          ref={danger ? undefined : confirmBtnRef}
+          id="btn-modal-confirm"
+          type="button"
+          className={`btn text-sm px-5 py-2.5 min-h-[44px] ${
+            danger ? 'btn-danger' : 'btn-primary'
+          }`}
+          onClick={onConfirm}
+          disabled={loading}
+        >
+          {loading ? <Spinner size="sm" /> : resolvedConfirmLabel}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

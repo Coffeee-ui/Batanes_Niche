@@ -37,6 +37,7 @@ export default function MyJobsPage() {
   };
 
   const filteredJobs = jobs.filter(j => tab === 'active' ? j.status === 'active' : j.status !== 'active');
+  const closingJob = jobs.find(j => j.id === closeId);
 
   if (loading) return <div className="container-page py-12"><PageSpinner /></div>;
 
@@ -55,7 +56,7 @@ export default function MyJobsPage() {
         <button
           onClick={() => navigate('/jobs/post')}
           id="btn-post-new-job"
-          className="btn btn-primary text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm self-start sm:self-auto"
+          className="btn btn-primary text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm self-start sm:self-auto min-h-[44px]"
         >
           Post a job
         </button>
@@ -91,7 +92,7 @@ export default function MyJobsPage() {
           description={tab === 'active' ? 'You have no active listings open for applications.' : 'No listings have been closed yet.'}
           action={
             tab === 'active' ? (
-              <button onClick={() => navigate('/jobs/post')} className="btn btn-primary text-xs font-bold">
+              <button onClick={() => navigate('/jobs/post')} className="btn btn-primary text-xs font-bold min-h-[44px]">
                 Post a job
               </button>
             ) : undefined
@@ -140,7 +141,7 @@ export default function MyJobsPage() {
                     <Link
                       to={`/applications?jobId=${job.id}`}
                       id={`btn-view-applicants-${job.id}`}
-                      className="badge badge-warning text-xs font-semibold py-1.5 px-3 hover:opacity-90 transition-opacity"
+                      className="badge badge-warning text-xs font-semibold py-1.5 px-3 hover:opacity-90 transition-opacity min-h-[36px] flex items-center"
                     >
                       {count} {count === 1 ? 'applicant' : 'applicants'}
                     </Link>
@@ -148,19 +149,29 @@ export default function MyJobsPage() {
                     <Link
                       to={`/jobs/${job.id}`}
                       id={`btn-view-job-${job.id}`}
-                      className="btn btn-secondary text-xs px-4 py-2 font-semibold"
+                      className="btn btn-secondary text-xs px-4 py-2 font-semibold min-h-[38px]"
                     >
                       View
                     </Link>
 
                     {job.status === 'active' && (
-                      <button
-                        id={`btn-close-job-${job.id}`}
-                        onClick={() => setCloseId(job.id)}
-                        className="btn btn-secondary text-xs px-4 py-2 font-semibold text-danger border-border hover:bg-danger/10"
-                      >
-                        Close job
-                      </button>
+                      <>
+                        <Link
+                          to={`/jobs/post?editId=${job.id}`}
+                          id={`btn-edit-job-${job.id}`}
+                          className="btn btn-secondary text-xs px-4 py-2 font-semibold min-h-[38px]"
+                        >
+                          Edit
+                        </Link>
+
+                        <button
+                          id={`btn-close-job-${job.id}`}
+                          onClick={() => setCloseId(job.id)}
+                          className="btn btn-secondary text-xs px-4 py-2 font-semibold text-danger border-border hover:bg-danger/10 min-h-[38px]"
+                        >
+                          Close job
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -170,12 +181,14 @@ export default function MyJobsPage() {
         </div>
       )}
 
-      {/* Close Job Dialog */}
+      {/* Close Job Dialog (H: Confirm before close job) */}
       <ConfirmDialog
         isOpen={closeId !== null}
         title="Close job opening?"
         message="This will mark the job as closed. It will no longer appear in searches, and no new applications will be accepted."
-        confirmLabel="Close job"
+        summaryCard={closingJob ? { jobTitle: closingJob.title, employer: closingJob.company_name || 'Your Company' } : undefined}
+        confirmLabel="Yes, close it"
+        cancelLabel="No, keep it"
         danger
         loading={closing}
         onConfirm={handleClose}

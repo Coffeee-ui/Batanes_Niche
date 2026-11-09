@@ -28,7 +28,8 @@ The **Batanes Niche Job Portal** provides:
 ## 2. Technology Stack
 
 ```text
-Frontend (SPA):       React 18.3 | TypeScript 5.4+ | Vite 5.3 | Tailwind CSS 3.4 | Axios
+Frontend (SPA):       React 18.3 | TypeScript 5.4+ | Vite 5.3+ | Tailwind CSS 3.4 | Lucide React | Axios
+Mobile Ergonomics:    Sticky BottomNav (md:hidden) | Accessible Modals | WCAG 2.2 AA Contrast Tokens
 Backend (REST API):   Node.js 20+ | Express.js 4.19 | TypeScript 5.4+ | Zod | Rate Limiter | Helmet
 Admin UI (SSR):       Nunjucks 3.2 Templates | HMAC-SHA256 Signed Cookies | Double-Submit CSRF
 Persistence:          Prisma ORM 5.15 | PostgreSQL 16 (Production) | SQLite (Dev / Test)
@@ -36,6 +37,7 @@ Database Migrations:  Prisma Client & Schema Push (`prisma db push`) | Dynamic S
 Workspace & Packages: pnpm 12+ Monorepo Workspace
 Containerization:     Docker Compose | Nginx 1.27 Reverse Proxy | Node 20 Alpine
 Testing & Quality:    TypeScript Compiler (`tsc --noEmit`) | Vitest 1.6 + JSDOM (Frontend & Zero-Jargon Audit)
+Audit & Governance:   15-Domain Audit Prompt Library (development/Audit/Prompts/) | Living Audit Log (Report.md)
 ```
 
 ---
@@ -103,9 +105,9 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
 
 | Role | Access Scope & Key Features |
 |---|---|
-| **Guest** | Browse and filter active vacancies; view job details; register as seeker or employer; request OTP password reset. |
-| **Job Seeker** | Complete profile (with 100-point gauge); apply to active vacancies; track application statuses; bookmark jobs; receive in-app notifications. |
-| **Employer** | Post, edit, and soft-delete vacancies; review applicants with authorized contact details; transition application statuses (`pending` $\leftrightarrow$ `accepted`/`rejected`); search candidate directory with recommendation scoring. |
+| **Guest** | Browse and filter active vacancies; inspect full job specifications and island locations; register as seeker or employer; request OTP password reset. |
+| **Job Seeker** | Sticky mobile bottom navigation (`BottomNav`); real-time unread notification badge; complete profile (with 100-point gauge & checklist); apply to vacancies with interactive modal; track application statuses; bookmark jobs. |
+| **Employer** | Post, edit, and soft-delete vacancies (with category validation); review applicants with revealed contact details; transition application statuses (`pending` $\leftrightarrow$ `accepted`/`rejected`); search candidate directory with recommendation scoring. |
 | **Administrator** | Access `/admin`; monitor system dashboard metrics; suspend/restore user accounts; disable/restore job listings; inspect 500 error reports; review append-only audit trail logs. |
 
 ---
@@ -312,22 +314,24 @@ For the full 19-step production deployment manual, refer to [`development/setup/
 
 ---
 
-## 10. Comprehensive Developer Documentation Catalog
+## 10. Comprehensive Developer Documentation & Audit Catalog
 
-The full developer documentation package is maintained in `development/Documentation/`:
+The repository maintains an exhaustive developer ecosystem within the `development/` directory:
+
+### Core Documentation Modules (`development/Documentation/`)
 
 | # | Document | Primary Focus & Domain |
 |---|---|---|
 | **01** | [**System Overview**](./development/Documentation/01-System-Overview.md) | Vision, target audience, key problems solved, Version 2 scope, and explicit non-features. |
 | **02** | [**Architecture**](./development/Documentation/02-Architecture.md) | High-level system architecture, multi-tier layout, layered domain boundaries, and Mermaid system diagram. |
-| **03** | [**Repository Structure**](./development/Documentation/03-Repository-Structure.md) | Complete directory tree breakdown (`backend/`, `frontend/`, `development/`, `docker/`), and code placement rules. |
+| **03** | [**Repository Structure**](./development/Documentation/03-Repository-Structure.md) | Complete directory tree breakdown (`backend/`, `frontend/`, `development/`, `docker/`, `reference UI/`), and code placement rules. |
 | **04** | [**Database and ERD**](./development/Documentation/04-Database-and-ERD.md) | Full Mermaid ERD (12 tables), schema definitions, constraints, indexes, lifecycle, and complete Data Dictionary. |
 | **05** | [**API Architecture**](./development/Documentation/05-API-Architecture.md) | REST API specifications, `/api/v1` routes, request/response contracts, rate limiting, and endpoint catalog. |
 | **06** | [**Authentication and Security**](./development/Documentation/06-Authentication-and-Security.md) | JWT access/refresh token rotation, reuse detection, bcrypt hashing, 6-digit OTP password reset, and security diagrams. |
 | **07** | [**User Roles and Permissions**](./development/Documentation/07-User-Roles-and-Permissions.md) | Role taxonomy (Guest, Seeker, Employer, Administrator), RBAC capability matrix, and row-level ownership checks. |
 | **08** | [**Business Workflows**](./development/Documentation/08-Business-Workflows.md) | End-to-end operational workflows with detailed Mermaid flowcharts (Auth, Jobs, Applications, Moderation). |
 | **09** | [**Recommendation Engine**](./development/Documentation/09-Recommendation-Engine.md) | Deterministic matching algorithm: 70-pt skill score, 30-pt geographic distance score, two-tier ranking formula. |
-| **10** | [**Frontend Architecture**](./development/Documentation/10-Frontend-Architecture.md) | React 18, Vite, TypeScript, Tailwind CSS, routing tables, AuthContext, Axios silent refresh, and HSL design tokens. |
+| **10** | [**Frontend Architecture**](./development/Documentation/10-Frontend-Architecture.md) | React 18, Vite, TypeScript, Tailwind CSS, routing tables, AuthContext, Axios silent refresh, HSL design tokens, and mobile bottom navigation. |
 | **11** | [**Administrative UI**](./development/Documentation/11-Administrative-UI.md) | Server-rendered Nunjucks admin interface (`/admin`), signed session cookies, CSRF protection, and moderation tools. |
 | **12** | [**Notifications and Applications**](./development/Documentation/12-Notifications-and-Applications.md) | Application lifecycle state machine, transactional notification coupling, and applicant contact privacy reveal. |
 | **13** | [**Geography and Reference Data**](./development/Documentation/13-Geography-and-Reference-Data.md) | Canonical Batanes geographic hierarchy (3 islands, 6 municipalities, 29 barangays), normalization algorithms, and seeder. |
@@ -341,6 +345,23 @@ The full developer documentation package is maintained in `development/Documenta
 | **21** | [**Developer Architecture Guide**](./development/Documentation/21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code walks, and modification maps. |
 | **22** | [**Backend Architecture**](./development/Documentation/22-Backend-Architecture.md) | Architecture specification for the Express.js + TypeScript backend (`backend/`), Prisma ORM, domain services, and repositories. |
 | **23** | [**Database Environment Switching**](./development/Documentation/23-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. |
+
+---
+
+### Audit Framework & Living Audit Log (`development/Audit/`)
+
+- [**Audit Prompt Library (`development/Audit/README.md`)**](./development/Audit/README.md): Master runbook and 15 reusable domain-specific prompt templates (`Prompts/`) spanning UI/UX, security, performance, accessibility (WCAG 2.2 AA), database integrity, API contracts, dependencies, and pre-release gates.
+- [**Living Audit Log (`development/Audit/Report.md`)**](./development/Audit/Report.md): Living, append-only audit registry and open findings tracker. Tracks `AUD-001` (UI/UX and Mobile Ergonomics audit) with remediation verification across typecheck and test suites.
+
+---
+
+### Additional Developer Resources
+
+- **Developer Scripts (`development/scripts/`)**: Windows batch wrappers (`setup.bat`, `start.bat`, `stop.bat`, `test.bat`, `init-db.bat`) and TypeScript database seeding orchestrators (`seeds/baseline.ts`, `seeds/sample.ts`).
+- **Setup Runbooks (`development/setup/`)**: Local onboarding guide ([`LOCAL_SETUP.md`](./development/setup/LOCAL_SETUP.md)) and enterprise production deployment manual ([`PRODUCTION_SETUP.md`](./development/setup/PRODUCTION_SETUP.md)).
+- **Testing Contracts (`development/testing/`)**: Quality verification, coverage, and zero-jargon specifications ([`TESTING.md`](./development/testing/TESTING.md)).
+- **Changelog (`development/CHANGELOG.md`)**: Version release history, migration notes, and audit remediations ([`CHANGELOG.md`](./development/CHANGELOG.md)).
+- **UI Design References (`reference UI/`)**: Desktop and mobile UI mockups alongside daylight/nighttime color palette specifications.
 
 ---
 

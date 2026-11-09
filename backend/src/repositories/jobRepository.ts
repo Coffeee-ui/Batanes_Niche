@@ -45,14 +45,13 @@ export class JobRepository {
     });
   }
 
-  static async listActiveJobs(
+  static buildActiveWhere(
     municipality?: string | null,
     island?: string | null,
     keyword?: string | null,
     employmentType?: string | null,
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<JobWithRelations[]> {
+    category?: string | null
+  ): Prisma.JobWhereInput {
     const where: Prisma.JobWhereInput = {
       status: 'active',
       deleted_at: null,
@@ -69,17 +68,71 @@ export class JobRepository {
       where.municipality = { in: munsOnIsland };
     }
 
+    const conditions: Prisma.JobWhereInput[] = [];
+
     if (keyword) {
       const kw = keyword.trim();
-      where.OR = [
-        { title: { contains: kw } },
-        { description: { contains: kw } },
-        { required_skills: { contains: kw } },
-      ];
+      conditions.push({
+        OR: [
+          { title: { contains: kw } },
+          { description: { contains: kw } },
+          { required_skills: { contains: kw } },
+        ],
+      });
+    }
+
+    if (category) {
+      const cat = category.trim();
+      conditions.push({
+        OR: [
+          { title: { contains: cat } },
+          { description: { contains: cat } },
+          { required_skills: { contains: cat } },
+        ],
+      });
+    }
+
+    if (conditions.length > 0) {
+      where.AND = conditions;
     }
 
     if (employmentType) {
       where.employment_type = { equals: employmentType.trim() };
+    }
+
+    return where;
+  }
+
+  static async countActiveJobs(
+    municipality?: string | null,
+    island?: string | null,
+    keyword?: string | null,
+    employmentType?: string | null,
+    category?: string | null
+  ): Promise<number> {
+    const where = this.buildActiveWhere(municipality, island, keyword, employmentType, category);
+    return prisma.job.count({ where });
+  }
+
+  static async listActiveJobs(
+    municipality?: string | null,
+    island?: string | null,
+    keyword?: string | null,
+    employmentType?: string | null,
+    limit: number = 50,
+    offset: number = 0,
+    sort?: string | null,
+    category?: string | null
+  ): Promise<JobWithRelations[]> {
+    const where = this.buildActiveWhere(municipality, island, keyword, employmentType, category);
+
+    let orderBy: Prisma.JobOrderByWithRelationInput = { created_at: 'desc' };
+    if (sort === 'salary_desc') {
+      orderBy = { salary_max: 'desc' };
+    } else if (sort === 'salary_asc') {
+      orderBy = { salary_min: 'asc' };
+    } else {
+      orderBy = { created_at: 'desc' };
     }
 
     return prisma.job.findMany({
@@ -88,7 +141,7 @@ export class JobRepository {
         employer: { include: { employer_profile: true } },
         applications: true,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy,
       skip: offset,
       take: limit,
     });
@@ -143,12 +196,5 @@ export class JobRepository {
     });
   }
 
-  static async countActiveJobs(): Promise<number> {
-    return prisma.job.count({
-      where: {
-        status: 'active',
-        deleted_at: null,
-      },
-    });
-  }
+
 }

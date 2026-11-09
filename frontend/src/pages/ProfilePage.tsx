@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  MapPin, Phone, Mail, Save, X, Lock,
-  CheckCircle2, Circle, Building2, Briefcase, Sparkles, User as UserIcon
+  MapPin, Phone, Mail, Save, X, Lock, FileText, Upload,
+  CheckCircle2, Circle, Building2, Briefcase, Sparkles, User as UserIcon, Trash2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersApi, metaApi, extractError } from '../api/client';
-import { Spinner, ProgressBar } from '../components/ui';
+import { Spinner, ProgressBar, ConfirmDialog } from '../components/ui';
 import { toastSuccess, toastError } from '../components/ui/Toast';
 import SkillSelector from '../components/forms/SkillSelector';
 
@@ -13,7 +13,14 @@ const MUNICIPALITIES = ['Basco', 'Itbayat', 'Ivana', 'Mahatao', 'Sabtang', 'Uyug
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [saving, setSaving] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showDeleteResumeConfirm, setShowDeleteResumeConfirm] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [deletingResume, setDeletingResume] = useState(false);
+
   const [selectedSkills, setSelectedSkills] = useState<string[]>(
     user?.skills?.split(',').map(s => s.trim()).filter(Boolean) || []
   );
@@ -62,8 +69,16 @@ export default function ProfilePage() {
     setSelectedSkills(user?.skills?.split(',').map(s => s.trim()).filter(Boolean) || []);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.full_name.trim()) {
+      toastError('Please enter your full name.');
+      return;
+    }
+    setShowSaveConfirm(true);
+  };
+
+  const executeSave = async () => {
     setSaving(true);
     try {
       const payload: Record<string, any> = {
@@ -87,11 +102,58 @@ export default function ProfilePage() {
 
       await usersApi.updateProfile(payload);
       await refreshUser();
+      setShowSaveConfirm(false);
       toastSuccess('Profile updated successfully!');
     } catch (err) {
       toastError(extractError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResumeFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (5 MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toastError('Resume file must be 5 MB or less.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate extension
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf' && ext !== 'docx') {
+      toastError('Only PDF and DOCX files are allowed.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setUploadingResume(true);
+    try {
+      await usersApi.uploadResume(file);
+      await refreshUser();
+      toastSuccess('Resume uploaded successfully!');
+    } catch (err) {
+      toastError(extractError(err));
+    } finally {
+      setUploadingResume(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const executeDeleteResume = async () => {
+    setDeletingResume(true);
+    try {
+      await usersApi.deleteResume();
+      await refreshUser();
+      setShowDeleteResumeConfirm(false);
+      toastSuccess('Resume deleted successfully.');
+    } catch (err) {
+      toastError(extractError(err));
+    } finally {
+      setDeletingResume(false);
     }
   };
 
@@ -116,6 +178,7 @@ export default function ProfilePage() {
         { label: 'Key skills listed', done: selectedSkills.length > 0 },
         { label: 'Experience background', done: Boolean(form.experience_years) },
         { label: 'Education background', done: Boolean(form.education) },
+        { label: 'Resume uploaded', done: Boolean(user?.resume_url) },
       ]
     : [
         { label: 'Company / Organization name', done: Boolean(form.company_name) },
@@ -137,8 +200,8 @@ export default function ProfilePage() {
         <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
           Account Profile
         </h1>
-        <p className="text-sm text-muted">
-          Manage your personal details and how you appear to others on Batanes Jobs
+        <p className="text-sm text-muted-foreground">
+          Manage your personal details and how you appear to others on Batanes Niche
         </p>
       </div>
 
@@ -156,13 +219,13 @@ export default function ProfilePage() {
               {form.full_name || user?.full_name || 'Your Name'}
             </h2>
 
-            <div className="flex items-center gap-1.5 text-xs text-muted mt-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
               <MapPin className="w-3.5 h-3.5" />
               <span>{form.municipality || 'Basco'}, {user?.island || 'Batan Island'}</span>
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-neutral text-foreground border border-border">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-neutral-soft text-foreground border border-border">
                 {isSeeker ? 'Job Seeker' : 'Employer'}
               </span>
             </div>
@@ -176,6 +239,77 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Resume Card for Job Seekers (FEAT-01 / Design G) */}
+          {isSeeker && (
+            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span>Resume</span>
+                </h3>
+                {user?.resume_url && (
+                  <span className="badge badge-success text-[11px]">Attached</span>
+                )}
+              </div>
+
+              {user?.resume_url ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl p-3 bg-neutral-soft/60 border border-border flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="w-5 h-5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">
+                          {user.resume_url.split('/').pop() || 'Resume document'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">PDF / DOCX</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteResumeConfirm(true)}
+                      className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors shrink-0"
+                      aria-label="Delete resume"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingResume}
+                    className="btn btn-secondary w-full text-xs py-2.5 rounded-xl font-semibold flex items-center justify-center gap-1.5 min-h-[44px]"
+                  >
+                    {uploadingResume ? <Spinner size="sm" /> : <><Upload className="w-3.5 h-3.5" /> Replace resume</>}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Upload your resume (PDF or DOCX, max 5 MB) so employers can review your full background.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingResume}
+                    className="btn btn-primary w-full text-xs py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 min-h-[44px]"
+                  >
+                    {uploadingResume ? <Spinner size="sm" /> : <><Upload className="w-3.5 h-3.5" /> Upload resume</>}
+                  </button>
+                </div>
+              )}
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="hidden"
+                onChange={handleResumeFileSelect}
+              />
+            </div>
+          )}
+
           {/* Checklist Card */}
           <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
@@ -187,9 +321,9 @@ export default function ProfilePage() {
                   {item.done ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   ) : (
-                    <Circle className="w-4 h-4 text-muted shrink-0" />
+                    <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
                   )}
-                  <span className={item.done ? 'text-foreground font-medium' : 'text-muted'}>
+                  <span className={item.done ? 'text-foreground font-medium' : 'text-muted-foreground'}>
                     {item.label}
                   </span>
                 </div>
@@ -201,14 +335,14 @@ export default function ProfilePage() {
         {/* Right Column: Edit Profile Form (8 cols) */}
         <div className="lg:col-span-8">
           <form
-            onSubmit={handleSave}
+            onSubmit={handleFormSubmit}
             className="bg-surface border border-border rounded-2xl p-6 sm:p-8 shadow-sm space-y-6"
           >
             <div className="border-b border-border pb-4">
               <h2 className="text-base font-bold text-foreground">
                 Edit Profile Details
               </h2>
-              <p className="text-xs text-muted mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Update your contact information and public Ivatan profile.
               </p>
             </div>
@@ -221,7 +355,8 @@ export default function ProfilePage() {
               <input
                 id="profile-full-name"
                 type="text"
-                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                placeholder="Your full name"
                 value={form.full_name}
                 onChange={set('full_name')}
                 required
@@ -239,10 +374,10 @@ export default function ProfilePage() {
                     id="profile-email"
                     type="email"
                     disabled
-                    className="w-full pl-4 pr-10 py-3 rounded-xl border border-border bg-neutral/60 text-muted text-sm cursor-not-allowed select-none"
+                    className="w-full pl-4 pr-10 py-3 rounded-xl border border-border bg-neutral-soft text-muted-foreground text-base sm:text-sm cursor-not-allowed select-none min-h-[44px]"
                     value={user?.email || ''}
                   />
-                  <Lock className="w-4 h-4 text-muted absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-muted-foreground absolute right-3.5 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
@@ -253,8 +388,8 @@ export default function ProfilePage() {
                 <input
                   id="profile-phone"
                   type="tel"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                  placeholder="09xx-xxx-xxxx"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                  placeholder="e.g. 0912 345 6789"
                   value={form.phone_number}
                   onChange={set('phone_number')}
                 />
@@ -269,7 +404,7 @@ export default function ProfilePage() {
                 </label>
                 <select
                   id="profile-municipality"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
                   value={form.municipality}
                   onChange={set('municipality')}
                   required
@@ -282,13 +417,13 @@ export default function ProfilePage() {
 
               <div>
                 <label htmlFor="profile-barangay" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
-                  Barangay <span className="text-muted font-normal lowercase">(optional)</span>
+                  Barangay <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                 </label>
                 <input
                   id="profile-barangay"
                   type="text"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                  placeholder="e.g. San Antonio"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                  placeholder="e.g. Kayvaluganan"
                   value={form.barangay}
                   onChange={set('barangay')}
                 />
@@ -302,9 +437,9 @@ export default function ProfilePage() {
               </label>
               <textarea
                 id="profile-bio"
-                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all resize-y min-h-[100px]"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all resize-y min-h-[100px]"
                 rows={3}
-                placeholder="Share a brief introduction about your skills, background, or organization…"
+                placeholder="Tell employers about yourself, your background, and the kind of work you do…"
                 value={form.bio}
                 onChange={set('bio')}
                 maxLength={500}
@@ -331,7 +466,8 @@ export default function ProfilePage() {
                     <input
                       id="profile-exp"
                       type="number"
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                      placeholder="e.g. 3"
                       value={form.experience_years}
                       onChange={set('experience_years')}
                       min={0}
@@ -346,8 +482,8 @@ export default function ProfilePage() {
                     <input
                       id="profile-education"
                       type="text"
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                      placeholder="e.g. College Graduate, High School, Vocational"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                      placeholder="e.g. Batanes State College"
                       value={form.education}
                       onChange={set('education')}
                     />
@@ -367,7 +503,8 @@ export default function ProfilePage() {
                     <input
                       id="profile-company-name"
                       type="text"
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+                      placeholder="e.g. Basco Seaside Inn"
                       value={form.company_name}
                       onChange={set('company_name')}
                       required
@@ -381,7 +518,7 @@ export default function ProfilePage() {
                     <input
                       id="profile-business-type"
                       type="text"
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
                       placeholder="e.g. Hospitality, Retail, Construction"
                       value={form.business_type}
                       onChange={set('business_type')}
@@ -396,7 +533,7 @@ export default function ProfilePage() {
                   <input
                     id="profile-address"
                     type="text"
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
                     placeholder="e.g. National Road, Kayvaluganan, Basco"
                     value={form.company_address}
                     onChange={set('company_address')}
@@ -409,7 +546,7 @@ export default function ProfilePage() {
                   </label>
                   <textarea
                     id="profile-company-desc"
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all resize-y min-h-[90px]"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all resize-y min-h-[90px]"
                     rows={3}
                     placeholder="Describe what your enterprise does and your mission in Batanes…"
                     value={form.company_description}
@@ -424,7 +561,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-full border border-border text-foreground hover:bg-neutral font-semibold text-xs transition-colors"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-full border border-border text-foreground hover:bg-neutral-soft font-semibold text-xs transition-colors min-h-[44px]"
               >
                 Cancel
               </button>
@@ -432,7 +569,7 @@ export default function ProfilePage() {
                 id="btn-save-profile"
                 type="submit"
                 disabled={saving || !form.full_name.trim()}
-                className="w-full sm:w-auto px-8 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs shadow-xs hover:opacity-95 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs shadow-xs hover:opacity-95 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
               >
                 {saving ? (
                   <>
@@ -450,6 +587,32 @@ export default function ProfilePage() {
           </form>
         </div>
       </div>
+
+      {/* Save Profile Confirmation Dialog (H: Save your changes) */}
+      <ConfirmDialog
+        isOpen={showSaveConfirm}
+        title="Save your changes?"
+        message="Your profile details will be updated for employers to see."
+        confirmLabel="Yes, save changes"
+        cancelLabel="No, go back"
+        danger={false}
+        loading={saving}
+        onConfirm={executeSave}
+        onCancel={() => setShowSaveConfirm(false)}
+      />
+
+      {/* Delete Resume Confirmation Dialog (H: Delete resume) */}
+      <ConfirmDialog
+        isOpen={showDeleteResumeConfirm}
+        title="Delete your resume?"
+        message="Your resume file will be permanently removed."
+        confirmLabel="Yes, delete it"
+        cancelLabel="No, keep it"
+        danger
+        loading={deletingResume}
+        onConfirm={executeDeleteResume}
+        onCancel={() => setShowDeleteResumeConfirm(false)}
+      />
     </div>
   );
 }

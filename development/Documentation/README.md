@@ -1,4 +1,4 @@
-# Batanes Niche Job Portal � Developer Documentation Package (Version 2)
+# Batanes Niche Job Portal — Developer Documentation Package (Version 2)
 
 Welcome to the comprehensive technical documentation for the **Batanes Niche Job Portal (Version 2)**. This package provides an in-depth reference for architects, software engineers, devops practitioners, and data analysts working with the codebase.
 
@@ -34,7 +34,7 @@ The documentation suite is structured into 23 specialized modules, each covering
 | **20** | [**System Flowcharts**](./20-System-Flowcharts.md) | Comprehensive standard flowchart suite (Level 1 User Journey, Level 2 Role-specific workflows, Level 3 Multi-tier architecture execution). | Non-technical Audience, All Engineers |
 | **21** | [**Developer Architecture Guide**](./21-Developer-Architecture-Guide.md) | Practical navigation guide with "Where Do I Modify This?" matrix, code traceability walks, frontend/backend/DB modification maps, and recipes. | New & Contributing Developers |
 | **22** | [**Backend Architecture**](./22-Backend-Architecture.md) | Architecture specification for the Express.js + TypeScript backend (`backend/`), Prisma ORM, domain services, repositories, and API contract preservation. | Architects, Backend Engineers |
-| **23** | [**Database Environment Switching**](./23-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ? PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. | Backend Engineers, DevOps, Database Maintainers |
+| **23** | [**Database Environment Switching**](./23-Database-Environment-Switching.md) | Dynamic provider synchronization (SQLite ↔ PostgreSQL/Supabase), zero-code environment switching via `.env`, Prisma sync, connection pooling, seed/reset tooling, and health probes. | Backend Engineers, DevOps, Database Maintainers |
 
 ---
 
@@ -60,9 +60,11 @@ Readiness Check:      http://localhost:8000/ready (Database Connectivity Probe)
 
 ---
 
-## Getting Started
+## Getting Started & Development Ecosystem
 
-To set up your local development environment, follow the step-by-step guide in [**17-Developer-Guide.md**](./17-Developer-Guide.md).
-For a high-level conceptual understanding of the platform design, begin with [**01-System-Overview.md**](./01-System-Overview.md) and [**02-Architecture.md**](./02-Architecture.md).
-To visualize user flows and end-to-end execution across tiers, refer to [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
-To locate specific files, components, and code pathways for modifications, consult [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
+- **Local Setup**: To configure your local development environment with SQLite or Supabase, follow [**17-Developer-Guide.md**](./17-Developer-Guide.md) and [`development/setup/LOCAL_SETUP.md`](../setup/LOCAL_SETUP.md).
+- **Architecture & System Design**: Begin with [**01-System-Overview.md**](./01-System-Overview.md), [**02-Architecture.md**](./02-Architecture.md), and [**22-Backend-Architecture.md**](./22-Backend-Architecture.md).
+- **Visual Workflows**: To trace user journeys and technical execution across layers, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
+- **Modification Matrix**: To locate specific components, routes, services, and tables, consult [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
+- **Audit Suite & Living Report**: For running domain-specific audits (UI/UX, Security, Accessibility, Performance) and tracking remediation status, see [**Audit Prompt Library**](../Audit/README.md) and [**Living Audit Log (`Report.md`)**](../Audit/Report.md).
+- **Changelog & History**: Review recent features, fixes, and release history in [**CHANGELOG.md**](../CHANGELOG.md).

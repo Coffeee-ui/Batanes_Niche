@@ -44,7 +44,7 @@ APP_NAME="Batanes Niche Job Portal"
 BASE_URL="http://localhost:8000"
 PORT=8000
 
-# Local SQLite Database (via Prisma) — Default
+# Local SQLite Database (via Prisma) â€” Default
 DB_PROVIDER=sqlite
 DATABASE_URL="file:../../Database/batanes_niche.db"
 

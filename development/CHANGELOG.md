@@ -4,6 +4,62 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ---
 
+## [2.1.0] — 2026-11-07
+
+### Added
+
+- **Mobile Navigation — `BottomNav.tsx` (new component)**
+  - Added a sticky bottom navigation bar strictly visible on mobile viewports (`md:hidden`) with high-contrast active route indicators and touch targets $\ge 44 \times 44\text{px}$.
+  - Includes real-time unread notification count badge and dynamic role-adaptive navigation destinations for Guests, Job Seekers, and Employers.
+  - Updated `Layout.tsx` with a bottom padding buffer (`pb-16 md:pb-0`) preventing floating elements from obstructing content.
+
+- **UI Primitives — `Modal.tsx` (new component)**
+  - Built a fully accessible, reusable modal dialog featuring backdrop blur, focus trapping, smooth entry/exit animations, and keyboard `Escape` dismissal.
+  - Re-exported via UI barrel at `frontend/src/components/ui/index.tsx` alongside enhanced `ConfirmDialog`, `ProgressBar`, and `Skeleton`.
+
+- **Audit Framework — `development/Audit/` (new directory)**
+  - Established a standardized prompt library in `development/Audit/Prompts/` with 15 specialized audit protocols (`00-protocol.md`, `ui-ux.md`, `frontend.md`, `backend.md`, `security.md`, `accessibility.md`, `performance.md`, `database.md`, `api.md`, `bugs-code-quality.md`, `devops.md`, `dependencies.md`, `pre-release.md`, `regression-retest.md`, `custom-audit-builder.md`).
+  - Created `development/Audit/Report.md` as the living audit log, indexing `AUD-001` (UI/UX & Mobile Focus) and tracking open/resolved findings with strict ID schema.
+  - Integrated visual reference mockups in `reference UI/` (`Desktop-UI`, `Mobile-UI`, `Other-UI`, and `Day and Night theme colors.png`).
+
+- **Backend API — Notification Unread Count & Mark-All-Read**
+  - Added `GET /api/v1/notifications/unread-count`: Returns `{ count: number }` for authenticated users.
+  - Added `PUT /api/v1/notifications/read-all`: Marks all unread notifications as read in a single transactional query.
+  - Implemented supporting repository methods `countUnread()` and `markAllRead()` in `notificationRepository.ts` and domain services in `notificationService.ts`.
+
+### Fixed
+
+- **Navigation — Unauthenticated Job Detail Lockout (NAV-03 / AUD-001-UX-01)**
+  - Removed `<ProtectedRoute>` barrier from `/jobs/:id` in `App.tsx`.
+  - Guests can now freely inspect complete job descriptions, requirements, and island locations on `JobDetailPage.tsx`.
+  - Clicking "Apply" as an unauthenticated guest triggers a user-friendly modal prompting registration or login, with return state preserved.
+
+- **Navigation — Missing Navigation / Dead-End Auth Trap (NAV-01 / AUD-001-NAV-01)**
+  - Added prominent brand header and "Back to Jobs" escape button to `LoginPage.tsx`, `RegisterPage.tsx`, and `ForgotPasswordPage.tsx` so users are never trapped on authentication pages.
+
+- **Accessibility — WCAG 2.2 AA Contrast Defect (A11Y-01 / AUD-001-A11Y-01)**
+  - Replaced unreadable `text-muted` (which mapped to pale grey `#EDEFF1` at ~1.1:1 contrast) with semantic `text-muted-foreground` across `ProfilePage.tsx`, `CandidatesPage.tsx`, `ApplicationsPage.tsx`, and `NotificationsPage.tsx`.
+  - Calibrated `--color-text-muted` and `--color-text-faint` in `index.css` ensuring $\ge 4.5:1$ contrast against white and card surfaces in Light Mode and $\ge 4.5:1$ on dark surfaces in Dark Mode.
+
+- **State & Data — Broken Catalog Pagination (DATA-01 / AUD-001-DATA-01)**
+  - Fixed pagination calculation where `total = items.length` previously forced `total_pages = 1`.
+  - Updated `backend/src/repositories/jobRepository.ts` to perform a companion `count()` query, returning `{ items, total }`.
+  - Updated `jobsApi.list` and `JobsPage.tsx` to calculate `total_pages = Math.ceil(total / limit)`, properly rendering multi-page navigation.
+
+- **Mobile Navigation — Notification Blindspot (NAV-02 / AUD-001-NAV-02)**
+  - Integrated notification count badge into `Navbar.tsx` and `BottomNav.tsx`, and added direct Notifications link into the mobile slide-out drawer.
+
+- **UI Polish — Dashboard Time-of-Day Greeting (UX-01 / AUD-001-UX-02)**
+  - Refactored `DashboardPage.tsx` greeting logic from dark-mode state to actual local clock hours (`new Date().getHours()`).
+
+- **Forms — Silent Job Category Payload Drop (FORM-01 / AUD-001-FORM-01)**
+  - Included `category: selectedCategory` in `PostJobPage.tsx` submission payload and added step-by-step validation.
+
+- **Backend Data Layer — Profile Management & Extended Fields**
+  - Updated `backend/src/api/v1/users.ts` with extended profile update handling and validation for seekers and employers.
+
+---
+
 ## [2.0.2] — 2026-09-12
 
 ### Added

@@ -35,8 +35,23 @@ jobsRouter.get(
       const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
       const offset = Math.max(0, parseInt((req.query.offset as string) || '0', 10));
 
+      const municipality = (req.query.municipality as string) || null;
+      const island = (req.query.island as string) || null;
+      const keyword = (req.query.keyword as string) || (req.query.q as string) || null;
+      const employmentType = (req.query.employment_type as string) || null;
+      const category = (req.query.category as string) || null;
+
+      // Whitelist safe sort options (DATA-03)
+      const rawSort = (req.query.sort as string) || 'newest';
+      const allowedSorts = ['newest', 'salary_desc', 'salary_asc'];
+      const sort = allowedSorts.includes(rawSort) ? rawSort : 'newest';
+
+      const total = await JobService.countActiveJobs(municipality, island, keyword, employmentType, category);
+      res.setHeader('X-Total-Count', total.toString());
+      res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
+
       if (!req.user) {
-        const previews = await JobService.listActiveJobsPreview(limit, offset);
+        const previews = await JobService.listActiveJobsPreview(limit, offset, sort, category);
         res.status(200).json(previews);
         return;
       }
@@ -45,12 +60,7 @@ jobsRouter.get(
         throw new HttpError(403, 'Employers cannot browse job seeker listings.');
       }
 
-      const municipality = (req.query.municipality as string) || null;
-      const island = (req.query.island as string) || null;
-      const keyword = (req.query.keyword as string) || null;
-      const employmentType = (req.query.employment_type as string) || null;
-
-      const jobs = await JobService.listActiveJobs(municipality, island, keyword, employmentType, limit, offset);
+      const jobs = await JobService.listActiveJobs(municipality, island, keyword, employmentType, limit, offset, sort, category);
       res.status(200).json(jobs);
     } catch (err) {
       next(err);
@@ -93,10 +103,10 @@ jobsRouter.get(
   }
 );
 
-// GET /:jobId
+// GET /:jobId (NAV-03: allow public guest access)
 jobsRouter.get(
   '/:jobId',
-  requireAuthenticated,
+  authenticateOptional,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const jobId = parseInt(req.params.jobId, 10);

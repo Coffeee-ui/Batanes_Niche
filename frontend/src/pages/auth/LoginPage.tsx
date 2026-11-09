@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/client';
 import { Spinner } from '../../components/ui';
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { from?: string } | null;
-  const from = state?.from || '/dashboard';
+  const from = state?.from || '/';
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -71,6 +71,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        {/* Auth Top Header (NAV-01) */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/" className="text-xl font-black text-foreground tracking-tight hover:opacity-90">
+            Batanes <span className="text-primary">Niche</span>
+          </Link>
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to jobs</span>
+          </Link>
+        </div>
+
         {/* Form Card */}
         <div className="card p-8 shadow-md">
           {/* Header */}
@@ -97,7 +111,7 @@ export default function LoginPage() {
               <input
                 id="login-identifier"
                 type="text"
-                className="input text-sm"
+                className="input text-base sm:text-sm"
                 placeholder="name@example.com"
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
@@ -117,8 +131,8 @@ export default function LoginPage() {
                 <input
                   id="login-password"
                   type={showPw ? 'text' : 'password'}
-                  className="input text-sm pr-10"
-                  placeholder="Your password"
+                  className="input text-base sm:text-sm pr-12"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -127,7 +141,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw(s => !s)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-0 top-0 bottom-0 px-3.5 flex items-center justify-center text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px]"
                   aria-label="Toggle password visibility"
                 >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

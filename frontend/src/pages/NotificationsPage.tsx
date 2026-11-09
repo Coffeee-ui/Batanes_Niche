@@ -45,6 +45,16 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleNotificationClick = async (n: Notification) => {
+    if (n.is_read) return;
+    try {
+      setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, is_read: true } : item));
+      await notificationsApi.markRead(n.id);
+    } catch {
+      // non-blocking
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
@@ -63,7 +73,7 @@ export default function NotificationsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
             Notifications
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {unreadCount > 0
               ? `${unreadCount} unread update${unreadCount !== 1 ? 's' : ''}`
               : 'You are all caught up'}
@@ -77,7 +87,7 @@ export default function NotificationsPage() {
             disabled={markingAll}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral transition-colors shadow-xs"
           >
-            <CheckCheck className="w-4 h-4 text-muted" />
+            <CheckCheck className="w-4 h-4 text-muted-foreground" />
             Mark all read
           </button>
         )}
@@ -104,8 +114,11 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 id={`notification-${n.id}`}
+                onClick={() => handleNotificationClick(n)}
                 className={`p-4 sm:p-5 transition-colors relative flex items-start gap-4 ${
-                  isUnread ? 'bg-highlight/30 hover:bg-highlight/40' : 'hover:bg-neutral/40'
+                  isUnread
+                    ? 'bg-highlight/30 hover:bg-highlight/40 cursor-pointer'
+                    : 'hover:bg-neutral/40'
                 }`}
               >
                 {/* Unread Accent Indicator */}
@@ -128,11 +141,11 @@ export default function NotificationsPage() {
                       <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />
                     )}
                   </div>
-                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                     {n.message}
                   </p>
                   <div className="flex items-center justify-between gap-3 mt-3 text-xs">
-                    <span className="text-[11px] text-muted flex items-center gap-1">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {new Date(n.created_at).toLocaleDateString('en-PH', {
                         month: 'short',
@@ -144,6 +157,10 @@ export default function NotificationsPage() {
                     {n.link && (
                       <Link
                         to={n.link}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleNotificationClick(n);
+                        }}
                         className="font-bold text-xs text-foreground hover:underline inline-flex items-center gap-1"
                       >
                         View details <ChevronRight className="w-3 h-3" />

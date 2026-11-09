@@ -24,6 +24,7 @@ export interface User {
   job_seeker_profile?: JobSeekerProfile;
   created_at: string;
   // UI helpers
+  company_name?: string;
   phone?: string;
   bio?: string;
   is_active?: boolean;
@@ -58,6 +59,7 @@ export interface Job {
   salary_max: number;
   employment_type: EmploymentType;
   required_skills?: string;
+  category?: string;
   status: JobStatus;
   created_at: string;
   company_name?: string;
@@ -71,6 +73,7 @@ export interface JobPreview {
   salary_min: number;
   salary_max: number;
   required_skills?: string;
+  category?: string;
 }
 
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
@@ -189,6 +192,7 @@ export interface JobCreate {
   salary_max?: number;
   employment_type: EmploymentType;
   required_skills?: string;
+  category?: string;
 }
 
 export interface JobFilters {
@@ -200,6 +204,8 @@ export interface JobFilters {
   min_salary?: number;
   page?: number;
   page_size?: number;
+  category?: string;
+  sort?: 'newest' | 'salary_desc' | 'salary_asc';
 }
 
 export interface Candidate {

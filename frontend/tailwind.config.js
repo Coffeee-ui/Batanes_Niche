@@ -83,6 +83,29 @@ export default {
         link: 'hsl(var(--link) / <alpha-value>)',
 
         /*
+         * CATEGORY TINTS (A5)
+         * Maps CSS variables: --tint-yellow, --tint-mint, --tint-peach, --tint-periwinkle
+         */
+        tint: {
+          yellow: {
+            DEFAULT: 'hsl(var(--tint-yellow) / <alpha-value>)',
+            foreground: 'hsl(var(--tint-yellow-foreground) / <alpha-value>)',
+          },
+          mint: {
+            DEFAULT: 'hsl(var(--tint-mint) / <alpha-value>)',
+            foreground: 'hsl(var(--tint-mint-foreground) / <alpha-value>)',
+          },
+          peach: {
+            DEFAULT: 'hsl(var(--tint-peach) / <alpha-value>)',
+            foreground: 'hsl(var(--tint-peach-foreground) / <alpha-value>)',
+          },
+          periwinkle: {
+            DEFAULT: 'hsl(var(--tint-periwinkle) / <alpha-value>)',
+            foreground: 'hsl(var(--tint-periwinkle-foreground) / <alpha-value>)',
+          },
+        },
+
+        /*
          * ACCENT
          * Maps CSS variables: --color-accent, --color-accent-foreground
          * Enables utilities: bg-accent, text-accent

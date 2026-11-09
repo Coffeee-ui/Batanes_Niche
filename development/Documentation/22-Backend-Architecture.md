@@ -60,7 +60,7 @@ backend/
 │   │       ├── applications.ts # /api/v1/applications router (3 endpoints)
 │   │       ├── savedJobs.ts    # /api/v1/saved-jobs router (3 endpoints)
 │   │       ├── recommendations.ts # /api/v1/recommendations router (2 endpoints)
-│   │       ├── notifications.ts   # /api/v1/notifications router (2 endpoints)
+│   │       ├── notifications.ts   # /api/v1/notifications router (4 endpoints: list, unread-count, read, read-all)
 │   │       ├── meta.ts         # /api/v1/meta router (1 endpoint)
 │   │       └── index.ts        # API v1 router aggregator
 │   ├── core/

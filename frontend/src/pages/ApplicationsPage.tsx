@@ -126,7 +126,7 @@ export default function ApplicationsPage() {
         setApplications(prev =>
           prev.map(a => (a.id === app.id ? { ...a, status: 'rejected' } : a))
         );
-        toastSuccess(`Application marked as rejected.`);
+        toastSuccess('Application marked as rejected.');
       } else if (type === 'reopen') {
         await applicationsApi.updateStatus(app.id, 'pending');
         setApplications(prev =>
@@ -148,7 +148,7 @@ export default function ApplicationsPage() {
     return applications.filter(a => a.status === statusFilter);
   }, [applications, statusFilter]);
 
-  // Modal display details
+  // Modal display details following Section H specs & mockups
   const modalDetails = useMemo(() => {
     const { type, app } = actionModal;
     const applicantName = app?.applicant?.full_name || app?.seeker_name || 'the candidate';
@@ -157,36 +157,42 @@ export default function ApplicationsPage() {
     switch (type) {
       case 'accept':
         return {
-          title: 'Accept Candidate',
-          message: `Are you sure you want to accept ${applicantName} for '${jobTitle}'? The candidate will be notified immediately.`,
-          confirmLabel: 'Accept Candidate',
+          title: 'Accept applicant?',
+          message: 'The applicant will be notified that they have been accepted for an interview.',
+          confirmLabel: 'Yes, accept',
+          cancelLabel: 'No, go back',
           danger: false,
+          summaryCard: { jobTitle, employer: applicantName },
         };
       case 'reject':
         return {
-          title: 'Reject Application',
-          message: `Are you sure you want to decline ${applicantName}'s application for '${jobTitle}'?`,
-          confirmLabel: 'Reject Application',
+          title: 'Reject applicant?',
+          message: 'The applicant will be notified that their application was not accepted.',
+          confirmLabel: 'Yes, reject',
+          cancelLabel: 'No, keep it',
           danger: true,
+          summaryCard: { jobTitle, employer: applicantName },
         };
       case 'withdraw':
         return {
-          title: 'Withdraw Application',
-          message: isEmployer
-            ? `Withdraw ${applicantName}'s application for '${jobTitle}'?`
-            : `Are you sure you want to withdraw your application for '${jobTitle}'? You may reapply later if the job is still active.`,
-          confirmLabel: 'Withdraw Application',
+          title: 'Withdraw application?',
+          message: 'Your application will be withdrawn and the employer will be notified.',
+          confirmLabel: 'Yes, withdraw',
+          cancelLabel: 'No, keep it',
           danger: true,
+          summaryCard: { jobTitle, employer: app?.company_name || 'Employer' },
         };
       case 'reopen':
         return {
-          title: 'Reset to Pending',
-          message: `Reset application for ${applicantName} back to pending evaluation status?`,
-          confirmLabel: 'Reset Status',
+          title: 'Reset to pending?',
+          message: 'The application status will be reset to pending review.',
+          confirmLabel: 'Yes, reset',
+          cancelLabel: 'No, go back',
           danger: false,
+          summaryCard: { jobTitle, employer: applicantName },
         };
     }
-  }, [actionModal, isEmployer]);
+  }, [actionModal]);
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -206,7 +212,7 @@ export default function ApplicationsPage() {
         );
       case 'withdrawn':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-neutral text-muted border border-border">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-neutral-soft text-muted-foreground border border-border">
             Withdrawn
           </span>
         );
@@ -241,7 +247,7 @@ export default function ApplicationsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
             {isEmployer ? 'Job Applicants' : 'My Applications'}
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             {applications.length} total application{applications.length !== 1 ? 's' : ''}
             {isEmployer && selectedJobId && <span> · Filtered by selected job</span>}
           </p>
@@ -251,14 +257,14 @@ export default function ApplicationsPage() {
             <Link
               to="/jobs/my"
               id="btn-back-to-my-jobs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors shadow-xs min-h-[44px]"
             >
-              <Briefcase className="w-3.5 h-3.5 text-muted" /> Manage my job listings
+              <Briefcase className="w-3.5 h-3.5 text-muted-foreground" /> Manage my job listings
             </Link>
           ) : (
             <Link
               to="/jobs"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-xs"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-xs min-h-[44px]"
             >
               <Send className="w-3.5 h-3.5" /> Browse open jobs
             </Link>
@@ -276,8 +282,8 @@ export default function ApplicationsPage() {
 
       {/* Filters & Status Tabs */}
       <div className="bg-surface border border-border rounded-2xl p-4 mb-6 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        {/* Status filter tabs */}
-        <div className="flex gap-2 flex-wrap items-center">
+        {/* Status filter tabs: single horizontally swipeable row (AUD-002-UX-09) */}
+        <div className="flex gap-2 overflow-x-auto flex-nowrap no-scrollbar items-center pb-1 -mx-1 px-1">
           {tabs.map(tab => {
             const isActive = statusFilter === tab.id;
             return (
@@ -286,15 +292,15 @@ export default function ApplicationsPage() {
                 id={`filter-${tab.id || 'all'}`}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 min-h-[44px] ${
                   isActive
                     ? 'bg-primary text-foreground font-bold shadow-xs'
-                    : 'bg-background text-muted hover:text-foreground border border-border'
+                    : 'bg-background text-muted-foreground hover:text-foreground border border-border'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[11px] ${
-                  isActive ? 'bg-foreground/15 text-foreground' : 'bg-neutral text-muted'
+                  isActive ? 'bg-foreground/15 text-foreground' : 'bg-neutral-soft text-muted-foreground'
                 }`}>
                   {tab.count}
                 </span>
@@ -309,7 +315,8 @@ export default function ApplicationsPage() {
             <label htmlFor="filter-job-select" className="sr-only">Filter by Job</label>
             <select
               id="filter-job-select"
-              className="w-full px-4 py-2 rounded-full border border-border bg-background text-foreground text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+              aria-label="Filter applicants by job opening"
+              className="w-full px-4 py-2 rounded-full border border-border bg-background text-foreground text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
               value={selectedJobId}
               onChange={e => handleJobFilterChange(e.target.value)}
             >
@@ -335,7 +342,7 @@ export default function ApplicationsPage() {
               : (statusFilter ? 'Try selecting a different filter.' : 'Start discovering opportunities across the islands of Batanes!')
           }
           action={!isEmployer && !statusFilter ? (
-            <Link to="/jobs" className="px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs">
+            <Link to="/jobs" className="px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs min-h-[44px] inline-flex items-center">
               Browse Jobs
             </Link>
           ) : undefined}
@@ -376,8 +383,8 @@ export default function ApplicationsPage() {
                           </h2>
                           {renderStatusBadge(app.status)}
                         </div>
-                        <p className="text-xs text-muted mt-1 flex items-center gap-1.5">
-                          <Briefcase className="w-3.5 h-3.5 text-muted" />
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
                           <span>Applied for: </span>
                           <Link
                             to={`/jobs/${app.job_id}`}
@@ -392,21 +399,21 @@ export default function ApplicationsPage() {
                     {/* Authorized Contact info */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-4 p-3.5 rounded-xl bg-background border border-border/60 text-xs">
                       <div className="flex items-center gap-2 text-foreground truncate">
-                        <Mail className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="truncate">{applicant?.email || 'Email not provided'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-foreground">
-                        <Phone className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span>{applicant?.phone_number || 'Phone not provided'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-foreground">
-                        <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span>{applicant?.municipality || 'Batanes'}, {applicant?.island || 'Batan Island'}</span>
                       </div>
                     </div>
 
                     {/* Background details: Experience, Education */}
-                    <div className="flex flex-wrap gap-4 text-xs text-muted mb-3">
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
                       {applicant?.experience_years !== undefined && (
                         <span>
                           <strong className="text-foreground">Experience:</strong> {applicant.experience_years} year{applicant.experience_years !== 1 ? 's' : ''}
@@ -427,7 +434,7 @@ export default function ApplicationsPage() {
                     {skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {skills.map(s => (
-                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral text-foreground border border-border/50">
+                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-soft text-foreground border border-border/50">
                             {s}
                           </span>
                         ))}
@@ -436,16 +443,16 @@ export default function ApplicationsPage() {
 
                     {/* Bio */}
                     {applicant?.bio && (
-                      <p className="text-xs text-muted italic mb-3 line-clamp-2">
+                      <p className="text-xs text-muted-foreground italic mb-3 line-clamp-2">
                         "{applicant.bio}"
                       </p>
                     )}
 
                     {/* Cover Letter */}
                     {app.cover_letter && (
-                      <div className="mt-3 p-3.5 rounded-xl bg-neutral/50 border border-border text-xs leading-relaxed">
+                      <div className="mt-3 p-3.5 rounded-xl bg-neutral-soft/50 border border-border text-xs leading-relaxed">
                         <p className="font-bold text-foreground mb-1">Cover Note:</p>
-                        <p className="text-muted whitespace-pre-wrap">{app.cover_letter}</p>
+                        <p className="text-muted-foreground whitespace-pre-wrap">{app.cover_letter}</p>
                       </div>
                     )}
 
@@ -472,7 +479,7 @@ export default function ApplicationsPage() {
                           id={`btn-accept-applicant-${app.id}`}
                           type="button"
                           onClick={() => openActionModal(app, 'accept')}
-                          className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                          className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-xs min-h-[44px]"
                         >
                           <CheckCircle className="w-3.5 h-3.5" /> Accept
                         </button>
@@ -480,7 +487,7 @@ export default function ApplicationsPage() {
                           id={`btn-reject-applicant-${app.id}`}
                           type="button"
                           onClick={() => openActionModal(app, 'reject')}
-                          className="px-4 py-2 rounded-full border border-border bg-surface text-danger font-semibold text-xs hover:bg-danger/10 transition-colors flex items-center justify-center gap-1.5"
+                          className="px-4 py-2 rounded-full border border-border bg-surface text-danger font-semibold text-xs hover:bg-danger/10 transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
                         >
                           <XCircle className="w-3.5 h-3.5" /> Reject
                         </button>
@@ -492,7 +499,7 @@ export default function ApplicationsPage() {
                         id={`btn-revert-applicant-${app.id}`}
                         type="button"
                         onClick={() => openActionModal(app, 'reopen')}
-                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted hover:text-foreground font-semibold text-xs hover:bg-neutral transition-colors flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
                       >
                         <RotateCcw className="w-3.5 h-3.5" /> Re-evaluate
                       </button>
@@ -503,14 +510,14 @@ export default function ApplicationsPage() {
                         id={`btn-reconsider-applicant-${app.id}`}
                         type="button"
                         onClick={() => openActionModal(app, 'reopen')}
-                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted hover:text-foreground font-semibold text-xs hover:bg-neutral transition-colors flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
                       >
                         <RotateCcw className="w-3.5 h-3.5" /> Reconsider
                       </button>
                     )}
 
                     {app.status === 'withdrawn' && (
-                      <span className="text-xs font-medium text-center py-2 text-muted">
+                      <span className="text-xs font-medium text-center py-2 text-muted-foreground">
                         Withdrawn by applicant
                       </span>
                     )}
@@ -540,7 +547,7 @@ export default function ApplicationsPage() {
                   {renderStatusBadge(app.status)}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {app.company_name && (
                     <span className="font-semibold text-foreground/80">{app.company_name}</span>
                   )}
@@ -557,7 +564,7 @@ export default function ApplicationsPage() {
                 </div>
 
                 {app.cover_letter && (
-                  <p className="text-xs text-muted/70 italic mt-2 line-clamp-1">
+                  <p className="text-xs text-muted-foreground italic mt-2 line-clamp-1">
                     "{app.cover_letter}"
                   </p>
                 )}
@@ -569,14 +576,14 @@ export default function ApplicationsPage() {
                     id={`btn-withdraw-${app.id}`}
                     type="button"
                     onClick={() => openActionModal(app, 'withdraw')}
-                    className="px-3.5 py-1.5 rounded-full border border-border text-danger hover:bg-danger/10 text-xs font-semibold transition-colors"
+                    className="px-3.5 py-1.5 rounded-full border border-border text-danger hover:bg-danger/10 text-xs font-semibold transition-colors min-h-[44px]"
                   >
                     Withdraw
                   </button>
                 )}
                 <Link
                   to={`/jobs/${app.job_id}`}
-                  className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all inline-flex items-center gap-1"
+                  className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all inline-flex items-center gap-1 min-h-[44px]"
                 >
                   View details <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
@@ -586,12 +593,14 @@ export default function ApplicationsPage() {
         </div>
       )}
 
-      {/* Accessible Reusable Action Modal */}
+      {/* Accessible Reusable Action Modal (H: Confirm Dialog) */}
       <ConfirmDialog
         isOpen={actionModal.isOpen}
         title={modalDetails.title}
         message={modalDetails.message}
+        summaryCard={modalDetails.summaryCard}
         confirmLabel={modalDetails.confirmLabel}
+        cancelLabel={modalDetails.cancelLabel}
         danger={modalDetails.danger}
         loading={actionLoading}
         onConfirm={handleConfirmAction}

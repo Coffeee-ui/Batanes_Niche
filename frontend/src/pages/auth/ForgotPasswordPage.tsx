@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { authApi, extractError } from '../../api/client';
 import { Spinner } from '../../components/ui';
 
@@ -82,6 +82,20 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        {/* Auth Top Header (NAV-01) */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/" className="text-xl font-black text-foreground tracking-tight hover:opacity-90">
+            Batanes <span className="text-primary">Niche</span>
+          </Link>
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to jobs</span>
+          </Link>
+        </div>
+
         <div className="card p-8 shadow-md">
           {/* Step text and progress bar */}
           <div className="mb-2">
@@ -141,7 +155,7 @@ export default function ForgotPasswordPage() {
                 <input
                   id="forgot-email"
                   type="email"
-                  className="input text-sm"
+                  className="input text-base sm:text-sm"
                   placeholder="name@example.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -207,8 +221,8 @@ export default function ForgotPasswordPage() {
                 <input
                   id="new-password"
                   type="password"
-                  className="input text-sm"
-                  placeholder="At least 8 characters"
+                  className="input text-base sm:text-sm"
+                  placeholder="Enter your new password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   required

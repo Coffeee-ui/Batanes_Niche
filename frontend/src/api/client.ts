@@ -213,21 +213,29 @@ export const jobsApi = {
   list: async (filters: JobFilters = {}): Promise<PaginatedResponse<Job>> => {
     const params: Record<string, any> = {};
     if (filters.q || filters.keyword) params.keyword = filters.q || filters.keyword;
+    if (filters.category) params.category = filters.category;
     if (filters.municipality) params.municipality = filters.municipality;
     if (filters.island) params.island = filters.island;
     if (filters.employment_type) params.employment_type = filters.employment_type;
+    if (filters.sort) params.sort = filters.sort;
     const limit = filters.page_size || 50;
     const offset = ((filters.page || 1) - 1) * limit;
     params.limit = limit;
     params.offset = offset;
 
-    const items = await api.get<Job[]>('/jobs', { params }).then(r => r.data);
+    const res = await api.get<Job[] | { items: Job[]; total: number }>('/jobs', { params });
+    const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+    const headerTotal = parseInt(res.headers?.['x-total-count'] as string, 10);
+    const total = !Array.isArray(res.data) && (res.data as any).total !== undefined
+      ? (res.data as any).total
+      : (!isNaN(headerTotal) ? headerTotal : items.length);
+
     return {
       items,
-      total: items.length,
+      total,
       page: filters.page || 1,
       page_size: limit,
-      total_pages: Math.max(1, Math.ceil(items.length / limit)),
+      total_pages: Math.max(1, Math.ceil(total / limit)),
     };
   },
 
@@ -274,10 +282,11 @@ export const jobsApi = {
 // Applications API (Section 14)
 // ============================================================
 export const applicationsApi = {
-  apply: (jobId: number, coverLetter?: string) =>
+  apply: (jobId: number, coverLetter?: string, attachResume = false) =>
     api.post<Application>('/applications', {
       job_id: jobId,
       cover_letter: coverLetter || null,
+      attach_resume: Boolean(attachResume),
     }).then(r => r.data),
 
   myApplications: async (params: { job_id?: number; page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Application>> => {
@@ -373,6 +382,20 @@ export const usersApi = {
     const tier2 = (res.tier_2 || []).map(t => t.candidate);
     return [...tier1, ...tier2];
   },
+
+  uploadResume: (file: File) => {
+    const fd = new FormData();
+    fd.append('resume', file);
+    return api.post<{ resume_url: string }>('/users/resume', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
+
+  deleteResume: () =>
+    api.delete('/users/resume').then(r => r.data),
+
+  downloadResumeUrl: (seekerId?: number) =>
+    seekerId ? `/api/v1/users/resume/${seekerId}` : '/api/v1/users/resume',
 };
 
 // ============================================================
@@ -398,6 +421,9 @@ export const notificationsApi = {
 
   markAllRead: () =>
     api.put('/notifications/read').then(r => r.data),
+
+  markRead: (id: number) =>
+    api.put(`/notifications/${id}/read`).then(r => r.data),
 
   unreadCount: async (): Promise<{ count: number }> => {
     const notifs = await api.get<Notification[]>('/notifications').then(r => r.data);

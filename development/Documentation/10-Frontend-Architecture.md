@@ -38,16 +38,17 @@ The routing topology is declared in `frontend/src/App.tsx`. All routes are group
        +-----------------------+             +-----------------------+             +-----------------------+
        | / (LandingPage)       |             | /dashboard (Adaptive) |             | Job Seeker:           |
        | /about (Static)       |             | /profile (ProfilePage)|             | - /applications       |
-       | /privacy (Static)     |             | /jobs/:id (Detail) *  |             | - /saved-jobs         |
-       | /terms (Static)       |             | /notifications (Feed) |             | Employer:             |
-       | /jobs (Catalog)       |             +-----------------------+             | - /jobs/post          |
-       | /login                |                                                   | - /jobs/my            |
-       | /register             |                                                   | - /candidates         |
-       | /forgot-password      |                                                   +-----------------------+
+       | /privacy (Static)     |             | /notifications (Feed) |             | - /saved-jobs         |
+       | /terms (Static)       |             +-----------------------+             | Employer:             |
+       | /jobs (Catalog)       |                                                   | - /jobs/post          |
+       | /jobs/:id (Detail) *  |                                                   | - /jobs/my            |
+       | /login                |                                                   | - /candidates         |
+       | /register             |                                                   +-----------------------+
+       | /forgot-password      |
        | * (404 Not Found)     |
        +-----------------------+
 
-* /jobs/:id requires authentication (any role). Unauthenticated direct URL access redirects to /login with state.from preserved for seamless post-login return.
+* /jobs/:id is publicly readable by guests, job seekers, and employers (NAV-03). Guests can review full job specifications and requirements; applying opens an authentication prompt with seamless return.
 ```
 
 ### Route Guard Implementation (`ProtectedRoute.tsx`)
@@ -58,17 +59,17 @@ The routing topology is declared in `frontend/src/App.tsx`. All routes are group
   - `/dashboard` dynamically renders either `<SeekerDashboard />` or `<EmployerDashboard />` based on `user.role`.
 - **Post-Auth Return Flow**: Both `LoginPage` and `RegisterPage` read `location.state?.from` and redirect to that path after successful authentication, falling back to `/dashboard` if no prior path was captured.
 
-### Public Job Preview Boundary
+### Public Job Detail & Application Boundary (NAV-03)
 
-The landing page (`/`) and the jobs catalog (`/jobs`) display public-facing data for unauthenticated visitors, but this data is strictly limited at both the API and frontend layers:
+The landing page (`/`), job catalog (`/jobs`), and job detail view (`/jobs/:id`) are accessible to unauthenticated visitors to support open job discovery without forcing premature account creation:
 
 | Layer | Mechanism | Effect |
 |---|---|---|
-| **Backend API** | `GET /api/v1/jobs/preview` returns `JobPreviewOut` | Only `id`, `title`, `salary_min`, `salary_max`, `required_skills` leave the server |
-| **Backend API** | `GET /api/v1/jobs` returns `JobPreviewOut` when unauthenticated | Prevents full data exposure via the general listing endpoint |
-| **Backend API** | `GET /api/v1/jobs/{id}` requires Bearer token | `401 Unauthorized` for unauthenticated callers |
-| **Frontend Route** | `/jobs/:id` wrapped in `<ProtectedRoute>` | Unauthenticated direct URL navigation redirects to `/login` |
-| **Frontend Component** | `JobPreviewCard` renders only allowed fields | Company name, description, location, employment type are never rendered on the landing page |
+| **Backend API** | `GET /api/v1/jobs/preview` returns `JobPreviewOut` | Only `id`, `title`, `salary_min`, `salary_max`, `required_skills` leave the server for landing previews |
+| **Backend API** | `GET /api/v1/jobs` returns vacancies with pagination | Allows search and filtering for guests and job seekers |
+| **Backend API** | `GET /api/v1/jobs/{id}` returns job details | Publicly accessible for vacancy specifications |
+| **Frontend Route** | `/jobs/:id` renders `JobDetailPage` | Publicly accessible; "Apply" button triggers application modal or prompts guest login |
+| **Frontend Component** | `JobPreviewCard` renders preview cards | Used on landing page hero and preview highlights |
 
 #### `JobPreviewCard` Component (`frontend/src/components/ui/JobPreviewCard.tsx`)
 
@@ -246,18 +247,33 @@ src/
 │   ├── forms/
 │   │   └── SkillSelector.tsx      # Canonical skill picker with custom-value (Other) support
 │   ├── layout/
-│   │   ├── Layout.tsx             # App shell (Navbar + Content + Footer)
-│   │   ├── Navbar.tsx             # Role-aware navigation bar with theme toggle
-│   │   └── Footer.tsx             # Standard footer with platform information
+│   │   ├── Layout.tsx             # App shell (Navbar + Content + BottomNav + Footer)
+│   │   ├── Navbar.tsx             # Header with role-aware menu, unread badge, & theme toggle
+│   │   ├── BottomNav.tsx          # Sticky mobile bottom navigation (md:hidden) with active & unread badges
+│   │   └── Footer.tsx             # Minimal footer with Batanes context & zero-jargon branding
 │   └── ui/
-│       ├── JobCard.tsx            # Job vacancy card with badges and bookmarking
-│       ├── Toast.tsx              # Animated toast alerts (success, error, warning)
-│       └── index.tsx              # Barrel exports: Spinner, ProgressBar, PageSpinner, Skeletons
+│       ├── BatanesScene.tsx       # Dynamic day/night vector landscape illustration
+│       ├── JobCard.tsx            # Full interactive job card with bookmarks & badges
+│       ├── JobPreviewCard.tsx     # Anonymized card strictly for public landing previews
+│       ├── Modal.tsx              # Reusable accessible dialog modal with backdrop blur & ESC dismiss
+│       ├── Toast.tsx              # Animated toast alerts with stacking and auto-dismiss
+│       └── index.tsx              # Barrel exports: Spinner, PageSpinner, ConfirmDialog, ProgressBar, Skeleton
 ```
 
 ---
 
-## 6. Zero-Jargon UI Contract
+## 6. Mobile Ergonomics & WCAG 2.2 AA Accessibility
+
+To support mobile users across the islands and meet strict accessibility standards:
+- **Sticky Bottom Navigation (`BottomNav.tsx`)**: Displays an ergonomic tab bar on viewports below `md` breakpoint with touch targets $\ge 44 \times 44\text{px}$, active state indicators, and an unread notification count badge.
+- **Escape Actions on Authentication**: All auth screens (`LoginPage`, `RegisterPage`, `ForgotPasswordPage`) feature a prominent brand header and "Back to Jobs" escape button to eliminate dead-end navigation traps.
+- **Accessible Dialogs (`Modal.tsx`)**: Traps focus, closes gracefully on `Escape` keypress or backdrop click, and applies `aria-modal="true"`.
+- **WCAG Contrast Compliance (`text-muted-foreground`)**: Secondary metadata, badges, and timestamps strictly utilize `--color-text-muted` and `--color-text-faint` calibrated to achieve $\ge 4.5:1$ contrast against white/card surfaces in Light Mode and $\ge 4.5:1$ on dark surfaces in Dark Mode.
+- **Dynamic Clock Greeting**: Dashboard greetings evaluate local device time (`new Date().getHours()`) rather than light/dark theme preference.
+
+---
+
+## 7. Zero-Jargon UI Contract
 
 The frontend strictly enforces a **Zero-Jargon User Interface Contract**:
 - Internal technical and architectural terms are **strictly forbidden** from rendering in any user-facing template or string:
@@ -269,10 +285,11 @@ The frontend strictly enforces a **Zero-Jargon User Interface Contract**:
 
 ---
 
-## 7. Next Steps
+## 8. Next Steps
 
 - For developer modification maps and frontend component lookup tables, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).
 - For complete visual user journey and multi-tier system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
 - To inspect the server-rendered administrative UI, see [**11-Administrative-UI.md**](./11-Administrative-UI.md).
 - To examine application lifecycle and notifications, see [**12-Notifications-and-Applications.md**](./12-Notifications-and-Applications.md).
 - For instructions on running frontend tests, see [**14-Testing-and-Quality.md**](./14-Testing-and-Quality.md).
+- For UI/UX audit procedures and mobile review prompts, see [**Audit/Prompts/ui-ux.md**](../Audit/Prompts/ui-ux.md).
