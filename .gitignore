@@ -71,3 +71,5 @@ logs/
 # Build artifacts
 *.tsbuildinfo
 
+# UI Components
+Reference-UI/

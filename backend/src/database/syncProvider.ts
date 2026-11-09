@@ -85,7 +85,11 @@ export function syncPrismaSchema(force: boolean = false): boolean {
 
   try {
     const cwd = path.resolve(__dirname, '../..');
-    execSync('npx prisma generate', { cwd, stdio: 'inherit' });
+    try {
+      execSync('pnpm exec prisma generate', { cwd, stdio: 'inherit' });
+    } catch {
+      execSync('npx --yes prisma generate', { cwd, stdio: 'inherit' });
+    }
     console.log(`[Database Sync] Prisma Client successfully regenerated for '${dialect}'.`);
     return true;
   } catch (err) {

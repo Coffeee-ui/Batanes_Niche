@@ -160,29 +160,47 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
       const syncScript = path.resolve(backendTsDir, 'src/database/syncProvider.ts');
       if (fs.existsSync(syncScript)) {
         try {
-          execSync(`npx ts-node "${syncScript}"`, {
-            cwd: backendTsDir,
-            stdio: 'pipe',
-            env: {
-              ...process.env,
-              DATABASE_URL: prismaUrl,
-              DB_PROVIDER: 'sqlite',
-            },
-          });
+          const syncEnv = {
+            ...process.env,
+            DATABASE_URL: prismaUrl,
+            DB_PROVIDER: 'sqlite',
+          };
+          try {
+            execSync(`pnpm exec ts-node "${syncScript}"`, {
+              cwd: backendTsDir,
+              stdio: 'pipe',
+              env: syncEnv,
+            });
+          } catch {
+            execSync(`npx --yes ts-node "${syncScript}"`, {
+              cwd: backendTsDir,
+              stdio: 'pipe',
+              env: syncEnv,
+            });
+          }
         } catch {
           // If syncProvider has already matched, continue
         }
       }
 
       // Execute prisma db push
-      execSync('npx prisma db push --skip-generate', {
-        cwd: backendTsDir,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          DATABASE_URL: prismaUrl,
-        },
-      });
+      const pushEnv = {
+        ...process.env,
+        DATABASE_URL: prismaUrl,
+      };
+      try {
+        execSync('pnpm exec prisma db push --skip-generate', {
+          cwd: backendTsDir,
+          stdio: 'inherit',
+          env: pushEnv,
+        });
+      } catch {
+        execSync('npx --yes prisma db push --skip-generate', {
+          cwd: backendTsDir,
+          stdio: 'inherit',
+          env: pushEnv,
+        });
+      }
 
       console.log('  ✓ Schema verified & synchronized successfully.');
     } catch (pushErr) {

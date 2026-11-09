@@ -13,6 +13,7 @@
     "db:reset": "pnpm --filter batanes-niche-backend db:reset",
     "db:seed": "pnpm --filter batanes-niche-backend db:seed",
     "db:migrate": "pnpm --filter batanes-niche-backend db:migrate",
-    "db:push": "pnpm --filter batanes-niche-backend db:push"
+    "db:push": "pnpm --filter batanes-niche-backend db:push",
+    "prisma:generate": "pnpm --filter batanes-niche-backend prisma:generate"
   }
 }
