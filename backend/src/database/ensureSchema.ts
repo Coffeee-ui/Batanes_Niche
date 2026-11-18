@@ -33,6 +33,7 @@ const POSTGRES_FORWARD_MIGRATIONS = [
   `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS close_option TEXT`,
 
   // 4. applications table — extended application fields
+  `ALTER TABLE applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS answers TEXT`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS stage TEXT DEFAULT 'new'`,
   `ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejection_template TEXT`,
