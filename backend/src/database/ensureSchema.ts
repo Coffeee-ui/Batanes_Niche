@@ -78,7 +78,21 @@ const POSTGRES_FORWARD_MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS idx_user_reports_reporter_id ON user_reports(reporter_id)`,
   `CREATE INDEX IF NOT EXISTS idx_user_reports_target ON user_reports(target_type, target_id)`,
 
-  // 6. Partial unique index for active applications
+  // 6. Persistent file storage (survives Render restarts)
+  `CREATE TABLE IF NOT EXISTS stored_files (
+    id           TEXT PRIMARY KEY,
+    user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_type    TEXT NOT NULL,
+    filename     TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    file_size    INT NOT NULL,
+    data         BYTEA NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_stored_files_user_id_file_type ON stored_files(user_id, file_type)`,
+
+  // 7. Partial unique index for active applications
   `CREATE UNIQUE INDEX IF NOT EXISTS uq_active_applications ON applications (job_id, seeker_id) WHERE status NOT IN ('withdrawn', 'rejected')`,
 
   // 7. Additional performance indexes

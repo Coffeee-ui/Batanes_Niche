@@ -16,6 +16,14 @@ export interface ModalProps {
   className?: string;
 }
 
+function isVisible(el: HTMLElement): boolean {
+  return !!(
+    el.offsetWidth ||
+    el.offsetHeight ||
+    el.getClientRects().length
+  ) && window.getComputedStyle(el).visibility !== 'hidden';
+}
+
 export function Modal({
   isOpen,
   onClose,
@@ -33,6 +41,13 @@ export function Modal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
+  // Store latest callbacks in refs so effects don't re-run and steal focus on parent rerender
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const initialFocusRefRef = useRef(initialFocusRef);
+  initialFocusRefRef.current = initialFocusRef;
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -40,44 +55,74 @@ export function Modal({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
+    // Assign initial focus ONCE when modal transitions to open
     const focusTimer = setTimeout(() => {
-      if (initialFocusRef?.current) {
-        initialFocusRef.current.focus();
+      if (!dialogRef.current) return;
+
+      if (initialFocusRefRef.current?.current) {
+        initialFocusRefRef.current.current.focus();
+        return;
+      }
+
+      // 1. Prefer explicit [autofocus] element
+      const autoFocusEl = dialogRef.current.querySelector<HTMLElement>('[autofocus]');
+      if (autoFocusEl && isVisible(autoFocusEl)) {
+        autoFocusEl.focus();
+        return;
+      }
+
+      // 2. Prefer first visible text input or textarea for form dialogs
+      const firstInput = dialogRef.current.querySelector<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])'
+      );
+      if (firstInput && isVisible(firstInput)) {
+        firstInput.focus();
+        return;
+      }
+
+      // 3. Fallback to first visible focusable element or the dialog container itself
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(isVisible);
+
+      if (focusable.length > 0) {
+        focusable[0].focus();
       } else {
-        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable && focusable.length > 0) {
-          focusable[0].focus();
-        } else {
-          dialogRef.current?.focus();
-        }
+        dialogRef.current?.focus();
       }
     }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
       if (e.key === 'Tab' && dialogRef.current) {
-        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length === 0) return;
+        const focusableElements = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter(isVisible);
+
+        if (focusableElements.length === 0) {
+          e.preventDefault();
+          return;
+        }
 
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 
         if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
+          if (document.activeElement === firstElement || !dialogRef.current.contains(document.activeElement)) {
             e.preventDefault();
             lastElement.focus();
           }
         } else {
-          if (document.activeElement === lastElement) {
+          if (document.activeElement === lastElement || !dialogRef.current.contains(document.activeElement)) {
             e.preventDefault();
             firstElement.focus();
           }
@@ -95,7 +140,7 @@ export function Modal({
         previousActiveElementRef.current.focus();
       }
     };
-  }, [isOpen, onClose, initialFocusRef]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -116,7 +161,7 @@ export function Modal({
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={e => {
           e.stopPropagation();
-          onClose();
+          onCloseRef.current();
         }}
         aria-hidden="true"
       />
@@ -162,7 +207,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => onCloseRef.current()}
                 className="inline-flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-neutral-soft/50 transition-colors -mr-2 -mt-2"
                 aria-label={closeAriaLabel}
                 style={{ width: '44px', height: '44px', minWidth: '44px', minHeight: '44px' }}
@@ -180,4 +225,3 @@ export function Modal({
 }
 
 export default Modal;
-

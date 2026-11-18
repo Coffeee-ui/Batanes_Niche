@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Building2, MapPin, Briefcase, RefreshCw, ArrowRight } from 'lucide-react';
-import { usersApi, extractError } from '../../api/client';
+import { usersApi, extractError, resolveMediaUrl } from '../../api/client';
 import { Spinner } from '../../components/ui';
 import type { Employer } from '../../types';
 
@@ -151,7 +151,12 @@ export default function EmployerDirectoryPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-lg overflow-hidden shrink-0">
                     {emp.profile_pic ? (
-                      <img src={emp.profile_pic} alt={emp.company_name} className="w-full h-full object-cover" />
+                      <img
+                        src={resolveMediaUrl(emp.profile_pic) || emp.profile_pic}
+                        alt={emp.company_name}
+                        onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       emp.company_name.charAt(0).toUpperCase()
                     )}

@@ -19,7 +19,7 @@ import {
   X,
   MessageSquare,
 } from 'lucide-react';
-import { applicationsApi, jobsApi, usersApi, extractError } from '../api/client';
+import { applicationsApi, jobsApi, usersApi, extractError, resolveMediaUrl } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import type { Application, Job } from '../types';
 import { PageSpinner, EmptyState, ConfirmDialog, Modal, Spinner } from '../components/ui';
@@ -51,6 +51,7 @@ export default function ApplicationsPage() {
 
   // Employer Applicant Drawer / Modal
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [applicantPhotoError, setApplicantPhotoError] = useState<number | null>(null);
 
   // Interview Invite Modal
   const [showInterviewModal, setShowInterviewModal] = useState(false);
@@ -506,8 +507,13 @@ export default function ApplicationsPage() {
             <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl overflow-hidden shrink-0">
-                  {selectedApp.applicant?.profile_pic ? (
-                    <img src={selectedApp.applicant.profile_pic} alt="" className="w-full h-full object-cover" />
+                  {selectedApp.applicant?.profile_pic && applicantPhotoError !== selectedApp.id ? (
+                    <img
+                      src={resolveMediaUrl(selectedApp.applicant.profile_pic) || selectedApp.applicant.profile_pic}
+                      onError={() => setApplicantPhotoError(selectedApp.id)}
+                      alt={selectedApp.applicant?.full_name || ''}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     selectedApp.applicant?.full_name?.charAt(0).toUpperCase() || 'A'
                   )}
@@ -601,9 +607,18 @@ export default function ApplicationsPage() {
                   </div>
                 </div>
                 <a
-                  href={usersApi.downloadResumeUrl(selectedApp.seeker_id || selectedApp.applicant.seeker_id)}
+                  href={usersApi.downloadResumeUrl(selectedApp.seeker_id || selectedApp.applicant?.seeker_id)}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const sId = selectedApp.seeker_id || selectedApp.applicant?.seeker_id;
+                    try {
+                      await usersApi.downloadResume(sId);
+                    } catch {
+                      window.open(usersApi.downloadResumeUrl(sId), '_blank');
+                    }
+                  }}
                   className="btn btn-primary text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5"
                 >
                   <Download className="w-4 h-4" /> Download CV

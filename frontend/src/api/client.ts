@@ -22,6 +22,23 @@ const api: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+export function resolveMediaUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('blob:') ||
+    url.startsWith('data:')
+  ) {
+    return url;
+  }
+  const base = rawBase || '';
+  if (url.startsWith('/')) {
+    return `${base}${url}`;
+  }
+  return `${base}/${url}`;
+}
+
 // In-memory access token storage (security best practice)
 let accessToken: string | null = null;
 const REFRESH_TOKEN_KEY = 'batanes_refresh_token';
@@ -461,7 +478,36 @@ export const usersApi = {
 
   downloadResumeUrl: (seekerId?: number) => {
     const base = API_BASE_URL;
-    return seekerId ? `${base}/users/resume/${seekerId}` : `${base}/users/resume`;
+    const path = seekerId ? `${base}/users/resume/${seekerId}` : `${base}/users/resume`;
+    const token = getAccessToken();
+    return token ? `${path}?token=${encodeURIComponent(token)}` : path;
+  },
+
+  downloadResume: async (seekerId?: number, defaultName = 'resume.pdf') => {
+    const path = seekerId ? `/users/resume/${seekerId}` : '/users/resume';
+    const response = await api.get(path, { responseType: 'blob' });
+    let filename = defaultName;
+    const disposition = String(response.headers['content-disposition'] || '');
+    const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (match && match[1]) {
+      try {
+        filename = decodeURIComponent(match[1].trim());
+      } catch {
+        filename = match[1].trim();
+      }
+    }
+    const contentType = String(response.headers['content-type'] || 'application/octet-stream');
+    const blob = new Blob([response.data], {
+      type: contentType,
+    });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
   },
 
   uploadProfilePicture: (file: File) => {

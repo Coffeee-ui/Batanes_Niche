@@ -12,7 +12,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { usersApi, extractError } from '../../api/client';
+import { usersApi, extractError, resolveMediaUrl } from '../../api/client';
 import { Spinner } from '../../components/ui';
 import type { Candidate, SavedCandidate } from '../../types';
 
@@ -213,7 +213,12 @@ export default function FindCandidatesPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-base overflow-hidden shrink-0">
                         {cand.profile_pic ? (
-                          <img src={cand.profile_pic} alt={cand.full_name} className="w-full h-full object-cover" />
+                          <img
+                            src={resolveMediaUrl(cand.profile_pic) || cand.profile_pic}
+                            alt={cand.full_name}
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           cand.full_name.charAt(0).toUpperCase()
                         )}

@@ -1,7 +1,6 @@
 datasource db {
-  provider  = "postgresql"
+  provider  = "sqlite"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -50,6 +49,7 @@ model User {
   saved_candidates      SavedCandidate[]      @relation("EmployerSavedCandidates")
   saved_as_candidate    SavedCandidate[]      @relation("CandidateSavedByEmployers")
   reports_submitted     UserReport[]          @relation("UserReports")
+  stored_files          StoredFile[]
 
   @@map("users")
 }
@@ -296,4 +296,21 @@ model UserReport {
   @@index([reporter_id])
   @@index([target_type, target_id])
   @@map("user_reports")
+}
+
+model StoredFile {
+  id           String   @id @default(uuid())
+  user_id      Int
+  file_type    String
+  filename     String
+  content_type String
+  file_size    Int
+  data         Bytes
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, file_type])
+  @@map("stored_files")
 }

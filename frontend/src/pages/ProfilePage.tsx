@@ -5,7 +5,7 @@ import {
   Calendar, Eye, EyeOff, Download, Camera
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersApi, metaApi, extractError } from '../api/client';
+import { usersApi, metaApi, extractError, resolveMediaUrl } from '../api/client';
 import { Spinner, ProgressBar, ConfirmDialog } from '../components/ui';
 import { toastSuccess, toastError, toastInfo } from '../components/ui/Toast';
 import SkillSelector from '../components/forms/SkillSelector';
@@ -54,6 +54,11 @@ export default function ProfilePage() {
   const [uploadingResume, setUploadingResume] = useState(false);
   const [deletingResume, setDeletingResume] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
+
+  useEffect(() => {
+    setPhotoLoadError(false);
+  }, [user?.profile_pic]);
 
   const [selectedSkills, setSelectedSkills] = useState<string[]>(
     user?.skills?.split(',').map(s => s.trim()).filter(Boolean) || []
@@ -315,10 +320,11 @@ export default function ProfilePage() {
           {/* Identity Card with Picture Upload */}
           <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm flex flex-col items-center text-center relative">
             <div className="relative mb-4 group">
-              {user?.profile_pic ? (
+              {user?.profile_pic && !photoLoadError ? (
                 <img
-                  src={user.profile_pic}
+                  src={resolveMediaUrl(user.profile_pic) || user.profile_pic}
                   alt={user.full_name || 'Profile'}
+                  onError={() => setPhotoLoadError(true)}
                   className="w-24 h-24 rounded-full object-cover border-2 border-border shadow-sm"
                 />
               ) : (
@@ -453,6 +459,14 @@ export default function ProfilePage() {
                         rel="noreferrer"
                         className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
                         title="Download CV"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          try {
+                            await usersApi.downloadResume();
+                          } catch {
+                            window.open(usersApi.downloadResumeUrl(), '_blank');
+                          }
+                        }}
                       >
                         <Download className="w-4 h-4" />
                       </a>

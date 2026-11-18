@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { usersApi, jobsApi, extractError } from '../../api/client';
+import { usersApi, jobsApi, extractError, resolveMediaUrl } from '../../api/client';
 import { Spinner } from '../../components/ui';
 import type { Employer, Job } from '../../types';
 
@@ -160,7 +160,12 @@ export default function EmployerProfilePage() {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-2xl overflow-hidden shrink-0">
               {employer.profile_pic ? (
-                <img src={employer.profile_pic} alt={employer.company_name} className="w-full h-full object-cover" />
+                <img
+                  src={resolveMediaUrl(employer.profile_pic) || employer.profile_pic}
+                  alt={employer.company_name}
+                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 employer.company_name.charAt(0).toUpperCase()
               )}

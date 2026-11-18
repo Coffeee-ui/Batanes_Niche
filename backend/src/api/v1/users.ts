@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { UserService } from '../../services/userService';
 import { UserRepository } from '../../repositories/userRepository';
@@ -7,43 +6,60 @@ import { AuthenticatedRequest, requireAuthenticated } from '../deps';
 import { UserProfileUpdateSchema } from '../../schemas/user';
 import { HttpError } from '../../core/errors';
 import { prisma } from '../../database/client';
-import { settings } from '../../core/config';
+import { FileStorageService } from '../../services/fileStorageService';
 
 export const usersRouter = Router();
-
-const UPLOAD_DIR = settings.UPLOAD_DIR;
-
-if (settings.DB_PROVIDER === 'postgresql' || settings.ENVIRONMENT.toLowerCase() === 'production') {
-  console.warn(
-    '[Uploads] WARNING: Upload files are stored on the local filesystem. ' +
-    'On cloud platforms the filesystem may be ephemeral. Migrate to object storage for production.'
-  );
-}
 
 function parseMultipartFile(
   buffer: Buffer,
   boundary: string
 ): { filename: string; contentType: string; data: Buffer } | null {
-  const boundaryBuffer = Buffer.from(`--${boundary}`);
+  const cleanBoundary = boundary.replace(/^--/, '').trim();
+  const boundaryBuffer = Buffer.from(`--${cleanBoundary}`);
   let start = buffer.indexOf(boundaryBuffer);
   if (start === -1) return null;
 
-  start += boundaryBuffer.length + 2;
+  start += boundaryBuffer.length;
+  // Skip CRLF or LF after boundary
+  if (buffer[start] === 0x0D && buffer[start + 1] === 0x0A) {
+    start += 2;
+  } else if (buffer[start] === 0x0A) {
+    start += 1;
+  }
+
   const headerEnd = buffer.indexOf(Buffer.from('\r\n\r\n'), start);
-  if (headerEnd === -1) return null;
+  let fileDataStart = -1;
+  let headerStr = '';
 
-  const headerStr = buffer.slice(start, headerEnd).toString('utf8');
-  const filenameMatch = headerStr.match(/filename="([^"]+)"/);
-  const contentTypeMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
+  if (headerEnd !== -1) {
+    headerStr = buffer.slice(start, headerEnd).toString('utf8');
+    fileDataStart = headerEnd + 4;
+  } else {
+    const lfEnd = buffer.indexOf(Buffer.from('\n\n'), start);
+    if (lfEnd !== -1) {
+      headerStr = buffer.slice(start, lfEnd).toString('utf8');
+      fileDataStart = lfEnd + 2;
+    } else {
+      return null;
+    }
+  }
 
-  const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
+  const filenameMatch = headerStr.match(/filename="?([^"\r\n]+)"?/i);
+  const contentTypeMatch = headerStr.match(/Content-Type:\s*([^\r\n;]+)/i);
+
+  const filename = filenameMatch ? path.basename(filenameMatch[1].trim()) : 'upload.bin';
   const contentType = contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream';
 
-  const fileDataStart = headerEnd + 4;
   const nextBoundary = buffer.indexOf(boundaryBuffer, fileDataStart);
   if (nextBoundary === -1) return null;
 
-  const fileDataEnd = nextBoundary - 2;
+  let fileDataEnd = nextBoundary;
+  if (fileDataEnd >= fileDataStart + 2 && buffer[fileDataEnd - 2] === 0x0D && buffer[fileDataEnd - 1] === 0x0A) {
+    fileDataEnd -= 2;
+  } else if (fileDataEnd >= fileDataStart + 1 && buffer[fileDataEnd - 1] === 0x0A) {
+    fileDataEnd -= 1;
+  }
+
   const fileData = buffer.slice(fileDataStart, fileDataEnd > fileDataStart ? fileDataEnd : fileDataStart);
 
   return { filename, contentType, data: fileData };
@@ -470,21 +486,23 @@ usersRouter.post(
             return;
           }
 
-          fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+          const mimeType = ext === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-          // Remove any existing resume files for this user
-          const existing = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith(`resume_${req.user!.id}_`));
-          for (const f of existing) {
-            try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch {}
-          }
-
-          const savedFilename = `resume_${req.user!.id}_${Date.now()}.${ext}`;
-          fs.writeFileSync(path.join(UPLOAD_DIR, savedFilename), fileData);
+          // Store persistently in PostgreSQL database (survives Render restarts)
+          const stored = await FileStorageService.saveFile(
+            req.user!.id,
+            'resume',
+            filename,
+            mimeType,
+            fileData
+          );
 
           const resumeUrl = `/api/v1/users/resume/${req.user!.id}`;
           await UserService.updateProfile(req.user!, { resume_url: resumeUrl });
 
-          res.status(200).json({ resume_url: resumeUrl, filename });
+          res.status(200).json({ resume_url: resumeUrl, filename: stored.filename });
         } catch (err) {
           next(err);
         }
@@ -501,13 +519,7 @@ usersRouter.delete(
   requireAuthenticated,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (fs.existsSync(UPLOAD_DIR)) {
-        const existing = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith(`resume_${req.user!.id}_`));
-        for (const f of existing) {
-          try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch {}
-        }
-      }
-
+      await FileStorageService.deleteFile(req.user!.id, 'resume');
       await UserService.updateProfile(req.user!, { resume_url: null });
       res.status(200).json({ message: 'Resume deleted successfully.' });
     } catch (err) {
@@ -550,16 +562,25 @@ usersRouter.get(
         }
       }
 
-      if (fs.existsSync(UPLOAD_DIR)) {
-        const files = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith(`resume_${targetUserId}_`));
-        if (files.length > 0) {
-          const filePath = path.join(UPLOAD_DIR, files[0]);
-          res.sendFile(filePath);
-          return;
-        }
+      const file = await FileStorageService.getFile(targetUserId, 'resume');
+      if (!file) {
+        res.status(404).json({ message: 'Resume file not found.' });
+        return;
       }
 
-      res.status(404).json({ message: 'Resume file not found.' });
+      const safeAsciiFilename = file.filename.replace(/["\r\n]/g, '').replace(/[^\x20-\x7E]/g, '_');
+      const safeUtf8Filename = encodeURIComponent(file.filename);
+
+      res.setHeader('Content-Type', file.contentType || 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${safeAsciiFilename}"; filename*=UTF-8''${safeUtf8Filename}`
+      );
+      res.setHeader('Content-Length', file.fileSize);
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(file.data);
     } catch (err) {
       next(err);
     }
@@ -616,18 +637,19 @@ usersRouter.post(
             return;
           }
 
-          fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+          const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
 
-          // Remove any existing avatar for this user
-          const existing = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith(`avatar_${req.user!.id}_`));
-          for (const f of existing) {
-            try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch {}
-          }
+          // Store persistently in PostgreSQL database (survives Render restarts)
+          await FileStorageService.saveFile(
+            req.user!.id,
+            'avatar',
+            `avatar_${req.user!.id}.${ext === 'jpg' ? 'jpeg' : ext}`,
+            mimeType,
+            fileData
+          );
 
-          const savedFilename = `avatar_${req.user!.id}_${Date.now()}.${ext === 'jpg' ? 'jpeg' : ext}`;
-          fs.writeFileSync(path.join(UPLOAD_DIR, savedFilename), fileData);
-
-          const avatarUrl = `/api/v1/users/avatar/${req.user!.id}`;
+          // Append timestamp version for instant cache invalidation upon photo replacement
+          const avatarUrl = `/api/v1/users/avatar/${req.user!.id}?v=${Date.now()}`;
           await UserService.updateProfile(req.user!, { profile_pic: avatarUrl });
 
           res.status(200).json({ profile_pic: avatarUrl });
@@ -652,16 +674,17 @@ usersRouter.get(
         return;
       }
 
-      if (fs.existsSync(UPLOAD_DIR)) {
-        const files = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith(`avatar_${targetUserId}_`));
-        if (files.length > 0) {
-          const filePath = path.join(UPLOAD_DIR, files[0]);
-          res.sendFile(filePath);
-          return;
-        }
+      const file = await FileStorageService.getFile(targetUserId, 'avatar');
+      if (!file) {
+        res.status(404).json({ message: 'Avatar image not found.' });
+        return;
       }
 
-      res.status(404).json({ message: 'Avatar image not found.' });
+      res.setHeader('Content-Type', file.contentType || 'image/jpeg');
+      res.setHeader('Content-Length', file.fileSize);
+      res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.send(file.data);
     } catch (err) {
       next(err);
     }
