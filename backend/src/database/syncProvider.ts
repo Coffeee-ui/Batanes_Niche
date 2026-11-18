@@ -19,17 +19,30 @@ export type DbDialect = 'sqlite' | 'postgresql';
 export function detectProvider(): { dialect: DbDialect; rawUrl: string; directUrl?: string } {
   const rawUrl = process.env.DATABASE_URL || '';
   const providerEnv = (process.env.DB_PROVIDER || '').trim().toLowerCase();
+  const env = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').trim().toLowerCase();
+  const isProduction = env === 'production';
 
   const isPostgres =
     providerEnv === 'postgres' ||
     providerEnv === 'postgresql' ||
     rawUrl.startsWith('postgres://') ||
-    rawUrl.startsWith('postgresql://');
+    rawUrl.startsWith('postgresql://') ||
+    (isProduction && providerEnv !== 'sqlite');
 
   const dialect: DbDialect = isPostgres ? 'postgresql' : 'sqlite';
   const directUrl = process.env.DIRECT_URL?.trim() || undefined;
 
   return { dialect, rawUrl, directUrl };
+}
+
+function getActiveClientProvider(): string | null {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const tempClient = new PrismaClient();
+    return (tempClient as any)._engineConfig?.activeProvider || null;
+  } catch {
+    return null;
+  }
 }
 
 export function syncPrismaSchema(force: boolean = false): boolean {
@@ -38,7 +51,7 @@ export function syncPrismaSchema(force: boolean = false): boolean {
     throw new Error(`Prisma schema not found at: ${schemaPath}`);
   }
 
-  const { dialect, directUrl } = detectProvider();
+  const { dialect } = detectProvider();
   let schemaContent = fs.readFileSync(schemaPath, 'utf8');
 
   // Match provider inside datasource db { ... }
@@ -53,13 +66,15 @@ export function syncPrismaSchema(force: boolean = false): boolean {
   const hasDirectUrlInSchema = /directUrl\s*=\s*env\("DIRECT_URL"\)/.test(schemaContent);
 
   const providerNeedsChange = currentProvider !== dialect;
-  const directUrlNeedsChange = dialect === 'postgresql' ? (Boolean(directUrl) && !hasDirectUrlInSchema) : hasDirectUrlInSchema;
+  const directUrlNeedsChange = dialect === 'postgresql' ? !hasDirectUrlInSchema : hasDirectUrlInSchema;
+  const activeClient = getActiveClientProvider();
+  const clientNeedsRegeneration = activeClient !== dialect;
 
-  if (!providerNeedsChange && !directUrlNeedsChange && !force) {
+  if (!providerNeedsChange && !directUrlNeedsChange && !clientNeedsRegeneration && !force) {
     return false;
   }
 
-  console.log(`[Database Sync] Updating schema.prisma provider from '${currentProvider}' to '${dialect}'...`);
+  console.log(`[Database Sync] Updating schema.prisma provider from '${currentProvider}' to '${dialect}' (client provider: '${activeClient}')...`);
 
   // Update provider
   schemaContent = schemaContent.replace(
@@ -67,16 +82,20 @@ export function syncPrismaSchema(force: boolean = false): boolean {
     `$1${dialect}$2`
   );
 
-  // Manage directUrl for PostgreSQL
-  if (dialect === 'postgresql' && directUrl) {
+  // Manage directUrl: PostgreSQL requires directUrl; SQLite rejects directUrl
+  if (dialect === 'postgresql') {
     if (!hasDirectUrlInSchema) {
       schemaContent = schemaContent.replace(
         /(url\s*=\s*env\("DATABASE_URL"\))/,
         `$1\n  directUrl = env("DIRECT_URL")`
       );
     }
+    // Fallback DIRECT_URL in environment if missing so CLI commands succeed
+    if (!process.env.DIRECT_URL && process.env.DATABASE_URL) {
+      process.env.DIRECT_URL = process.env.DATABASE_URL;
+    }
   } else {
-    // Remove directUrl if SQLite or not provided
+    // Remove directUrl if SQLite
     schemaContent = schemaContent.replace(/\s*directUrl\s*=\s*env\("DIRECT_URL"\)/g, '');
   }
 
@@ -98,10 +117,11 @@ export function syncPrismaSchema(force: boolean = false): boolean {
   }
 }
 
-// Allow direct CLI execution: ts-node src/database/syncProvider.ts
+// Allow direct CLI execution: ts-node src/database/syncProvider.ts [--force]
 if (require.main === module) {
   try {
-    syncPrismaSchema();
+    const force = process.argv.includes('--force');
+    syncPrismaSchema(force);
   } catch (e) {
     console.error(e);
     process.exit(1);

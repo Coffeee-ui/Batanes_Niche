@@ -96,7 +96,7 @@ export class Settings {
     if (this.DB_PROVIDER === 'postgresql') {
       if (!this.DATABASE_URL.startsWith('postgres://') && !this.DATABASE_URL.startsWith('postgresql://')) {
         throw new Error(
-          `[Config Error] DB_PROVIDER is set to '${this.DB_PROVIDER}', but DATABASE_URL does not start with 'postgres://' or 'postgresql://'. Received: ${this.DATABASE_URL}`
+          `[Config Error] DB_PROVIDER is set to '${this.DB_PROVIDER}', but DATABASE_URL does not start with 'postgres://' or 'postgresql://'. Invalid connection URL protocol.`
         );
       }
       // Supabase pooler validation helper

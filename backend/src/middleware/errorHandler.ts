@@ -17,6 +17,13 @@ const SENSITIVE_KEYS = new Set([
   'secret',
 ]);
 
+function sanitizeSensitiveString(str: string): string {
+  if (!str) return str;
+  return str
+    .replace(/(postgres(?:ql)?:\/\/[^:]+:)([^@]+)(@)/gi, '$1[REDACTED]$3')
+    .replace(/(password|passwd|pwd|secret|token|api[_-]?key)=([^&;\s]+)/gi, '$1=[REDACTED]');
+}
+
 function sanitizeRequestBody(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
   try {
@@ -60,9 +67,12 @@ export async function errorHandler(
   }
 
   const traceId = (req.headers['x-trace-id'] as string) || crypto.randomUUID().slice(0, 8);
-  const errorMsg = err instanceof Error ? err.message : String(err);
-  const stackTrace = err instanceof Error ? err.stack : undefined;
+  const rawErrorMsg = err instanceof Error ? err.message : String(err);
+  const rawStackTrace = err instanceof Error ? err.stack : undefined;
   const username = (req as any).user?.username || null;
+
+  const errorMsg = sanitizeSensitiveString(rawErrorMsg);
+  const stackTrace = rawStackTrace ? sanitizeSensitiveString(rawStackTrace) : undefined;
 
   console.error(`[TRACE_ID: ${traceId}] Unhandled Exception on ${req.method} ${req.originalUrl}: ${errorMsg}`);
 
@@ -75,7 +85,15 @@ export async function errorHandler(
       sanitizeRequestBody(req.body)
     );
   } catch (logErr) {
-    console.error('Failed to record incident to error_reports:', logErr);
+    const logErrMsg = logErr instanceof Error ? logErr.message : String(logErr);
+    console.error(
+      `[TRACE_ID: ${traceId}] Failed to record incident to error_reports (DB offline/inaccessible):`,
+      sanitizeSensitiveString(logErrMsg)
+    );
+  }
+
+  if (res.headersSent) {
+    return;
   }
 
   res.setHeader('X-Trace-ID', traceId);

@@ -1,6 +1,13 @@
 import { ErrorReport } from '@prisma/client';
 import { ErrorReportRepository } from '../repositories/errorReportRepository';
 
+function sanitizeSensitive(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return text
+    .replace(/(postgres(?:ql)?:\/\/[^:]+:)([^@]+)(@)/gi, '$1[REDACTED]$3')
+    .replace(/(password|passwd|pwd|secret|token|api[_-]?key)=([^&;\s]+)/gi, '$1=[REDACTED]');
+}
+
 export class ErrorLoggingService {
   static async recordError(
     errorMessage: string,
@@ -20,10 +27,10 @@ export class ErrorLoggingService {
     }
 
     return ErrorReportRepository.create({
-      error_message: errorMessage,
+      error_message: sanitizeSensitive(errorMessage) || errorMessage,
       endpoint: endpoint || null,
       username: username || null,
-      stack_trace: stackTrace || null,
+      stack_trace: sanitizeSensitive(stackTrace),
       request_data: sanitizedRequestData || null,
     });
   }

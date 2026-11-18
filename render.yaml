@@ -4,7 +4,7 @@ services:
     runtime: node
     region: singapore
     # Monorepo root — build command handles subpackage targeting
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter batanes-niche-backend exec prisma generate && pnpm --filter batanes-niche-backend run build:render
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter batanes-niche-backend run db:sync && pnpm --filter batanes-niche-backend run build:render
     startCommand: node backend/dist/main.js
     healthCheckPath: /health
     envVars:

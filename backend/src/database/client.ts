@@ -14,6 +14,14 @@ export const prisma = new PrismaClient({
   errorFormat: 'minimal',
 });
 
+// Guard against runtime provider mismatch (e.g. SQLite client running against PostgreSQL)
+const activeProvider = (prisma as any)._engineConfig?.activeProvider;
+if (activeProvider && activeProvider !== settings.DB_PROVIDER) {
+  throw new Error(
+    `[Database Provider Mismatch] Prisma Client was compiled for '${activeProvider}', but runtime DB_PROVIDER is '${settings.DB_PROVIDER}'. Run 'pnpm run db:sync' or 'prisma generate' to regenerate the client.`
+  );
+}
+
 export function isPostgres(): boolean {
   return settings.DB_PROVIDER === 'postgresql';
 }
@@ -25,6 +33,12 @@ export async function disconnectDatabase(): Promise<void> {
   } catch (err) {
     console.error('[Database] Error disconnecting Prisma client:', err);
   }
+}
+
+function sanitizeDatabaseError(msg: string): string {
+  return msg
+    .replace(/(postgres(?:ql)?:\/\/[^:]+:)([^@]+)(@)/gi, '$1[REDACTED]$3')
+    .replace(/(password|passwd|pwd|secret)=([^&;\s]+)/gi, '$1=[REDACTED]');
 }
 
 export async function checkDatabaseHealth(): Promise<{
@@ -45,12 +59,13 @@ export async function checkDatabaseHealth(): Promise<{
       latencyMs,
     };
   } catch (exc) {
+    const rawMsg = exc instanceof Error ? exc.message : String(exc);
     return {
       status: 'not_ready',
       database: 'disconnected',
       provider: settings.DB_PROVIDER,
       latencyMs: Date.now() - start,
-      error: exc instanceof Error ? exc.message : String(exc),
+      error: sanitizeDatabaseError(rawMsg),
     };
   }
 }
