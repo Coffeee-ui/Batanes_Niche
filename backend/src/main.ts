@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { settings } from './core/config';
 import { checkDatabaseHealth, disconnectDatabase } from './database/client';
+import { ensurePostgresSchema } from './database/ensureSchema';
 import { structuredLoggingMiddleware } from './middleware/logging';
 import { errorHandler } from './middleware/errorHandler';
 import { apiV1Router } from './api/v1';
@@ -98,6 +99,10 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
     console.log(`[Batanes Niche] Provider: ${settings.DB_PROVIDER.toUpperCase()}, Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
     console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);
+
+    ensurePostgresSchema().catch(err => {
+      console.error('[Schema Sync] Unexpected error during schema verification:', err);
+    });
   });
 
   const handleShutdown = async (signal: string) => {
