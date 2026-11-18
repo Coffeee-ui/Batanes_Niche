@@ -95,15 +95,19 @@ app.use(errorHandler);
 // Start server
 let server: any = null;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(settings.PORT, '0.0.0.0', () => {
-    console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
-    console.log(`[Batanes Niche] Provider: ${settings.DB_PROVIDER.toUpperCase()}, Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
-    console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);
+  (async () => {
+    try {
+      await ensurePostgresSchema();
+    } catch (err) {
+      console.error('[Schema Sync] Unexpected error during startup schema sync:', err);
+    }
 
-    ensurePostgresSchema().catch(err => {
-      console.error('[Schema Sync] Unexpected error during schema verification:', err);
+    server = app.listen(settings.PORT, '0.0.0.0', () => {
+      console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
+      console.log(`[Batanes Niche] Provider: ${settings.DB_PROVIDER.toUpperCase()}, Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
+      console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);
     });
-  });
+  })();
 
   const handleShutdown = async (signal: string) => {
     console.log(`\n[Batanes Niche] Received ${signal}. Starting graceful shutdown...`);

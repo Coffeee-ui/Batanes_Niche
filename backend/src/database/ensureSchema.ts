@@ -91,21 +91,38 @@ const POSTGRES_FORWARD_MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS idx_applications_seeker_id ON applications(seeker_id)`,
 ];
 
+export interface SchemaSyncStatus {
+  completed: boolean;
+  successCount: number;
+  totalStatements: number;
+  errors: string[];
+}
+
+export const schemaSyncStatus: SchemaSyncStatus = {
+  completed: false,
+  successCount: 0,
+  totalStatements: POSTGRES_FORWARD_MIGRATIONS.length,
+  errors: [],
+};
+
 export async function ensurePostgresSchema(): Promise<void> {
   if (settings.DB_PROVIDER !== 'postgresql') {
     return;
   }
 
   console.log('[Schema Sync] Verifying PostgreSQL database schema compatibility...');
-  let successCount = 0;
+  schemaSyncStatus.errors = [];
+  schemaSyncStatus.successCount = 0;
   for (const statement of POSTGRES_FORWARD_MIGRATIONS) {
     try {
       await prisma.$executeRawUnsafe(statement);
-      successCount++;
+      schemaSyncStatus.successCount++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      schemaSyncStatus.errors.push(`${statement.slice(0, 30)}...: ${msg.split('\n')[0]}`);
       console.warn(`[Schema Sync] Warning on statement: ${msg.split('\n')[0]}`);
     }
   }
-  console.log(`[Schema Sync] Schema compatibility verified (${successCount}/${POSTGRES_FORWARD_MIGRATIONS.length} operations confirmed).`);
+  schemaSyncStatus.completed = true;
+  console.log(`[Schema Sync] Schema compatibility verified (${schemaSyncStatus.successCount}/${POSTGRES_FORWARD_MIGRATIONS.length} operations confirmed).`);
 }
