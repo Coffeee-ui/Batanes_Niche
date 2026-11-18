@@ -84,3 +84,6 @@ frontend/.env.local
 
 # Vercel
 .vercel/
+
+#others
+documentation/
