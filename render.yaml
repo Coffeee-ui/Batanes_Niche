@@ -49,6 +49,10 @@ services:
         value: true
       - key: MAIL_SSL_TLS
         value: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 15
       - key: REFRESH_TOKEN_EXPIRE_DAYS

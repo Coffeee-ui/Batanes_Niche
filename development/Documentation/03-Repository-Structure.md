@@ -29,7 +29,7 @@ The backend follows a layered domain architecture using TypeScript, Express.js 4
 ```text
 backend/
 +-- prisma/                                 # Prisma schema and migrations
-|   +-- schema.prisma                       # Bit-for-bit Prisma schema mapping all 12 tables
+|   +-- schema.prisma                       # Bit-for-bit Prisma schema mapping all 15 tables
 +-- src/                                    # Application source code
 |   +-- admin/                              # Server-rendered administrative portal (/admin)
 |   |   +-- auth.ts                         # Signed cookie session management & CSRF helpers

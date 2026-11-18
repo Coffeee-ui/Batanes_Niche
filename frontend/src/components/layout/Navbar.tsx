@@ -12,6 +12,8 @@ import {
   ArrowRight,
   MapPin,
   ChevronDown,
+  Settings,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -213,22 +215,23 @@ export default function Navbar() {
   const navLinks = isAuthenticated
     ? isEmployer
       ? [
-          { to: '/', label: 'Home' },
-          { to: '/jobs/my', label: 'My Jobs' },
-          { to: '/jobs/post', label: 'Post a Job' },
-          { to: '/profile', label: 'Profile' },
+          { to: '/jobs/my', label: 'Vacancies' },
+          { to: '/applications', label: 'Applicants' },
+          { to: '/candidates', label: 'Find Candidates' },
+          { to: '/jobs/post', label: 'Post Vacancy' },
+          { to: '/employers', label: 'Employers' },
         ]
       : [
-          { to: '/', label: 'Home' },
-          { to: '/jobs', label: 'Browse Jobs' },
+          { to: '/jobs', label: 'Jobs' },
           { to: '/applications', label: 'Applications' },
           { to: '/saved-jobs', label: 'Saved Jobs' },
-          { to: '/profile', label: 'Profile' },
+          { to: '/employers', label: 'Employers' },
         ]
     : [
-        { to: '/', label: 'Home' },
         { to: '/jobs', label: 'Browse Jobs' },
+        { to: '/employers', label: 'Employers' },
         { to: '/about', label: 'About' },
+        { to: '/help', label: 'Help' },
       ];
 
   const initial = (user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'M').toUpperCase();
@@ -413,6 +416,24 @@ export default function Navbar() {
                         >
                           <User className="w-4 h-4 text-muted-foreground" />
                           My Profile
+                        </Link>
+
+                        <Link
+                          to="/account"
+                          id="menu-account"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-neutral-soft text-foreground"
+                        >
+                          <Settings className="w-4 h-4 text-muted-foreground" />
+                          Account Settings
+                        </Link>
+
+                        <Link
+                          to="/help"
+                          id="menu-help"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-neutral-soft text-foreground"
+                        >
+                          <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                          Help & Support
                         </Link>
 
                         <button

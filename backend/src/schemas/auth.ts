@@ -15,12 +15,12 @@ const passwordValidation = z
   });
 
 export const UserRegisterSchema = z.object({
-  username: z.string().min(3).max(50),
+  username: z.string().min(3).max(50).optional(),
   email: z.string().email(),
   password: passwordValidation,
-  full_name: z.string().min(2).max(100),
+  full_name: z.string().min(2).max(100).optional(),
   phone_number: z.string().max(20).optional().nullable(),
-  municipality: z.string().min(2).max(50),
+  municipality: z.string().min(2).max(50).optional().default('Basco'),
   barangay: z.string().max(100).optional().nullable(),
   role: z
     .string()

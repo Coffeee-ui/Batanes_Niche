@@ -57,11 +57,11 @@ describe('Navbar Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Browse Jobs')).toBeInTheDocument();
-    expect(screen.getByText(/Saved/i)).toBeInTheDocument();
-    expect(screen.getByText(/Applications/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Post.*Job/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Jobs$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Saved Jobs$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Applications$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Employers$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Post Vacancy/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
   });
 
@@ -83,11 +83,10 @@ describe('Navbar Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText(/Post.*Job/i)).toBeInTheDocument();
-    expect(screen.getByText('My Jobs')).toBeInTheDocument();
-    expect(screen.queryByText('Candidates')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Post Vacancy/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Vacancies/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Applicants/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Find Candidates/i })).toBeInTheDocument();
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Applications/i)).not.toBeInTheDocument();
   });
 });

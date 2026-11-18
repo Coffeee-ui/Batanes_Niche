@@ -37,4 +37,18 @@ export class NotificationRepository {
       where: { user_id: userId, is_read: false },
     });
   }
+
+  static async delete(notificationId: number, userId: number): Promise<boolean> {
+    const res = await prisma.notification.deleteMany({
+      where: { id: notificationId, user_id: userId },
+    });
+    return res.count > 0;
+  }
+
+  static async bulkDelete(notificationIds: number[], userId: number): Promise<number> {
+    const res = await prisma.notification.deleteMany({
+      where: { id: { in: notificationIds }, user_id: userId },
+    });
+    return res.count;
+  }
 }

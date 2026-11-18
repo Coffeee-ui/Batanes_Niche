@@ -245,6 +245,16 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
       await enableSqliteForeignKeys(prisma);
     }
 
+    // Ensure database-level partial unique index for active applications (both SQLite & PostgreSQL)
+    try {
+      await prisma.$executeRawUnsafe(
+        `CREATE UNIQUE INDEX IF NOT EXISTS uq_active_applications ON applications (job_id, seeker_id) WHERE status NOT IN ('withdrawn', 'rejected')`
+      );
+      console.log('  ✓ Verified database-level partial unique index: uq_active_applications');
+    } catch (idxErr) {
+      console.warn('  [DB Setup] Note on partial unique index creation:', idxErr);
+    }
+
     // 8. Transactional Seeding
     if (!options.noSeed) {
       console.log('\n[DB Setup] Seeding database within atomic transaction...');

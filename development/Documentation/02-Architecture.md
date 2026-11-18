@@ -108,7 +108,7 @@ flowchart TB
     end
 
     subgraph ExternalServices["External Services Tier"]
-        SMTPServer["SMTP Mail Server<br/>(Gmail / SMTP Relay)"]
+        SMTPServer["SMTP Mail Server<br/>(Gmail / SMTP Relay — Nodemailer)"]
     end
 
     %% Client traffic
@@ -208,8 +208,6 @@ flowchart TB
   - Consumes Domain Services and Repositories directly within the Node.js process.
   - Renders dashboard analytics, user moderation tables, job audit screens, and system logs.
   - Authenticated via HMAC-SHA256 signed HttpOnly session cookies (`batanes_admin_session`) and double-submit CSRF cookies (`batanes_admin_csrf`).
-- **Legacy Administrative Portal (`backend/app/admin/` — Python)**:
-  - Built with server-side **Jinja2** templates (now superseded by the TypeScript implementation).
 
 ### 3.2 Gateway & Reverse Proxy Tier (`docker/nginx.conf`)
 - Acts as the single entry point in production environments (Port 80/443).
@@ -221,13 +219,12 @@ flowchart TB
 
 ### 3.3 Backend API Layer
 - **TypeScript** (`backend/src/api/v1/`): Pure HTTP translation boundary using Express.js Router. Parses request payloads, deserializes/validates JSON via **Zod**, checks route-level permissions, and dispatches to Domain Services.
-- **Python** (`backend/app/api/v1/`): Uses FastAPI router with Pydantic v2 schema validation.
 - Routers contain zero SQL queries, zero scoring logic, and zero direct entity mutations.
 - Rate limiting: **express-rate-limit**.
 - Response serialization: Zod schemas.
 
 ### 3.4 Domain Service Layer
-- **TypeScript** (`backend/src/services/`) / **Python** (`backend/app/services/`)
+- **TypeScript** (`backend/src/services/`)
 - Encapsulates all business rules, orchestration workflows, and invariant enforcement. - Key Domain Services:
   - `AuthService`: Registration, credential verification, token issuance/rotation, compromise detection, and OTP generation.
   - `UserService`: Profile completeness scoring, profile updates, sanitized candidate searches.
@@ -242,13 +239,12 @@ flowchart TB
 
 ### 3.5 Repository Layer
 - **TypeScript** (`backend/src/repositories/`): Prisma ORM with type-safe query builders and `$transaction` blocks.
-- **Python** (`backend/app/repositories/`): SQLAlchemy 2.0 ORM sessions with synchronous transactions.
 - Repositories enforce strict data integrity rules: active application duplicate checks, soft-delete filtering (`deleted_at IS NULL`), token hash lookups, and transaction flushes.
 - Repositories shield Domain Services from underlying SQL query mechanics and database dialect nuances.
 
 ### 3.6 Persistence Tier
 - **Production**: PostgreSQL 16 relational database with connection pooling and WAL archiving.
-- **Local Development & CI Testing**: SQLite (`sqlite:///./batanes_niche.db` or in-memory `sqlite:///:memory:`).
+- **Local Development & CI Testing**: SQLite (`file:../../Database/batanes_niche.db`).
 - **File Storage**: Local filesystem volume mounted at `/app/uploads` for resume files and user avatars.
 
 ---
@@ -257,7 +253,6 @@ flowchart TB
 
 ### 4.1 Global Exception & Error Handling
 - **TypeScript**: Handled via `backend/src/middleware/errorHandler.ts` (Express.js error middleware).
-- **Python**: Handled via `backend/app/middleware/error_handler.py`.
 - `HTTPException` instances are translated into structured JSON responses:
   ```json
   {

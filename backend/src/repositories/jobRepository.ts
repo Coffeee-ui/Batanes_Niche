@@ -10,7 +10,28 @@ export type JobWithRelations = Prisma.JobGetPayload<{
 }>;
 
 export class JobRepository {
+  static async autoCloseExpiredDeadlines(): Promise<number> {
+    try {
+      const now = new Date();
+      const res = await prisma.job.updateMany({
+        where: {
+          status: { in: ['published', 'active'] },
+          application_deadline: { lt: now },
+          deleted_at: null,
+        },
+        data: {
+          status: 'closed',
+          close_option: 'ended',
+        },
+      });
+      return res.count;
+    } catch {
+      return 0;
+    }
+  }
+
   static async getById(jobId: number, includeDeleted: boolean = false): Promise<JobWithRelations | null> {
+    await this.autoCloseExpiredDeadlines();
     const where: Prisma.JobWhereInput = { id: jobId };
     if (!includeDeleted) {
       where.deleted_at = null;
@@ -53,7 +74,7 @@ export class JobRepository {
     category?: string | null
   ): Prisma.JobWhereInput {
     const where: Prisma.JobWhereInput = {
-      status: 'active',
+      status: { in: ['published', 'active'] },
       deleted_at: null,
     };
 
@@ -124,6 +145,7 @@ export class JobRepository {
     sort?: string | null,
     category?: string | null
   ): Promise<JobWithRelations[]> {
+    await this.autoCloseExpiredDeadlines();
     const where = this.buildActiveWhere(municipality, island, keyword, employmentType, category);
 
     let orderBy: Prisma.JobOrderByWithRelationInput = { created_at: 'desc' };

@@ -64,6 +64,10 @@ The following matrix documents authorization rules across all system capabilitie
 | **View Saved Jobs** | No | **Yes** | No | No | `GET /api/v1/saved-jobs` (Filtered by `user_id == user.id`) |
 | **View In-App Notifications** | No | Yes | Yes | Yes | `GET /api/v1/notifications` (Filtered by `user_id == user.id`) |
 | **Mark Notifications Read** | No | Yes | Yes | Yes | `POST /api/v1/notifications/read` |
+| **Control Discoverability** | No | **Yes** | No | No | `PUT /api/v1/users/profile` (`is_discoverable` boolean toggle) |
+| **Follow / Unfollow Employer** | No | **Yes** | No | No | Schema-backed relation (`followed_employers`) |
+| **Save / Shortlist Candidates** | No | No | **Yes** | No | Schema-backed relation (`saved_candidates`) |
+| **Submit Content/User Report** | No | **Yes** | **Yes** | No | Schema-backed entity (`user_reports`) |
 | **Browse Candidate Directory** | No | No | **Yes** | **Yes** | `GET /api/v1/users/job-seekers` (Sanitized summaries without email/phone) |
 | **View Applicant Contact Info** | No | No | **Conditional** | **Yes** | Contact revealed **only** if seeker applied to employer's job |
 | **View Ranked Recommendations** | No | **Yes** (Jobs) | **Yes** (Candidates) | No | `/api/v1/recommendations/*` (Role-tailored algorithms) |
@@ -80,46 +84,42 @@ The following matrix documents authorization rules across all system capabilitie
 In addition to role gates, services enforce strict row-level ownership checks:
 
 ### 3.1 Job Modification & Deletion
-```python
-# Enforced in JobService.update_job and JobService.delete_job
-if job.employer_id != user.id and user.role != "admin":
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="You do not have permission to modify this job posting."
-    )
+```typescript
+// Enforced in jobService.ts: updateJob and deleteJob
+if (job.employer_id !== user.id && user.role !== "admin") {
+  throw new ForbiddenError("You do not have permission to modify this job posting.");
+}
 ```
 
 ### 3.2 Application Submission Boundaries
 - Job seekers **cannot apply to their own job postings** (in the event an employer registers a seeker account).
-- Job seekers **cannot submit duplicate active applications** to the same job posting (`uq_applications_job_seeker`).
+- Job seekers **cannot submit duplicate active applications** to the same job posting (enforced at service level and by database partial unique index `uq_active_applications` on `(job_id, seeker_id)` where status is active; reapplication after withdrawal or rejection while the vacancy is open is supported while preserving history).
 - Applications can only be submitted to jobs with `status == 'active'` and `deleted_at IS NULL`.
 
 ### 3.3 Application Status Updates
-```python
-# Enforced in ApplicationService.update_application_status
-if application.job.employer_id != employer.id and employer.role != "admin":
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="You do not have permission to manage applications for this job."
-    )
+```typescript
+// Enforced in applicationService.ts: updateApplication
+if (application.job.employer_id !== employer.id && employer.role !== "admin") {
+  throw new ForbiddenError("You do not have permission to manage applications for this job.");
+}
 ```
 
 ### 3.4 Applicant Contact Information Revelation Rule
 - In the public candidate directory (`/api/v1/users/job-seekers`), candidate contact details (`email`, `phone_number`) are **strictly stripped**.
 - When an employer accesses `/api/v1/applications`, contact details are materialized **only for candidates who submitted an application to that employer's job**:
-```python
-# Enforced in ApplicationService._to_employer_application_out
-applicant_profile = EmployerApplicantProfile(
-    seeker_id=seeker.id,
-    full_name=seeker.full_name,
-    email=seeker.email,           # Authorized access
-    phone_number=seeker.phone_number,  # Authorized access
-    municipality=seeker.municipality,
-    island=island,
-    barangay=seeker.barangay,
-    skills=seeker.skills,
-    ...
-)
+```typescript
+// Enforced in applicationService.ts: toEmployerApplicationOut
+const applicantProfile = {
+  seeker_id: seeker.id,
+  full_name: seeker.full_name,
+  email: seeker.email,           // Authorized access
+  phone_number: seeker.phone_number,  // Authorized access
+  municipality: seeker.municipality,
+  island: island,
+  barangay: seeker.barangay,
+  skills: seeker.skills,
+  // ...
+};
 ```
 
 ---
@@ -128,12 +128,13 @@ applicant_profile = EmployerApplicantProfile(
 
 The `admin` role possesses elevated supervisory powers but is isolated through separate architectural layers:
 
-1. **No Public API Admin Registration**: Admin accounts can only be provisioned via the secure server CLI:
+1. **No Public API Admin Registration**: Admin accounts can only be provisioned via the seed script or direct SQL migration:
    ```bash
-   python -m app.cli create-admin --username admin --email admin@batanesniche.ph --password <password>
+   pnpm db:seed
    ```
-2. **Session Cookie Isolation**: Admin routes (`/admin/*`) require a signed HTTP cookie (`batanes_admin_session`) managed by `app.admin.auth.verify_admin_session`. Bearer JWT tokens from the React frontend are **not** accepted for admin UI routes.
-3. **Double-Submit CSRF Defense**: All state-modifying admin POST requests (suspend, restore, disable) require matching CSRF cookies and form fields.
+   Or executing `Database/migrations/002_seed_production_admin.sql` in production.
+2. **Session Cookie Isolation**: Admin routes (`/admin/*`) require a signed HTTP cookie (`batanes_admin_session`) managed by `src/admin/auth.ts`. Bearer JWT tokens from the React frontend are **not** accepted for admin UI routes.
+3. **Double-Submit CSRF Defense**: All state-modifying admin POST requests (suspend, restore, disable) require matching CSRF cookies and form fields (`batanes_admin_csrf`).
 4. **Append-Only Auditing**: Every administrative moderation action generates an immutable audit record in `audit_logs` specifying `actor_id`, `action`, `target_type`, `target_id`, and redacted JSON details.
 
 ---

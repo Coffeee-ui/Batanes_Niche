@@ -90,6 +90,7 @@ export default function JobCard({
   const locationText = job.barangay ? `${job.barangay}, ${job.municipality}` : job.municipality;
   const companyName = job.company_name || job.employer_name || 'Batanes Employer';
   const jobCategory = (job as any).category || undefined;
+  const isJobClosed = job.status === 'closed' || job.status === 'archived' || (job as any).status === 'ended';
 
   return (
     <>
@@ -107,9 +108,15 @@ export default function JobCard({
                 <span className="badge badge-muted">
                   {job.employment_type}
                 </span>
-                <span className="badge badge-success">
-                  Hiring
-                </span>
+                {isJobClosed ? (
+                  <span className="badge badge-muted text-muted-foreground border border-border">
+                    Unavailable
+                  </span>
+                ) : (
+                  <span className="badge badge-success">
+                    Hiring
+                  </span>
+                )}
               </div>
             </div>
 

@@ -11,6 +11,7 @@ export default function SavedJobsPage() {
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastRemoved, setLastRemoved] = useState<SavedJob | null>(null);
 
   useEffect(() => {
     savedJobsApi.list()
@@ -27,8 +28,24 @@ export default function SavedJobsPage() {
 
   const handleSaveToggle = (jobId: number, saved: boolean) => {
     if (!saved) {
+      const removed = savedJobs.find(sj => sj.job_id === jobId);
+      if (removed) {
+        setLastRemoved(removed);
+      }
       setSavedJobs(prev => prev.filter(sj => sj.job_id !== jobId));
       toastSuccess('Job removed from saved list.');
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!lastRemoved) return;
+    try {
+      await savedJobsApi.save(lastRemoved.job_id);
+      setSavedJobs(prev => [lastRemoved, ...prev]);
+      setLastRemoved(null);
+      toastSuccess('Job restored to saved list.');
+    } catch (err) {
+      toastError(extractError(err));
     }
   };
 
@@ -66,6 +83,18 @@ export default function SavedJobsPage() {
         <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-6 flex items-center gap-3 text-sm text-danger">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {lastRemoved && (
+        <div className="bg-surface border border-primary/40 rounded-xl p-3 mb-6 flex items-center justify-between gap-3 text-xs shadow-xs animate-fade-in">
+          <span>Removed <strong>{lastRemoved.job.title}</strong> from saved jobs.</span>
+          <button
+            onClick={handleUndo}
+            className="font-bold text-primary hover:underline px-2 py-1 rounded"
+          >
+            Undo
+          </button>
         </div>
       )}
 

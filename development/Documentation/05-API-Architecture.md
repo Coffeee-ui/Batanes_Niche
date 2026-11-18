@@ -15,7 +15,7 @@ The **Batanes Niche Job Portal** exposes a standard RESTful HTTP API mounted at 
    - `401 Unauthorized`: Missing, expired, blacklisted, or cryptographically invalid token.
    - `403 Forbidden`: Authenticated user lacks the necessary role or resource ownership.
    - `404 Not Found`: Target resource does not exist or has been soft-deleted.
-   - `422 Unprocessable Entity`: Request body failed Pydantic schema validation.
+   - `422 Unprocessable Entity`: Request body failed Zod schema validation.
    - `429 Too Many Requests`: Rate limit exceeded.
    - `500 Internal Server Error`: Unhandled server exception (sanitized; recorded to `error_reports`).
 4. **Uniform Error Format**:
@@ -29,7 +29,7 @@ The **Batanes Niche Job Portal** exposes a standard RESTful HTTP API mounted at 
 
 ## 2. Global Rate Limiting Architecture
 
-Rate limits are enforced at the router layer using **SlowAPI** backed by in-memory token buckets:
+Rate limits are enforced at the router layer using **express-rate-limit** backed by in-memory token buckets:
 
 | Endpoint Group | Default Limit | Purpose |
 |---|---|---|
@@ -148,7 +148,8 @@ Job catalog filters:
 - `query`: String (matches substring in title, description, or required skills).
 - `municipality`: String (exact match against canonical municipality).
 - `employment_type`: String (`Full-time`, `Part-time`, `Contract`, `Seasonal`, `Internship`).
-- `salary_min`: Float (filters for jobs with `salary_max >= salary_min` or `salary_min >= salary_min`).
+- `salary_min`: Float (filters for jobs with `salary_max >= salary_min`).
+- `salary_max`: Float (filters for jobs with `salary_min <= salary_max`).
 
 ---
 

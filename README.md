@@ -335,7 +335,7 @@ The repository maintains an exhaustive developer ecosystem within the `developme
 | **01** | [**System Overview**](./development/Documentation/01-System-Overview.md) | Vision, target audience, key problems solved, Version 2 scope, and explicit non-features. |
 | **02** | [**Architecture**](./development/Documentation/02-Architecture.md) | High-level system architecture, multi-tier layout, layered domain boundaries, and Mermaid system diagram. |
 | **03** | [**Repository Structure**](./development/Documentation/03-Repository-Structure.md) | Complete directory tree breakdown (`backend/`, `frontend/`, `development/`, `docker/`, `reference UI/`), and code placement rules. |
-| **04** | [**Database and ERD**](./development/Documentation/04-Database-and-ERD.md) | Full Mermaid ERD (12 tables), schema definitions, constraints, indexes, lifecycle, and complete Data Dictionary. |
+| **04** | [**Database and ERD**](./development/Documentation/04-Database-and-ERD.md) | Full Mermaid ERD (15 tables), schema definitions, constraints, indexes, lifecycle, and complete Data Dictionary. |
 | **05** | [**API Architecture**](./development/Documentation/05-API-Architecture.md) | REST API specifications, `/api/v1` routes, request/response contracts, rate limiting, and endpoint catalog. |
 | **06** | [**Authentication and Security**](./development/Documentation/06-Authentication-and-Security.md) | JWT access/refresh token rotation, reuse detection, bcrypt hashing, 6-digit OTP password reset, and security diagrams. |
 | **07** | [**User Roles and Permissions**](./development/Documentation/07-User-Roles-and-Permissions.md) | Role taxonomy (Guest, Seeker, Employer, Administrator), RBAC capability matrix, and row-level ownership checks. |

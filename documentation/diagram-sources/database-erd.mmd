@@ -17,6 +17,16 @@ erDiagram
         string role
         string account_status
         datetime created_at
+        string date_of_birth
+        string desired_employment_type
+        string work_experience
+        boolean is_discoverable
+        boolean onboarding_completed
+        boolean walkthrough_dismissed
+        string notification_preferences
+        string language_preference
+        datetime deactivated_at
+        datetime deletion_requested_at
     }
 
     employer_profiles {
@@ -25,6 +35,9 @@ erDiagram
         string company_address
         string company_description
         string business_type
+        string industry
+        boolean onboarding_completed
+        boolean walkthrough_dismissed
     }
 
     job_seeker_profiles {
@@ -46,6 +59,17 @@ erDiagram
         string employment_type
         string required_skills
         string status
+        string work_arrangement
+        string street_or_landmark
+        string multiple_locations
+        string experience_level
+        string salary_type
+        string salary_period
+        string benefits
+        datetime application_deadline
+        string application_questions
+        boolean is_featured
+        string close_option
         datetime created_at
         datetime deleted_at
     }
@@ -58,6 +82,17 @@ erDiagram
         string resume_url
         string status
         datetime created_at
+        datetime updated_at
+        string answers
+        string stage
+        string rejection_template
+        string rejection_message
+        datetime interview_date
+        string interview_type
+        string interview_location
+        string interview_message
+        string interview_status
+        datetime withdrawn_at
     }
 
     saved_jobs {
@@ -127,6 +162,30 @@ erDiagram
         string details
     }
 
+    followed_employers {
+        int id PK
+        int seeker_id FK
+        int employer_id FK
+        datetime created_at
+    }
+
+    saved_candidates {
+        int id PK
+        int employer_id FK
+        int candidate_id FK
+        datetime created_at
+    }
+
+    user_reports {
+        int id PK
+        int reporter_id FK
+        string target_type
+        int target_id
+        string reason
+        string details
+        datetime created_at
+    }
+
     users ||--o| employer_profiles : "has one"
     users ||--o| job_seeker_profiles : "has one"
     users ||--o{ jobs : "posts"
@@ -136,6 +195,11 @@ erDiagram
     users ||--o{ refresh_tokens : "holds"
     users ||--o{ password_reset_tokens : "requests"
     users ||--o{ audit_logs : "generates"
+    users ||--o{ followed_employers : "follows (seeker_id)"
+    users ||--o{ followed_employers : "followed by (employer_id)"
+    users ||--o{ saved_candidates : "saves (employer_id)"
+    users ||--o{ saved_candidates : "saved as (candidate_id)"
+    users ||--o{ user_reports : "files (reporter_id)"
 
     jobs ||--o{ applications : "receives"
     jobs ||--o{ saved_jobs : "bookmarked by"

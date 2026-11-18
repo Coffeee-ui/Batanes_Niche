@@ -17,7 +17,7 @@ The TypeScript backend is engineered as a bit-for-bit, behaviorally identical dr
 3. **Identical Error Format (`{ "detail": ... }`)**:
    - Error responses adhere strictly to `{ "detail": string | Array<{ loc: string[], msg: string }> }`. Zod validation errors return HTTP 422 Unprocessable Entity formatted to mirror FastAPI `RequestValidationError`.
 4. **Database & Data Parity**:
-   - The database schema is bit-for-bit compatible with the existing 12 tables and constraints in SQLite (`backend/batanes_niche.db`) and PostgreSQL. Prisma models map directly to existing table and column names using `@map` / `@@map`.
+   - The database schema is bit-for-bit compatible with all 15 tables and constraints in SQLite (`backend/batanes_niche.db`) and PostgreSQL. Prisma models map directly to existing table and column names using `@map` / `@@map`.
 5. **No Logic Alterations**:
    - Business rules, geographic scoring, deterministic 70/30 recommendation formulas, token rotation algorithms, and SSR admin functionality remain strictly identical.
 
@@ -118,22 +118,25 @@ backend/
 
 ---
 
-## 4. Database Schema Parity (12 Tables)
+## 4. Database Schema Parity (15 Tables)
 
 The Prisma schema matches the SQLite and PostgreSQL schemas exactly:
 
-1. `users`: Core account identity, role (`job_seeker`, `employer`, `admin`), account status (`active`, `suspended`, `inactive`), profile completeness.
-2. `employer_profiles`: 1-to-1 extension with `company_name`, `company_address`, `business_type`.
+1. `users`: Core account identity, role (`job_seeker`, `employer`, `admin`), account status (`active`, `suspended`), profile completeness, discoverability (`is_discoverable`), onboarding flags, and deactivation timestamps.
+2. `employer_profiles`: 1-to-1 extension with `company_name`, `company_address`, `business_type`, `industry`, onboarding status.
 3. `job_seeker_profiles`: 1-to-1 extension with `bio`, `education`, `experience_years`.
-4. `jobs`: Listings with `salary_min`, `salary_max`, `employment_type`, `required_skills`, `status`, soft-delete `deleted_at`.
-5. `applications`: Many-to-one between `jobs` and `users` (seeker), `status` (`pending`, `accepted`, `rejected`), unique `(job_id, seeker_id)`.
+4. `jobs`: Listings with `salary_min`, `salary_max`, `employment_type`, `required_skills`, `status`, `work_arrangement`, `is_featured`, screening questions, deadlines, and soft-delete `deleted_at`.
+5. `applications`: Many-to-one between `jobs` and `users` (seeker), `status` (`new`, `accepted`, `rejected`, `withdrawn`), recruitment `stage`, interview fields, and unique `(job_id, seeker_id)`.
 6. `saved_jobs`: Bookmarks with unique `(seeker_id, job_id)`.
 7. `notifications`: Persistent notifications with `type` (`new_application`, `application_status_updated`).
 8. `refresh_tokens`: Token rotation with hashed tokens, expiry, and revocation flags.
-9. `revoked_tokens`: JTI blacklist for logged-out access tokens.
+9. `revoked_tokens`: JTI blacklist for logged-out access tokens (`token_jti`).
 10. `password_reset_tokens`: 6-digit OTP tokens with bcrypt hashes, attempt counters, and expiry.
 11. `error_reports`: Unhandled 500 error incident tracking with sanitized `trace_id`.
 12. `audit_logs`: Security and administrative action auditing.
+13. `followed_employers`: Job seekers following employer accounts with unique `(seeker_id, employer_id)`.
+14. `saved_candidates`: Employers saving / shortlisting candidate profiles with unique `(employer_id, candidate_id)`.
+15. `user_reports`: User-submitted content, vacancy, or profile moderation reports.
 
 ---
 

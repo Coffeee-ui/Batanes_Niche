@@ -1,6 +1,6 @@
-# 25 — Database Environment Switching
+# 23 — Database Environment Switching
 
-> Both backends read the same `.env` variables; only the TypeScript backend performs Prisma schema synchronization automatically.
+> The backend reads environment variables from `.env` and performs Prisma schema provider synchronization automatically.
 
 ---
 
@@ -37,17 +37,6 @@ client.ts (PrismaClient)
 main.ts
   - GET /ready → { status, database, provider, latencyMs }
   - GET /health → { status, app, version, timestamp }
-```
-
-For the Python backend, `session.py` reads the same `.env` and selects the correct SQLAlchemy engine factory:
-
-```
-.env (DATABASE_URL)
-        │
-        ▼
-session.py (create_engine)
-  - postgresql:// → QueuePool + SSL for Supabase
-  - sqlite:///    → StaticPool + PRAGMA foreign_keys = ON
 ```
 
 ---
@@ -213,29 +202,6 @@ pnpm db:reset
 
 ---
 
-## Python Backend (`backend/`)
-
-The Python/FastAPI backend uses SQLAlchemy and reads the same `DATABASE_URL`.
-
-**File**: `backend/app/database/session.py`
-
-| Provider | Engine Config |
-|---|---|
-| `postgresql://` | `QueuePool`, `pool_pre_ping=True`, SSL args for Supabase (`?sslmode=require`) |
-| `sqlite:///` | `StaticPool`, `check_same_thread=False`, `PRAGMA foreign_keys = ON` via event listener |
-
-**File**: `backend/app/core/config.py` — additional fields:
-
-| Variable | Type | Default |
-|---|---|---|
-| `DB_PROVIDER` | `str` | inferred from `DATABASE_URL` |
-| `DB_POOL_MIN` | `int` | `2` |
-| `DB_POOL_MAX` | `int` | `10` |
-| `DB_TIMEOUT_SEC` | `int` | `30` |
-| `DB_SSL` | `bool` | `True` (PostgreSQL) |
-
----
-
 ## Health & Readiness Probes
 
 | Endpoint | Description |
@@ -259,7 +225,6 @@ If the database is unreachable, `/ready` returns `503 Service Unavailable`.
 
 ## Notes & Caveats
 
-- **Admin sessions are not portable** across backends (FastAPI vs TypeScript) or across database switches — re-login at `/admin` after any switch.
-- **`prisma db push` is not `migrate`** — it applies schema changes directly without a migration history. For a production migration history use `prisma migrate deploy` (requires `DIRECT_URL`).
-- **SQLite does not enforce foreign keys by default** — `session.py` enables them via `PRAGMA foreign_keys = ON` on every connection.
-- **`schema.prisma` is modified in place** by `syncProvider.ts` — commit the file after switching if you intend to share the provider setting with your team via version control.
+- **Admin sessions**: Re-login at `/admin` after any database switch.
+- **`prisma db push` is not `migrate`**: It applies schema changes directly without a migration history. For a production migration history use `prisma migrate deploy` (requires `DIRECT_URL`).
+- **`schema.prisma` is modified in place** by `syncProvider.ts`: Commit the file after switching if you intend to share the provider setting with your team via version control.

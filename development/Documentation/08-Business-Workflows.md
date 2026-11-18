@@ -68,6 +68,22 @@ stateDiagram-v2
     end note
 ```
 
+### Extended Job Posting Fields
+
+Beyond the core lifecycle fields, job postings support the following additional schema-level attributes (exposed via `POST /api/v1/jobs` and `PUT /api/v1/jobs/:jobId`):
+
+| Field | Type | Description |
+|---|---|---|
+| `work_arrangement` | String? | `remote`, `hybrid`, or `on-site` |
+| `experience_level` | String? | `entry`, `mid`, or `senior` |
+| `salary_type` | String (default `'range'`) | `fixed` or `range` salary display |
+| `salary_period` | String (default `'monthly'`) | `monthly`, `weekly`, or `daily` |
+| `benefits` | String? | Serialized list of employment benefits |
+| `application_deadline` | DateTime? | Automatic vacancy closure date |
+| `application_questions` | String? | Custom questions presented to applicants |
+| `is_featured` | Boolean (default `false`) | Flags the vacancy for the homepage featured section (`GET /api/v1/jobs/featured`) |
+| `close_option` | String? | Automatic close behavior when vacancy is filled |
+
 ---
 
 ## 4. Job Application Submission & Notification Workflow
@@ -89,7 +105,7 @@ flowchart TD
     DupCheck -- Yes --> ErrDup[HTTP 400: Already applied for this job]
     DupCheck -- No --> BeginTxn[Begin Atomic DB Transaction]
     
-    BeginTxn --> InsertApp[INSERT INTO applications status='pending']
+    BeginTxn --> InsertApp[INSERT INTO applications status='new', stage='new']
     InsertApp --> InsertNotif[INSERT INTO notifications recipient=employer_id, type='new_application']
     InsertNotif --> CommitTxn[Commit DB Transaction]
     
@@ -103,7 +119,7 @@ flowchart TD
 
 ## 5. Application Status Transition & Applicant Notification Workflow
 
-Employers review applications and update candidate statuses (`pending` -> `accepted` / `rejected`). Each status change atomically notifies the candidate.
+Employers review applications and update candidate statuses (`new` -> `reviewed` / `accepted` / `rejected`). Each status change atomically notifies the candidate.
 
 ```mermaid
 flowchart TD
@@ -117,7 +133,7 @@ flowchart TD
     TransCheck -- No --> ErrTrans[HTTP 400: Invalid status transition]
     TransCheck -- Yes --> BeginTxn[Begin Atomic DB Transaction]
     
-    BeginTxn --> UpdateStatus[UPDATE applications SET status = new_status]
+    BeginTxn --> UpdateStatus[UPDATE applications SET status = new_status, stage = new_stage]
     UpdateStatus --> CreateSeekerNotif[INSERT INTO notifications recipient=seeker_id, type='application_status_updated']
     CreateSeekerNotif --> CommitTxn[Commit DB Transaction]
     
@@ -128,10 +144,39 @@ flowchart TD
 ```
 
 ### Permitted Status Transitions
-- `pending` -> `accepted` (Applicant approved for hiring)
-- `pending` -> `rejected` (Applicant not selected)
+- `new` -> `reviewed`, `accepted`, `rejected`
+- `reviewed` -> `accepted`, `rejected`
 - `accepted` -> `pending` (Status re-opened for evaluation)
 - `rejected` -> `pending` (Application reconsidered)
+
+### Extended Application Pipeline (Fully Implemented)
+
+The application pipeline supports a rich recruitment workflow beyond simple status changes. All the following endpoints are live in `POST /api/v1/applications/:appId/*`:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/:appId` | `PUT` | Update application `status` and `stage` fields |
+| `/:appId/stage` | `POST` | Alias for updating the pipeline stage |
+| `/:appId/invite` | `POST` | Employer sends interview invitation (sets `interview_date`, `interview_type`, `interview_location`, `interview_message`, `interview_status='pending'`) |
+| `/:appId/interview-response` | `PUT` | Job seeker accepts or declines the interview invitation (sets `interview_status` to `'accepted'` or `'declined'`) |
+| `/:appId/reject` | `POST` | Reject application with an optional `rejection_template` and/or custom `rejection_message` |
+| `/:appId/withdraw` | `POST` | Seeker or employer withdraws the application; sets `withdrawn_at` timestamp |
+
+#### Application Entity — Extended Fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `status` | String | `'new'` | Broad lifecycle status |
+| `stage` | String | `'new'` | Granular recruitment pipeline stage |
+| `answers` | String? | — | Serialized responses to application questions |
+| `rejection_template` | String? | — | Template identifier used for rejection |
+| `rejection_message` | String? | — | Custom rejection message sent to applicant |
+| `interview_date` | DateTime? | — | Scheduled interview date and time |
+| `interview_type` | String? | — | `'in-person'`, `'video'`, or `'phone'` |
+| `interview_location` | String? | — | Physical address or video call link |
+| `interview_message` | String? | — | Personalized invitation message |
+| `interview_status` | String? | — | `'pending'`, `'accepted'`, or `'declined'` |
+| `withdrawn_at` | DateTime? | — | Timestamp when application was withdrawn |
 
 ---
 
@@ -185,10 +230,10 @@ flowchart TD
     RoleGuard -- Yes --> ExistsGuard{Saved Job Record Exists?}
     
     ExistsGuard -- Yes (Action: Save) --> ErrDup[HTTP 400: Job already saved]
-    ExistsGuard -- No (Action: Save) --> InsertSaved[INSERT INTO saved_jobs user_id, job_id]
+    ExistsGuard -- No (Action: Save) --> InsertSaved[INSERT INTO saved_jobs seeker_id, job_id]
     InsertSaved --> DoneSave([Return HTTP 201 Created SavedJobOut])
     
-    ExistsGuard -- Yes (Action: Delete) --> DeleteSaved[DELETE FROM saved_jobs WHERE id = id AND user_id = user.id]
+    ExistsGuard -- Yes (Action: Delete) --> DeleteSaved[DELETE FROM saved_jobs WHERE seeker_id = user.id AND job_id = job_id]
     DeleteSaved --> DoneDel([Return HTTP 200 OK])
 ```
 
@@ -196,7 +241,7 @@ flowchart TD
 
 ## 8. Administrative User Moderation Workflow
 
-Administrators can search, inspect, suspend, and restore platform accounts via the Jinja2 interface.
+Administrators can search, inspect, suspend, and restore platform accounts via the server-rendered Nunjucks administrative interface (`/admin`).
 
 ```mermaid
 flowchart TD
@@ -216,7 +261,28 @@ flowchart TD
 
 ---
 
-## 9. Next Steps
+## 9. Social Engagement & Moderation Workflows
+
+### 9.1 Followed Employers
+Job seekers can follow employer accounts to track new openings:
+- Relationship stored in `followed_employers` with `(seeker_id, employer_id)`.
+- Unique constraint prevents duplicate follow relationships.
+- Cascades on user deletion (`ON DELETE CASCADE`).
+
+### 9.2 Saved Candidates
+Employers can shortlist candidate profiles when reviewing the candidate directory or applications:
+- Shortlist stored in `saved_candidates` with `(employer_id, candidate_id)`.
+- Unique constraint prevents duplicate candidate saves.
+- Candidate contact details remain governed by the privacy reveal invariant.
+
+### 9.3 Content and Account Reporting
+Users can report abusive, fraudulent, or non-compliant content:
+- Stored in `user_reports` (`reporter_id`, `target_type`, `target_id`, `reason`, `details`).
+- Provides administrative auditability for user moderation.
+
+---
+
+## 10. Next Steps
 
 - For comprehensive user journey and multi-tier system flowcharts, see [**20-System-Flowcharts.md**](./20-System-Flowcharts.md).
 - For practical developer modification maps and code paths, see [**21-Developer-Architecture-Guide.md**](./21-Developer-Architecture-Guide.md).

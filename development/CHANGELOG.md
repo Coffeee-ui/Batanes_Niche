@@ -4,6 +4,57 @@ All meaningful development changes to the Batanes Niche Job Portal are recorded 
 
 ---
 
+## [2.2.1] — 2026-11-19
+
+### Final Acceptance Audit & Production Stabilization Verification
+
+- **Database-Level Partial Unique Index for Active Applications**:
+  - Replaced the hard unique constraint in `Database/migrations/001_initial_schema.sql` with partial unique index `uq_active_applications` on `(job_id, seeker_id) WHERE status NOT IN ('withdrawn', 'rejected')`.
+  - Added automatic verification and creation of `uq_active_applications` in `development/scripts/init-db.ts` for both SQLite and PostgreSQL.
+  - Allows reapplication after withdrawal or rejection while vacancy remains open, while strictly preventing duplicate active applications and preserving historical timestamps.
+
+- **Automatic Vacancy Closure after Deadlines**:
+  - Implemented `autoCloseExpiredDeadlines()` in `JobRepository` and integrated into listing and lookup flows (`listActiveJobs`, `getById`), automatically transitioning published vacancies with passed deadlines to `'closed'` with `close_option: 'ended'`.
+
+- **Saved Jobs Unavailable States & Instant Undo**:
+  - Updated `JobCard.tsx` to dynamically render `"Unavailable"` badge (instead of `"Hiring"`) for closed, ended, or archived jobs.
+  - Added instant "Undo" toast and notification banner in `SavedJobsPage.tsx` allowing job seekers to restore accidentally removed saved jobs.
+
+- **Git & Asset Cleanliness**:
+  - Updated root `.gitignore` to ensure `Reference-UI/New-Ui/` remains intact and tracked/available while ignoring `/documentation/` and non-active reference UI directories.
+  - Verified zero accidental build files, `.bak`, or temporary artifacts.
+
+- **Automated Audit Verification Suite**:
+  - Created `development/scripts/audit-verifier.ts` executing 19 end-to-end programmatic acceptance suites covering all 14 functional areas and 8-step Resend lifecycle with 100% pass rate.
+
+### Synchronized & Updated
+
+- **Database Schema SQL Reference (`Database/migrations/001_initial_schema.sql`)**
+  - Fully synchronized with authoritative Prisma schema (`backend/prisma/schema.prisma`).
+  - Added 10 missing columns to `users` (`date_of_birth`, `desired_employment_type`, `work_experience`, `is_discoverable`, `onboarding_completed`, `walkthrough_dismissed`, `notification_preferences`, `language_preference`, `deactivated_at`, `deletion_requested_at`).
+  - Added 3 missing columns to `employer_profiles` (`industry`, `onboarding_completed`, `walkthrough_dismissed`).
+  - Added 11 missing columns to `jobs` (`work_arrangement`, `street_or_landmark`, `multiple_locations`, `experience_level`, `salary_type`, `salary_period`, `benefits`, `application_deadline`, `application_questions`, `is_featured`, `close_option`).
+  - Added 11 missing columns to `applications` (`updated_at`, `answers`, `stage`, `rejection_template`, `rejection_message`, `interview_date`, `interview_type`, `interview_location`, `interview_message`, `interview_status`, `withdrawn_at`), corrected default status to `'new'`, and added `idx_applications_job_seeker` composite index.
+  - Added 3 missing tables: `followed_employers`, `saved_candidates`, `user_reports` with foreign key relations, unique constraints, and indexes. Total tables: 15.
+
+- **Entity-Relationship Documentation (`development/Documentation/04-Database-and-ERD.md`)**
+  - Updated from 12 to 15 core relational tables across 5 functional categories.
+  - Updated Mermaid ERD with all 15 entities, relationships, attributes, and indexes.
+  - Corrected primary keys for `employer_profiles` and `job_seeker_profiles` (`user_id` PK/FK, no surrogate `id`).
+  - Corrected `saved_jobs` foreign key to `seeker_id` and timestamp to `saved_at`.
+  - Corrected `revoked_tokens` JTI column name to `token_jti`.
+  - Updated complete Data Dictionary covering all 15 tables and their sensitivity ratings.
+
+- **Architecture & API Documentation (`01`, `02`, `05`, `07`, `08`, `12`, `22`, `23`)**
+  - Removed lingering legacy Python/FastAPI/SQLAlchemy/SlowAPI/Pydantic references; standardized on TypeScript 5.4+, Express.js 4.x, Prisma ORM 5.x, Zod 3.x, express-rate-limit, and Nunjucks SSR.
+  - Documented extended recruitment pipeline (interview scheduling, custom rejection messaging, application withdrawal, and stage tracking).
+  - Documented social features (followed employers, saved candidates) and moderation reporting (`user_reports`).
+  - Documented account deactivation and deletion lifecycle attributes.
+  - Updated ERD source in `documentation/diagram-sources/database-erd.mmd` to 15 tables.
+  - Synchronized `DATABASE_SETUP.md`, `ENVIRONMENT_VARIABLES.md`, root `README.md`, and `Database/README.md`.
+
+---
+
 ## [2.1.0] — 2026-11-07
 
 ### Added

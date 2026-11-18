@@ -27,55 +27,60 @@ Job application submission is implemented in `ApplicationService.submit_applicat
 1. **Role Check**: Verifies `current_user.role == 'job_seeker'`. Employers and guests are rejected with `HTTP 403 Forbidden`.
 2. **Job Status Check**: Verifies target job exists, has `status == 'active'`, and `deleted_at IS NULL`. Closed or deleted jobs are rejected with `HTTP 400 Bad Request`.
 3. **Self-Application Check**: Verifies `job.employer_id != seeker.id`. Users cannot apply to their own job listings (`HTTP 400 Bad Request`).
-4. **Duplicate Application Prevention**: Verifies via `ApplicationRepository.has_active_application(db, job_id, seeker_id)` and the database unique constraint `uq_applications_job_seeker`. Duplicate attempts are rejected with `HTTP 400 Bad Request: You have already applied for this job.`
+4. **Duplicate Application Prevention**: Verifies via `ApplicationRepository.hasActiveApplication(job_id, seeker_id)` and the database partial unique index `uq_active_applications` on `(job_id, seeker_id) WHERE status NOT IN ('withdrawn', 'rejected')`. Duplicate active attempts are rejected with `HTTP 409 Conflict: You already have an active application for this job.`, while allowing reapplications after withdrawal or rejection with full history preserved.
 
 ### Transaction Boundary Execution
-```python
-try:
-    # 1. Insert application record
-    application = Application(
-        job_id=job.id,
-        seeker_id=seeker.id,
-        cover_letter=app_data.cover_letter.strip() if app_data.cover_letter else None,
-        resume_url=app_data.resume_url.strip() if app_data.resume_url else seeker.resume_url,
-        status="pending",
-    )
-    ApplicationRepository.create(db, application)
-    db.flush()
+```typescript
+// Implemented via Prisma $transaction in applicationService.ts
+return await prisma.$transaction(async (tx) => {
+  // 1. Insert application record
+  const application = await tx.application.create({
+    data: {
+      job_id: job.id,
+      seeker_id: seeker.id,
+      cover_letter: appData.cover_letter?.trim() || null,
+      resume_url: appData.resume_url?.trim() || seeker.resume_url,
+      answers: appData.answers ? JSON.stringify(appData.answers) : null,
+      status: "new",
+      stage: "new",
+    },
+  });
 
-    # 2. Insert employer notification
-    notification = Notification(
-        user_id=job.employer_id,
-        title="New Application Received",
-        message=f"{seeker.full_name} submitted an application for your job posting: '{job.title}'.",
-        type="new_application",
-        link="/employer",
-    )
-    NotificationRepository.create(db, notification)
+  // 2. Insert employer notification
+  await tx.notification.create({
+    data: {
+      user_id: job.employer_id,
+      title: "New Application Received",
+      message: `${seeker.full_name} submitted an application for your job posting: '${job.title}'.`,
+      type: "new_application",
+      link: "/employer",
+    },
+  });
 
-    # 3. Commit atomic transaction
-    db.commit()
-    db.refresh(application)
-except Exception as exc:
-    db.rollback()
-    raise HTTPException(status_code=400, detail=f"Failed to submit application: {exc}")
+  return application;
+});
 ```
 
 ---
 
 ## 3. Application Status State Machine & Transitions
 
-Employers manage applicant progress through a validated state machine (`ApplicationService.update_application_status`):
+Employers manage applicant progress through a validated state machine and recruitment pipeline (`applicationService.ts`):
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending : Seeker Submits Application
-    Pending --> Accepted : Employer Accepts Candidate
-    Pending --> Rejected : Employer Rejects Candidate
-    Accepted --> Pending : Re-opened for Review
-    Rejected --> Pending : Reconsidered for Review
+    [*] --> New : Seeker Submits Application
+    New --> Reviewed : Employer Reviews Candidate
+    New --> Accepted : Employer Accepts Candidate
+    New --> Rejected : Employer Rejects Candidate
+    Reviewed --> Accepted : Employer Accepts Candidate
+    Reviewed --> Rejected : Employer Rejects Candidate
+    Accepted --> New : Re-opened for Review
+    Rejected --> New : Reconsidered for Review
+    New --> Withdrawn : Seeker Withdraws Application
     Accepted --> [*]
     Rejected --> [*]
+    Withdrawn --> [*]
 
     note right of Accepted
         Applicant notified of acceptance
@@ -84,37 +89,45 @@ stateDiagram-v2
 
     note right of Rejected
         Applicant notified of status
+        Optional rejection template or custom message
     end note
 ```
 
 ### Transition Enforcement Rules
-- Allowed transitions from `pending`: `accepted`, `rejected`.
-- Allowed transitions from `accepted`: `pending`.
-- Allowed transitions from `rejected`: `pending`.
-- Any transition not defined in the transition map is rejected with `HTTP 400 Bad Request: Invalid status transition from '{current}' to '{new}'.`
+- Allowed transitions from `new`: `reviewed`, `accepted`, `rejected`, `withdrawn`.
+- Allowed transitions from `reviewed`: `accepted`, `rejected`, `withdrawn`.
+- Allowed transitions from `accepted`: `new`.
+- Allowed transitions from `rejected`: `new`.
+
+### Extended Pipeline & Interview Scheduling
+The application domain supports full recruitment lifecycle management:
+- **Interview Invitations**: Employers can schedule interviews with `interview_date`, `interview_type` (in-person, video, phone), `interview_location`, and `interview_message`. The applicant responds with `interview_status` (`accepted` or `declined`).
+- **Rejection Messaging**: Employers can choose a predefined `rejection_template` or write a custom `rejection_message`.
+- **Application Withdrawal**: Job seekers can withdraw an application at any point prior to finalization (`withdrawn_at` timestamp).
 
 ### Transaction Boundary on Status Update
-```python
-try:
-    application.status = new_status
-    ApplicationRepository.update(db, application)
+```typescript
+// Implemented via Prisma $transaction in applicationService.ts
+return await prisma.$transaction(async (tx) => {
+  const updatedApp = await tx.application.update({
+    where: { id: applicationId },
+    data: { status: newStatus, stage: newStage || undefined },
+  });
 
-    # Atomic Notification for Applicant
-    status_text = "accepted" if new_status == "accepted" else ("rejected" if new_status == "rejected" else "marked pending")
-    notification = Notification(
-        user_id=application.seeker_id,
-        title="Application Status Updated",
-        message=f"Your application for '{application.job.title}' was {status_text}.",
-        type="application_status_updated",
-        link="/dashboard",
-    )
-    NotificationRepository.create(db, notification)
+  // Atomic Notification for Applicant
+  const statusText = newStatus === "accepted" ? "accepted" : (newStatus === "rejected" ? "rejected" : "updated");
+  await tx.notification.create({
+    data: {
+      user_id: application.seeker_id,
+      title: "Application Status Updated",
+      message: `Your application for '${application.job.title}' was ${statusText}.`,
+      type: "application_status_updated",
+      link: "/dashboard",
+    },
+  });
 
-    db.commit()
-    db.refresh(application)
-except Exception as exc:
-    db.rollback()
-    raise HTTPException(status_code=400, detail=f"Failed to update application status: {exc}")
+  return updatedApp;
+});
 ```
 
 ---

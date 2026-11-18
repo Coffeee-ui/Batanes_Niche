@@ -115,12 +115,16 @@ export class UserRepository {
     municipality?: string | null,
     island?: string | null,
     skill?: string | null,
+    education?: string | null,
+    experienceYears?: number | null,
+    desiredEmploymentType?: string | null,
     limit: number = 50,
     offset: number = 0
   ): Promise<UserWithProfiles[]> {
     const where: Prisma.UserWhereInput = {
       role: 'job_seeker',
       account_status: 'active',
+      is_discoverable: true,
     };
 
     if (municipality) {
@@ -138,12 +142,183 @@ export class UserRepository {
       where.skills = { contains: skill.trim() };
     }
 
+    if (desiredEmploymentType) {
+      where.desired_employment_type = { contains: desiredEmploymentType.trim() };
+    }
+
+    if (education || (experienceYears !== null && experienceYears !== undefined)) {
+      where.job_seeker_profile = {
+        ...(education ? { education: { contains: education.trim() } } : {}),
+        ...(experienceYears !== null && experienceYears !== undefined
+          ? { experience_years: { gte: experienceYears } }
+          : {}),
+      };
+    }
+
     return prisma.user.findMany({
       where,
       include: { employer_profile: true, job_seeker_profile: true },
       orderBy: { full_name: 'asc' },
       skip: offset,
       take: limit,
+    });
+  }
+
+  static async listEmployers(
+    company?: string | null,
+    industry?: string | null,
+    municipality?: string | null,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<Array<UserWithProfiles & { _count: { jobs: number } }>> {
+    const where: Prisma.UserWhereInput = {
+      role: 'employer',
+      account_status: 'active',
+    };
+
+    if (municipality) {
+      where.municipality = { equals: municipality.trim() };
+    }
+
+    if (company || industry) {
+      where.employer_profile = {
+        ...(company ? { company_name: { contains: company.trim() } } : {}),
+        ...(industry
+          ? {
+              OR: [
+                { industry: { contains: industry.trim() } },
+                { business_type: { contains: industry.trim() } },
+              ],
+            }
+          : {}),
+      };
+    }
+
+    return prisma.user.findMany({
+      where,
+      include: {
+        employer_profile: true,
+        job_seeker_profile: true,
+        _count: {
+          select: {
+            jobs: {
+              where: {
+                status: { in: ['published', 'active'] },
+                deleted_at: null,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { full_name: 'asc' },
+      skip: offset,
+      take: limit,
+    });
+  }
+
+  // Saved Candidates
+  static async saveCandidate(employerId: number, candidateId: number) {
+    return prisma.savedCandidate.upsert({
+      where: {
+        employer_id_candidate_id: {
+          employer_id: employerId,
+          candidate_id: candidateId,
+        },
+      },
+      update: {},
+      create: {
+        employer_id: employerId,
+        candidate_id: candidateId,
+      },
+    });
+  }
+
+  static async removeSavedCandidate(employerId: number, candidateId: number) {
+    return prisma.savedCandidate.deleteMany({
+      where: {
+        employer_id: employerId,
+        candidate_id: candidateId,
+      },
+    });
+  }
+
+  static async listSavedCandidates(employerId: number) {
+    const saved = await prisma.savedCandidate.findMany({
+      where: { employer_id: employerId },
+      include: {
+        candidate: {
+          include: { job_seeker_profile: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+    // Filter out candidates who disabled discoverability or are not active
+    return saved.filter(
+      s => s.candidate.account_status === 'active' && s.candidate.is_discoverable
+    );
+  }
+
+  // Followed Employers
+  static async followEmployer(seekerId: number, employerId: number) {
+    return prisma.followedEmployer.upsert({
+      where: {
+        seeker_id_employer_id: {
+          seeker_id: seekerId,
+          employer_id: employerId,
+        },
+      },
+      update: {},
+      create: {
+        seeker_id: seekerId,
+        employer_id: employerId,
+      },
+    });
+  }
+
+  static async unfollowEmployer(seekerId: number, employerId: number) {
+    return prisma.followedEmployer.deleteMany({
+      where: {
+        seeker_id: seekerId,
+        employer_id: employerId,
+      },
+    });
+  }
+
+  static async isFollowingEmployer(seekerId: number, employerId: number): Promise<boolean> {
+    const count = await prisma.followedEmployer.count({
+      where: { seeker_id: seekerId, employer_id: employerId },
+    });
+    return count > 0;
+  }
+
+  static async listFollowedEmployers(seekerId: number) {
+    return prisma.followedEmployer.findMany({
+      where: { seeker_id: seekerId },
+      include: {
+        employer: {
+          include: { employer_profile: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  // User Reports
+  static async createReport(
+    reporterId: number,
+    targetType: string,
+    targetId: number,
+    reason: string,
+    details?: string | null
+  ) {
+    return prisma.userReport.create({
+      data: {
+        reporter_id: reporterId,
+        target_type: targetType,
+        target_id: targetId,
+        reason,
+        details: details || null,
+      },
     });
   }
 

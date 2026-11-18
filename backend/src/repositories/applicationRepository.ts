@@ -20,14 +20,31 @@ export class ApplicationRepository {
   }
 
   static async getByJobAndSeeker(jobId: number, seekerId: number): Promise<ApplicationWithRelations | null> {
-    return prisma.application.findUnique({
+    return prisma.application.findFirst({
       where: {
-        job_id_seeker_id: { job_id: jobId, seeker_id: seekerId },
+        job_id: jobId,
+        seeker_id: seekerId,
       },
       include: {
         job: { include: { employer: { include: { employer_profile: true } } } },
         seeker: { include: { job_seeker_profile: true } },
       },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  static async getActiveByJobAndSeeker(jobId: number, seekerId: number): Promise<ApplicationWithRelations | null> {
+    return prisma.application.findFirst({
+      where: {
+        job_id: jobId,
+        seeker_id: seekerId,
+        status: { notIn: ['withdrawn', 'rejected'] },
+      },
+      include: {
+        job: { include: { employer: { include: { employer_profile: true } } } },
+        seeker: { include: { job_seeker_profile: true } },
+      },
+      orderBy: { created_at: 'desc' },
     });
   }
 
@@ -95,13 +112,14 @@ export class ApplicationRepository {
   }
 
   static async hasActiveApplication(jobId: number, seekerId: number): Promise<boolean> {
-    const existing = await prisma.application.findUnique({
+    const existing = await prisma.application.findFirst({
       where: {
-        job_id_seeker_id: { job_id: jobId, seeker_id: seekerId },
+        job_id: jobId,
+        seeker_id: seekerId,
+        status: { notIn: ['withdrawn', 'rejected'] },
       },
-      select: { id: true, status: true },
     });
-    return existing !== null && existing.status !== 'withdrawn';
+    return Boolean(existing);
   }
 
   static async countApplications(): Promise<number> {

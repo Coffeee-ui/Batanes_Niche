@@ -71,8 +71,9 @@ logs/
 # Build artifacts
 *.tsbuildinfo
 
-# UI Components
-Reference-UI/
+# UI Components 
+Reference-UI/*
+Reference-UI/New-Ui/
 
 # Backend uploads (ephemeral on Render)
 uploads/
@@ -85,5 +86,5 @@ frontend/.env.local
 # Vercel
 .vercel/
 
-#others
-documentation/
+# Root documentation folder
+/documentation/

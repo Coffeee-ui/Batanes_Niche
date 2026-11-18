@@ -27,7 +27,7 @@ Format:
 - Section 5: Functional and Non-Functional Requirements (FR-001–FR-030, NFR-001–NFR-012)
 - Section 6: System Architecture Diagram (Mermaid source: `diagram-sources/system-architecture.mmd`)
 - Section 7: System Design and Component Descriptions
-- Section 8: Database ERD (12 tables — Prisma schema verified; Mermaid source: `diagram-sources/database-erd.mmd`)
+- Section 8: Database ERD (15 tables — Prisma schema verified; Mermaid source: `diagram-sources/database-erd.mmd`)
 - Section 9: System Integration and Communication
 - Section 10: APIs, Middleware, Protocols (all 8 route modules documented)
 - Section 11: Security Implementation (all mechanisms verified against source code)

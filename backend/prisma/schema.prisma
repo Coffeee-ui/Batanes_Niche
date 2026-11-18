@@ -1,7 +1,6 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -9,75 +8,107 @@ generator client {
 }
 
 model User {
-  id                   Int                   @id @default(autoincrement())
-  username             String                @unique
-  email                String                @unique
-  password_hash        String
-  full_name            String
-  phone_number         String?
-  municipality         String
-  barangay             String?
-  skills               String?
-  profile_pic          String?
-  resume_url           String?
-  role                 String
-  account_status       String
-  created_at           DateTime              @default(now())
+  id                    Int                   @id @default(autoincrement())
+  username              String                @unique
+  email                 String                @unique
+  password_hash         String
+  full_name             String
+  phone_number          String?
+  municipality          String
+  barangay              String?
+  skills                String?
+  profile_pic           String?
+  resume_url            String?
+  role                  String
+  account_status        String
+  created_at            DateTime              @default(now())
 
-  employer_profile     EmployerProfile?
-  job_seeker_profile   JobSeekerProfile?
-  jobs                 Job[]
-  applications         Application[]
-  saved_jobs           SavedJob[]
-  notifications        Notification[]
-  refresh_tokens       RefreshToken[]
+  date_of_birth         String?
+  desired_employment_type String?
+  work_experience       String?
+  is_discoverable       Boolean               @default(true)
+  onboarding_completed  Boolean               @default(false)
+  walkthrough_dismissed Boolean               @default(false)
+  notification_preferences String?
+  language_preference   String                @default("en")
+  deactivated_at        DateTime?
+  deletion_requested_at DateTime?
+
+  employer_profile      EmployerProfile?
+  job_seeker_profile    JobSeekerProfile?
+  jobs                  Job[]
+  applications          Application[]
+  saved_jobs            SavedJob[]
+  notifications         Notification[]
+  refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
-  audit_logs           AuditLog[]
+  audit_logs            AuditLog[]
+
+  followed_employers    FollowedEmployer[]    @relation("UserFollowedEmployers")
+  employer_followers    FollowedEmployer[]    @relation("EmployerFollowers")
+  saved_candidates      SavedCandidate[]      @relation("EmployerSavedCandidates")
+  saved_as_candidate    SavedCandidate[]      @relation("CandidateSavedByEmployers")
+  reports_submitted     UserReport[]          @relation("UserReports")
 
   @@map("users")
 }
 
 model EmployerProfile {
-  user_id             Int      @id
-  company_name        String
-  company_address     String
-  company_description String?
-  business_type       String
+  user_id               Int      @id
+  company_name          String
+  company_address       String
+  company_description   String?
+  business_type         String
+  industry              String?
+  onboarding_completed  Boolean  @default(false)
+  walkthrough_dismissed Boolean  @default(false)
 
-  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("employer_profiles")
 }
 
 model JobSeekerProfile {
-  user_id          Int      @id
-  bio              String?
-  education        String?
-  experience_years Int      @default(0)
+  user_id               Int      @id
+  bio                   String?
+  education             String?
+  experience_years      Int      @default(0)
 
-  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("job_seeker_profiles")
 }
 
 model Job {
-  id              Int           @id @default(autoincrement())
-  employer_id     Int
-  title           String
-  description     String
-  municipality    String
-  barangay        String?
-  salary_min      Decimal
-  salary_max      Decimal
-  employment_type String
-  required_skills String
-  status          String        @default("active")
-  created_at      DateTime      @default(now())
-  deleted_at      DateTime?
+  id                    Int           @id @default(autoincrement())
+  employer_id           Int
+  title                 String
+  description           String
+  municipality          String
+  barangay              String?
+  salary_min            Decimal
+  salary_max            Decimal
+  employment_type       String
+  required_skills       String
+  status                String        @default("active")
+  created_at            DateTime      @default(now())
+  deleted_at            DateTime?
 
-  employer        User          @relation(fields: [employer_id], references: [id], onDelete: Cascade)
-  applications    Application[]
-  saved_jobs      SavedJob[]
+  work_arrangement      String?
+  street_or_landmark    String?
+  multiple_locations    String?
+  experience_level      String?
+  salary_type           String        @default("range")
+  salary_period         String        @default("monthly")
+  benefits              String?
+  application_deadline  DateTime?
+  application_questions String?
+  is_featured           Boolean       @default(false)
+  close_option          String?
+
+  employer              User          @relation(fields: [employer_id], references: [id], onDelete: Cascade)
+  applications          Application[]
+  saved_jobs            SavedJob[]
 
   @@index([status])
   @@index([municipality])
@@ -88,18 +119,30 @@ model Job {
 }
 
 model Application {
-  id           Int      @id @default(autoincrement())
-  job_id       Int
-  seeker_id    Int
-  cover_letter String?
-  resume_url   String?
-  status       String   @default("pending")
-  created_at   DateTime @default(now())
+  id                   Int       @id @default(autoincrement())
+  job_id               Int
+  seeker_id            Int
+  cover_letter         String?
+  resume_url           String?
+  status               String    @default("new")
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @default(now())
 
-  job          Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
-  seeker       User     @relation(fields: [seeker_id], references: [id], onDelete: Cascade)
+  answers              String?
+  stage                String?   @default("new")
+  rejection_template   String?
+  rejection_message    String?
+  interview_date       DateTime?
+  interview_type       String?
+  interview_location   String?
+  interview_message    String?
+  interview_status     String?
+  withdrawn_at         DateTime?
 
-  @@unique([job_id, seeker_id])
+  job                  Job       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  seeker               User      @relation(fields: [seeker_id], references: [id], onDelete: Cascade)
+
+  @@index([job_id, seeker_id])
   @@index([job_id])
   @@index([seeker_id])
   @@map("applications")
@@ -206,4 +249,50 @@ model AuditLog {
   @@index([actor_id])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+model FollowedEmployer {
+  id          Int      @id @default(autoincrement())
+  seeker_id   Int
+  employer_id Int
+  created_at  DateTime @default(now())
+
+  seeker      User     @relation("UserFollowedEmployers", fields: [seeker_id], references: [id], onDelete: Cascade)
+  employer    User     @relation("EmployerFollowers", fields: [employer_id], references: [id], onDelete: Cascade)
+
+  @@unique([seeker_id, employer_id])
+  @@index([seeker_id])
+  @@index([employer_id])
+  @@map("followed_employers")
+}
+
+model SavedCandidate {
+  id           Int      @id @default(autoincrement())
+  employer_id  Int
+  candidate_id Int
+  created_at   DateTime @default(now())
+
+  employer     User     @relation("EmployerSavedCandidates", fields: [employer_id], references: [id], onDelete: Cascade)
+  candidate    User     @relation("CandidateSavedByEmployers", fields: [candidate_id], references: [id], onDelete: Cascade)
+
+  @@unique([employer_id, candidate_id])
+  @@index([employer_id])
+  @@index([candidate_id])
+  @@map("saved_candidates")
+}
+
+model UserReport {
+  id          Int      @id @default(autoincrement())
+  reporter_id Int
+  target_type String
+  target_id   Int
+  reason      String
+  details     String?
+  created_at  DateTime @default(now())
+
+  reporter    User     @relation("UserReports", fields: [reporter_id], references: [id], onDelete: Cascade)
+
+  @@index([reporter_id])
+  @@index([target_type, target_id])
+  @@map("user_reports")
 }

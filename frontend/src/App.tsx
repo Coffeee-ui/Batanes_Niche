@@ -8,26 +8,36 @@ import ToastProvider from './components/ui/Toast';
 import { PageSpinner } from './components/ui';
 
 // Lazy-load all pages for code-splitting
-const HomePage           = lazy(() => import('./pages/HomePage'));
-const LoginPage          = lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage       = lazy(() => import('./pages/auth/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const HomePage              = lazy(() => import('./pages/HomePage'));
+const LoginPage             = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage          = lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage    = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const OnboardingPage        = lazy(() => import('./pages/onboarding/OnboardingPage'));
 
-const ProfilePage        = lazy(() => import('./pages/ProfilePage'));
-const JobsPage           = lazy(() => import('./pages/jobs/JobsPage'));
-const JobDetailPage      = lazy(() => import('./pages/jobs/JobDetailPage'));
-const PostJobPage        = lazy(() => import('./pages/jobs/PostJobPage'));
-const MyJobsPage         = lazy(() => import('./pages/jobs/MyJobsPage'));
-const ApplicationsPage   = lazy(() => import('./pages/ApplicationsPage'));
-const SavedJobsPage      = lazy(() => import('./pages/SavedJobsPage'));
+const ProfilePage           = lazy(() => import('./pages/ProfilePage'));
+const AccountSettingsPage   = lazy(() => import('./pages/account/AccountSettingsPage'));
+const JobsPage              = lazy(() => import('./pages/jobs/JobsPage'));
+const JobDetailPage         = lazy(() => import('./pages/jobs/JobDetailPage'));
+const PostJobPage           = lazy(() => import('./pages/jobs/PostJobPage'));
+const MyJobsPage            = lazy(() => import('./pages/jobs/MyJobsPage'));
+const ApplicationsPage      = lazy(() => import('./pages/ApplicationsPage'));
+const SavedJobsPage         = lazy(() => import('./pages/SavedJobsPage'));
 
-const NotificationsPage  = lazy(() => import('./pages/NotificationsPage'));
+const EmployerDirectoryPage = lazy(() => import('./pages/employers/EmployerDirectoryPage'));
+const EmployerProfilePage   = lazy(() => import('./pages/employers/EmployerProfilePage'));
+const FollowedEmployersPage = lazy(() => import('./pages/employers/FollowedEmployersPage'));
 
-// Guard: /jobs is for job seekers and guests only; employers go to their dashboard
+const FindCandidatesPage    = lazy(() => import('./pages/candidates/FindCandidatesPage'));
+const SavedCandidatesPage   = lazy(() => import('./pages/candidates/SavedCandidatesPage'));
+
+const NotificationsPage     = lazy(() => import('./pages/NotificationsPage'));
+const HelpPage              = lazy(() => import('./pages/HelpPage'));
+
+// Guard: /jobs is for job seekers and guests only; employers go to their vacancies
 function JobsPageGuard() {
   const { user, isLoading } = useAuth();
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><PageSpinner /></div>;
-  if (user?.role === 'employer') return <Navigate to="/" replace />;
+  if (user?.role === 'employer') return <Navigate to="/jobs/my" replace />;
   return <JobsPage />;
 }
 
@@ -82,22 +92,24 @@ function AboutPage() {
 function PrivacyPage() {
   return (
     <div className="container-page py-16 max-w-3xl">
-      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--foreground))' }}>Privacy Policy</h1>
-      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <h1 className="text-3xl font-black mb-6 text-foreground">Privacy Notice</h1>
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Batanes Niche collects personal information (name, email, location, skills) solely for the purpose of
-          facilitating employment connections within Batanes, Philippines.
+          Batanes Niche collects personal information (name, email, municipality, skills, work experience) solely for the purpose of
+          facilitating legitimate employment connections within Batanes, Philippines.
         </p>
         <p>
-          <strong style={{ color: 'hsl(var(--foreground))' }}>Contact privacy:</strong> A job seeker's email and phone number are never displayed
-          publicly. They are only revealed to an employer after the seeker has applied to one of that employer's active job listings.
+          <strong className="text-foreground">Candidate privacy:</strong> A job seeker's CV and contact number are never displayed
+          publicly. They are only revealed to an employer after the seeker has actively applied to one of that employer's vacancies.
         </p>
         <p>
-          We do not sell personal data to third parties. Your information is stored securely and protected with
-          industry-standard encryption and access controls.
+          <strong className="text-foreground">Equal Opportunity:</strong> In compliance with fair employment and non-discrimination standards, personal demographic criteria are never requested, stored, or processed anywhere within Batanes Niche.
         </p>
         <p>
-          You may request deletion of your account and all associated data by contacting us at privacy@batanesjobs.ph.
+          <strong className="text-foreground">Data retention & deletion:</strong> When you request permanent account deletion, your account enters a [RETENTION PERIOD]-day grace period before being completely and irrecoverably purged from our systems.
+        </p>
+        <p>
+          For privacy inquiries or data rights requests, contact our privacy officer at [EMAIL].
         </p>
       </div>
     </div>
@@ -107,8 +119,8 @@ function PrivacyPage() {
 function TermsPage() {
   return (
     <div className="container-page py-16 max-w-3xl">
-      <h1 className="text-3xl font-black mb-6" style={{ color: 'hsl(var(--foreground))' }}>Terms of Service</h1>
-      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <h1 className="text-3xl font-black mb-6 text-foreground">Terms of Service</h1>
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
         <p>
           By using Batanes Niche, you agree to use the platform lawfully and only for its intended purpose of
           facilitating employment within the Batanes province.
@@ -139,55 +151,74 @@ export default function App() {
           <ToastProvider />
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><PageSpinner /></div>}>
             <Routes>
-              {/* Public routes — no layout wrapper needed for auth pages */}
-              <Route path="/login"          element={<LoginPage />} />
-              <Route path="/register"       element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              {/* Public routes — standalone auth & onboarding */}
+              <Route path="/login"           element={<LoginPage />} />
+              <Route path="/register"        element={<RegisterPage />} />
+              <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+              <Route path="/onboarding"       element={
+                <ProtectedRoute><OnboardingPage /></ProtectedRoute>
+              } />
 
-              {/* All other routes use the Navbar+Footer layout */}
+              {/* Layout wrapper routes */}
               <Route element={<Layout />}>
                 <Route index element={<HomePage />} />
                 <Route path="/about"   element={<AboutPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms"   element={<TermsPage />} />
+                <Route path="/help"    element={<HelpPage />} />
 
-                {/* Public job browsing — job seekers and guests only; employers are redirected */}
+                {/* Public job browsing */}
                 <Route path="/jobs" element={<JobsPageGuard />} />
-
-                {/* NAV-03: Job detail is publicly viewable by guests and authenticated users */}
                 <Route path="/jobs/:id" element={<JobDetailPage />} />
-                {/* Legacy notification link redirect */}
-                <Route path="/employer" element={<Navigate to="/jobs/my" replace />} />
-                <Route path="/dashboard" element={
-                  <Navigate to="/" replace />
-                } />
+
+                {/* Public Employer Directory & Profile */}
+                <Route path="/employers" element={<EmployerDirectoryPage />} />
+                <Route path="/employers/:id" element={<EmployerProfilePage />} />
+
+                {/* User Profile & Account Settings */}
                 <Route path="/profile" element={
                   <ProtectedRoute><ProfilePage /></ProtectedRoute>
+                } />
+                <Route path="/account" element={
+                  <ProtectedRoute><AccountSettingsPage /></ProtectedRoute>
                 } />
                 <Route path="/notifications" element={
                   <ProtectedRoute><NotificationsPage /></ProtectedRoute>
                 } />
 
-                {/* Protected: any authenticated user — backend returns role-appropriate data */}
+                {/* Applications (role-appropriate data) */}
                 <Route path="/applications" element={
                   <ProtectedRoute><ApplicationsPage /></ProtectedRoute>
                 } />
 
-                {/* Protected: job seeker only */}
+                {/* Job Seeker Only */}
                 <Route path="/saved-jobs" element={
                   <ProtectedRoute role="job_seeker"><SavedJobsPage /></ProtectedRoute>
                 } />
+                <Route path="/followed-employers" element={
+                  <ProtectedRoute role="job_seeker"><FollowedEmployersPage /></ProtectedRoute>
+                } />
 
-                {/* Protected: employer only */}
+                {/* Employer Only */}
                 <Route path="/jobs/post" element={
                   <ProtectedRoute role="employer"><PostJobPage /></ProtectedRoute>
                 } />
                 <Route path="/jobs/my" element={
                   <ProtectedRoute role="employer"><MyJobsPage /></ProtectedRoute>
                 } />
-                <Route path="/candidates" element={
-                  <Navigate to="/" replace />
+                <Route path="/my-jobs" element={
+                  <ProtectedRoute role="employer"><MyJobsPage /></ProtectedRoute>
                 } />
+                <Route path="/candidates" element={
+                  <ProtectedRoute role="employer"><FindCandidatesPage /></ProtectedRoute>
+                } />
+                <Route path="/candidates/saved" element={
+                  <ProtectedRoute role="employer"><SavedCandidatesPage /></ProtectedRoute>
+                } />
+
+                {/* Legacy redirects */}
+                <Route path="/employer" element={<Navigate to="/jobs/my" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
                 {/* 404 */}
                 <Route path="*" element={<NotFoundPage />} />

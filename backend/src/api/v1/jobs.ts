@@ -6,10 +6,38 @@ import {
   requireAuthenticated,
   requireEmployerContext,
 } from '../deps';
-import { JobCreateSchema, JobUpdateSchema } from '../../schemas/job';
+import { JobCloseRequestSchema, JobCreateSchema, JobUpdateSchema } from '../../schemas/job';
 import { HttpError } from '../../core/errors';
 
 export const jobsRouter = Router();
+
+// GET /featured (featured jobs for homepage)
+jobsRouter.get(
+  '/featured',
+  async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const jobs = await JobService.listFeaturedJobs();
+      res.status(200).json(jobs);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /recommended (recommended jobs for seeker)
+jobsRouter.get(
+  '/recommended',
+  authenticateOptional,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '10', 10)));
+      const jobs = await JobService.listRecommendedJobs(req.user, limit);
+      res.status(200).json(jobs);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // GET /preview
 jobsRouter.get(
@@ -41,7 +69,7 @@ jobsRouter.get(
       const employmentType = (req.query.employment_type as string) || null;
       const category = (req.query.category as string) || null;
 
-      // Whitelist safe sort options (DATA-03)
+      // Whitelist safe sort options
       const rawSort = (req.query.sort as string) || 'newest';
       const allowedSorts = ['newest', 'salary_desc', 'salary_asc'];
       const sort = allowedSorts.includes(rawSort) ? rawSort : 'newest';
@@ -103,7 +131,69 @@ jobsRouter.get(
   }
 );
 
-// GET /:jobId (NAV-03: allow public guest access)
+// GET /:jobId/stats (vacancy application stats)
+jobsRouter.get(
+  '/:jobId/stats',
+  requireAuthenticated,
+  requireEmployerContext,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const jobId = parseInt(req.params.jobId, 10);
+      if (isNaN(jobId)) {
+        throw new HttpError(404, 'Job posting not found.');
+      }
+      const stats = await JobService.getJobStats(jobId, req.user!);
+      res.status(200).json(stats);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /:jobId/close (close vacancy with options)
+jobsRouter.post(
+  '/:jobId/close',
+  requireAuthenticated,
+  requireEmployerContext,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const jobId = parseInt(req.params.jobId, 10);
+      if (isNaN(jobId)) {
+        throw new HttpError(404, 'Job posting not found.');
+      }
+      const body = JobCloseRequestSchema.parse(req.body);
+      const updated = await JobService.closeJob(jobId, req.user!, body.close_option);
+      res.status(200).json(updated);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PUT /:jobId/status (change vacancy status)
+jobsRouter.put(
+  '/:jobId/status',
+  requireAuthenticated,
+  requireEmployerContext,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const jobId = parseInt(req.params.jobId, 10);
+      if (isNaN(jobId)) {
+        throw new HttpError(404, 'Job posting not found.');
+      }
+      const status = req.body.status;
+      if (!status || typeof status !== 'string') {
+        throw new HttpError(400, 'Valid status is required.');
+      }
+      const updated = await JobService.updateJobStatus(jobId, req.user!, status);
+      res.status(200).json(updated);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /:jobId (allow public guest access)
 jobsRouter.get(
   '/:jobId',
   authenticateOptional,

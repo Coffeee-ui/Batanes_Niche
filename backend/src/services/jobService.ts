@@ -1,9 +1,10 @@
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
+import { prisma } from '../database/client';
 import { JobRepository, JobWithRelations } from '../repositories/jobRepository';
 import { SavedJobRepository, SavedJobWithRelations } from '../repositories/savedJobRepository';
 import { GeographyService } from './geographyService';
 import { serializeSkillValues } from './skillService';
-import { JobCreate, JobOut, JobPreviewOut, JobUpdate, SavedJobOut } from '../schemas/job';
+import { JobCreate, JobOut, JobPreviewOut, JobStatsOut, JobUpdate, SavedJobOut } from '../schemas/job';
 import { HttpError } from '../core/errors';
 
 export class JobService {
@@ -13,6 +14,8 @@ export class JobService {
       title: job.title,
       salary_min: Number(job.salary_min),
       salary_max: Number(job.salary_max),
+      salary_type: (job as any).salary_type || 'range',
+      salary_period: (job as any).salary_period || 'monthly',
       required_skills: job.required_skills,
     };
   }
@@ -20,13 +23,21 @@ export class JobService {
   static toJobOut(job: JobWithRelations): JobOut {
     const island = GeographyService.resolveIsland(job.municipality) || 'Batan Island';
     let companyName: string | null = null;
+    let companyAddress: string | null = null;
+    let companyDescription: string | null = null;
+
     if (job.employer) {
       if (job.employer.employer_profile) {
         companyName = job.employer.employer_profile.company_name;
+        companyAddress = job.employer.employer_profile.company_address;
+        companyDescription = job.employer.employer_profile.company_description;
       } else {
         companyName = job.employer.full_name;
       }
     }
+
+    const apps = job.applications || [];
+    const activeApps = apps.filter((a: { status?: string }) => a.status !== 'withdrawn');
 
     return {
       id: job.id,
@@ -36,16 +47,31 @@ export class JobService {
       municipality: job.municipality,
       island,
       barangay: job.barangay,
+      street_or_landmark: (job as any).street_or_landmark || null,
+      work_arrangement: (job as any).work_arrangement || null,
+      multiple_locations: (job as any).multiple_locations || null,
+      employment_type: job.employment_type,
+      experience_level: (job as any).experience_level || null,
+      salary_type: (job as any).salary_type || 'range',
+      salary_period: (job as any).salary_period || 'monthly',
       salary_min: Number(job.salary_min),
       salary_max: Number(job.salary_max),
-      employment_type: job.employment_type,
+      benefits: (job as any).benefits || null,
+      application_deadline: (job as any).application_deadline
+        ? (job as any).application_deadline instanceof Date
+          ? (job as any).application_deadline.toISOString()
+          : String((job as any).application_deadline)
+        : null,
+      application_questions: (job as any).application_questions || null,
       required_skills: job.required_skills,
       status: job.status,
+      is_featured: (job as any).is_featured || false,
+      close_option: (job as any).close_option || null,
       created_at: job.created_at.toISOString(),
       company_name: companyName,
-      application_count: job.applications
-        ? job.applications.filter((a: { status?: string }) => a.status !== 'withdrawn').length
-        : 0,
+      company_address: companyAddress,
+      company_description: companyDescription,
+      application_count: activeApps.length,
     };
   }
 
@@ -68,19 +94,50 @@ export class JobService {
       throw new HttpError(400, 'A custom value is required when selecting Other as a skill.');
     }
 
-    const created = await JobRepository.create({
+    if (jobData.is_featured) {
+      const activeFeaturedCount = await prisma.job.count({
+        where: {
+          employer_id: employer.id,
+          is_featured: true,
+          status: { in: ['published', 'active'] },
+          deleted_at: null,
+        },
+      });
+      if (activeFeaturedCount >= 3) {
+        throw new HttpError(400, 'An employer can have a maximum of 3 active featured vacancies.');
+      }
+    }
+
+    const initialStatus = jobData.status || 'published';
+
+    const createPayload: Prisma.JobCreateInput = {
       employer: { connect: { id: employer.id } },
       title: jobData.title.trim(),
       description: jobData.description.trim(),
       municipality: locResult.canonicalMunicipality,
       barangay: locResult.canonicalBarangay,
+      street_or_landmark: jobData.street_or_landmark?.trim() || null,
+      work_arrangement: jobData.work_arrangement || null,
+      multiple_locations: typeof jobData.multiple_locations === 'boolean'
+        ? (jobData.multiple_locations ? 'true' : 'false')
+        : (jobData.multiple_locations?.trim() || null),
+      employment_type: jobData.employment_type.trim(),
+      experience_level: jobData.experience_level || null,
+      salary_type: jobData.salary_type || 'range',
+      salary_period: jobData.salary_period || 'monthly',
       salary_min: jobData.salary_min,
       salary_max: jobData.salary_max,
-      employment_type: jobData.employment_type.trim(),
+      benefits: jobData.benefits?.trim() || null,
+      application_deadline: jobData.application_deadline ? new Date(jobData.application_deadline) : null,
+      application_questions: Array.isArray(jobData.application_questions)
+        ? JSON.stringify(jobData.application_questions)
+        : (jobData.application_questions?.trim() || null),
       required_skills: normalizedSkills || '',
-      status: 'active',
-    });
+      status: initialStatus,
+      is_featured: Boolean(jobData.is_featured),
+    };
 
+    const created = await JobRepository.create(createPayload);
     return this.toJobOut(created);
   }
 
@@ -96,10 +153,6 @@ export class JobService {
       throw new HttpError(404, 'Job posting not found.');
     }
 
-    if (currentUser && currentUser.role === 'employer' && job.employer_id !== currentUser.id) {
-      throw new HttpError(403, 'Employers can only view their own job listings.');
-    }
-
     return this.toJobOut(job);
   }
 
@@ -113,11 +166,51 @@ export class JobService {
       throw new HttpError(403, 'You do not have permission to edit this job.');
     }
 
+    if (job.status === 'closed' || job.status === 'archived') {
+      throw new HttpError(400, 'Cannot edit closed or archived vacancies.');
+    }
+
     const jobUpdates: Record<string, unknown> = {};
 
     if (updateData.title !== undefined) jobUpdates.title = updateData.title.trim();
     if (updateData.description !== undefined) jobUpdates.description = updateData.description.trim();
     if (updateData.employment_type !== undefined) jobUpdates.employment_type = updateData.employment_type.trim();
+    if (updateData.street_or_landmark !== undefined) jobUpdates.street_or_landmark = updateData.street_or_landmark?.trim() || null;
+    if (updateData.work_arrangement !== undefined) jobUpdates.work_arrangement = updateData.work_arrangement;
+    if (updateData.multiple_locations !== undefined) {
+      jobUpdates.multiple_locations = typeof updateData.multiple_locations === 'boolean'
+        ? (updateData.multiple_locations ? 'true' : 'false')
+        : (updateData.multiple_locations?.trim() || null);
+    }
+    if (updateData.experience_level !== undefined) jobUpdates.experience_level = updateData.experience_level;
+    if (updateData.salary_type !== undefined) jobUpdates.salary_type = updateData.salary_type;
+    if (updateData.salary_period !== undefined) jobUpdates.salary_period = updateData.salary_period;
+    if (updateData.benefits !== undefined) jobUpdates.benefits = updateData.benefits?.trim() || null;
+    if (updateData.application_deadline !== undefined) {
+      jobUpdates.application_deadline = updateData.application_deadline ? new Date(updateData.application_deadline) : null;
+    }
+    if (updateData.application_questions !== undefined) {
+      jobUpdates.application_questions = Array.isArray(updateData.application_questions)
+        ? JSON.stringify(updateData.application_questions)
+        : (updateData.application_questions?.trim() || null);
+    }
+
+    if (updateData.is_featured !== undefined) {
+      if (updateData.is_featured && !job.is_featured) {
+        const activeFeaturedCount = await prisma.job.count({
+          where: {
+            employer_id: employer.id,
+            is_featured: true,
+            status: { in: ['published', 'active'] },
+            deleted_at: null,
+          },
+        });
+        if (activeFeaturedCount >= 3) {
+          throw new HttpError(400, 'An employer can have a maximum of 3 active featured vacancies.');
+        }
+      }
+      jobUpdates.is_featured = Boolean(updateData.is_featured);
+    }
 
     if (updateData.required_skills !== undefined) {
       const normalizedSkills = serializeSkillValues(updateData.required_skills.split(','));
@@ -150,8 +243,113 @@ export class JobService {
       jobUpdates.status = updateData.status;
     }
 
-    const updated = await JobRepository.update(jobId, jobUpdates);
+    const updated = await JobRepository.update(jobId, jobUpdates as any);
     return this.toJobOut(updated);
+  }
+
+  static async updateJobStatus(jobId: number, employer: User, newStatus: string): Promise<JobOut> {
+    const job = await JobRepository.getById(jobId, false);
+    if (!job) {
+      throw new HttpError(404, 'Job posting not found.');
+    }
+
+    if (job.employer_id !== employer.id && employer.role !== 'admin') {
+      throw new HttpError(403, 'You do not have permission to modify this job.');
+    }
+
+    const updated = await JobRepository.update(jobId, { status: newStatus });
+    return this.toJobOut(updated);
+  }
+
+  static async closeJob(jobId: number, employer: User, closeOption: 'reviewing' | 'ended'): Promise<JobOut> {
+    const job = await JobRepository.getById(jobId, false);
+    if (!job) {
+      throw new HttpError(404, 'Job posting not found.');
+    }
+
+    if (job.employer_id !== employer.id && employer.role !== 'admin') {
+      throw new HttpError(403, 'You do not have permission to close this job.');
+    }
+
+    const updated = await JobRepository.update(jobId, {
+      status: 'closed',
+      close_option: closeOption,
+    } as any);
+    return this.toJobOut(updated);
+  }
+
+  static async getJobStats(jobId: number, employer: User): Promise<JobStatsOut> {
+    const job = await JobRepository.getById(jobId, true);
+    if (!job) {
+      throw new HttpError(404, 'Job posting not found.');
+    }
+
+    if (job.employer_id !== employer.id && employer.role !== 'admin') {
+      throw new HttpError(403, 'You do not have permission to view stats for this job.');
+    }
+
+    const apps = job.applications || [];
+    const by_status: Record<string, number> = {};
+    for (const app of apps) {
+      const stage = (app as any).stage || app.status || 'new';
+      by_status[stage] = (by_status[stage] || 0) + 1;
+    }
+
+    return {
+      total_applications: apps.length,
+      by_status,
+    };
+  }
+
+  static async listFeaturedJobs(): Promise<JobOut[]> {
+    const jobs = await prisma.job.findMany({
+      where: {
+        is_featured: true,
+        status: { in: ['published', 'active'] },
+        deleted_at: null,
+      },
+      orderBy: { created_at: 'desc' },
+      include: {
+        employer: { include: { employer_profile: true } },
+        applications: true,
+      },
+    });
+    return jobs.map(j => this.toJobOut(j as any));
+  }
+
+  static async listRecommendedJobs(seeker?: User | null, limit: number = 10): Promise<JobOut[]> {
+    if (!seeker || !seeker.skills) {
+      // Fallback to latest jobs
+      const latest = await JobRepository.listActiveJobs(null, null, null, null, limit, 0, 'created_at_desc', null);
+      return latest.map(j => this.toJobOut(j));
+    }
+
+    const seekerSkills = seeker.skills
+      .toLowerCase()
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const activeJobs = await JobRepository.listActiveJobs(null, null, null, null, 50, 0, null, null);
+
+    // Score jobs based on matching skills and same municipality
+    const scored = activeJobs.map(job => {
+      let score = 0;
+      const jobSkills = (job.required_skills || '').toLowerCase();
+      for (const skill of seekerSkills) {
+        if (jobSkills.includes(skill)) {
+          score += 10;
+        }
+      }
+      if (seeker.municipality && job.municipality.toLowerCase() === seeker.municipality.toLowerCase()) {
+        score += 5;
+      }
+      return { job, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score || b.job.created_at.getTime() - a.job.created_at.getTime());
+
+    return scored.slice(0, limit).map(s => this.toJobOut(s.job));
   }
 
   static async softDeleteJob(jobId: number, employer: User): Promise<void> {
@@ -165,7 +363,7 @@ export class JobService {
     }
 
     await JobRepository.update(jobId, {
-      status: 'closed',
+      status: 'archived',
       deleted_at: new Date(),
     });
   }
@@ -222,7 +420,7 @@ export class JobService {
     }
 
     const job = await JobRepository.getById(jobId, false);
-    if (!job || job.status !== 'active') {
+    if (!job || (job.status !== 'active' && job.status !== 'published')) {
       throw new HttpError(400, 'Only active jobs can be bookmarked.');
     }
 

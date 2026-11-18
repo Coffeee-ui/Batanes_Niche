@@ -11,7 +11,7 @@ export class EmailDeliveryService {
       `Sincerely,\n${settings.APP_NAME} Support Team`;
 
     const apiKey = process.env.RESEND_API_KEY;
-    const fromEmail = settings.MAIL_FROM || 'onboarding@resend.dev';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || settings.MAIL_FROM || 'onboarding@resend.dev';
 
     if (!apiKey) {
       console.log(
@@ -21,7 +21,7 @@ export class EmailDeliveryService {
     }
 
     try {
-      const response = await fetch('https://resend.com', {
+      const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,

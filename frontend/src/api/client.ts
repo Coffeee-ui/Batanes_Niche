@@ -2,18 +2,16 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import type {
   User, Job, JobPreview, Application, Notification, SavedJob,
   PaginatedResponse, Token, RegisterPayload,
-  LoginPayload, JobCreate, JobFilters, Candidate,
+  LoginPayload, JobCreate, JobUpdate, JobFilters, Candidate,
   CandidateRankingResponse, JobRankingResponse,
-  MetadataOptions, GeoMeta, ApiError, DemoStatusResponse
+  MetadataOptions, GeoMeta, ApiError, DemoStatusResponse,
+  Employer, FollowedEmployer, SavedCandidate, NotificationPreferences, JobStats
 } from '../types';
 
 // ============================================================
 // Axios Client Configuration
 // ============================================================
 
-// In production (Vercel), VITE_API_BASE_URL must be set to the Render backend URL
-// e.g. https://batanes-niche-backend.onrender.com
-// In development, falls back to '/api/v1' so the Vite dev-server proxy still works.
 const rawBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 const API_BASE_URL = rawBase ? `${rawBase}/api/v1` : '/api/v1';
 
@@ -136,6 +134,8 @@ export function extractError(error: unknown): string {
         return data.detail.map(d => d.msg).join(', ');
       }
     }
+    const message = (error.response?.data as any)?.message;
+    if (message) return message;
     if (error.response?.status === 429) return 'Too many requests. Please slow down.';
     if (error.response?.status === 403) return 'You do not have permission to perform this action.';
     if (error.response?.status === 404) return 'The requested resource was not found.';
@@ -147,29 +147,11 @@ export function extractError(error: unknown): string {
 }
 
 // ============================================================
-// Auth API (Section 14 & 26)
+// Auth API
 // ============================================================
 export const authApi = {
   register: (payload: RegisterPayload) => {
-    // Generate username from full name or email if not provided
-    const username = payload.username || payload.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') + '_' + Math.floor(Math.random() * 1000);
-    const body = {
-      username,
-      email: payload.email,
-      password: payload.password,
-      full_name: payload.full_name,
-      role: payload.role,
-      municipality: payload.municipality,
-      barangay: payload.barangay || undefined,
-      phone_number: payload.phone_number || payload.phone || undefined,
-      skills: payload.skills || undefined,
-      bio: payload.bio || undefined,
-      company_name: payload.company_name || undefined,
-      company_address: payload.company_address || undefined,
-      company_description: payload.company_description || undefined,
-      business_type: payload.business_type || undefined,
-    };
-    return api.post<Token>('/auth/register', body).then(r => r.data);
+    return api.post<Token>('/auth/register', payload).then(r => r.data);
   },
 
   login: (payload: LoginPayload) => {
@@ -198,6 +180,9 @@ export const authApi = {
   requestPasswordReset: (email: string) =>
     api.post('/auth/forgot-password', { email }).then(r => r.data),
 
+  verifyResetCode: (email: string, otp_code: string) =>
+    api.post<{ valid: boolean; message: string }>('/auth/verify-reset-code', { email, otp_code }).then(r => r.data),
+
   confirmPasswordReset: (email: string, otp: string, new_password: string) =>
     api.post('/auth/reset-password', {
       email,
@@ -213,7 +198,7 @@ export const authApi = {
 };
 
 // ============================================================
-// Jobs API (Section 14)
+// Jobs API
 // ============================================================
 export const jobsApi = {
   list: async (filters: JobFilters = {}): Promise<PaginatedResponse<Job>> => {
@@ -251,22 +236,38 @@ export const jobsApi = {
     return api.get<JobPreview[]>('/jobs/preview', { params: { limit, offset } }).then(r => r.data);
   },
 
+  featured: () =>
+    api.get<Job[]>('/jobs/featured').then(r => r.data),
+
+  recommendedJobs: (limit: number = 10) =>
+    api.get<Job[]>('/jobs/recommended', { params: { limit } }).then(r => r.data),
+
   get: (id: number) =>
     api.get<Job>(`/jobs/${id}`).then(r => r.data),
 
   create: (payload: JobCreate) =>
     api.post<Job>('/jobs', payload).then(r => r.data),
 
-  update: (id: number, payload: Partial<JobCreate>) =>
+  update: (id: number, payload: JobUpdate) =>
     api.put<Job>(`/jobs/${id}`, payload).then(r => r.data),
+
+  updateStatus: (id: number, status: string) =>
+    api.put<Job>(`/jobs/${id}/status`, { status }).then(r => r.data),
+
+  closeJob: (id: number, close_option: 'reviewing' | 'ended' = 'reviewing') =>
+    api.post<Job>(`/jobs/${id}/close`, { close_option }).then(r => r.data),
 
   close: (id: number) =>
     api.delete(`/jobs/${id}`).then(r => r.data),
 
-  myJobs: async (params: { page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Job>> => {
+  getStats: (id: number) =>
+    api.get<JobStats>(`/jobs/${id}/stats`).then(r => r.data),
+
+  myJobs: async (params: { page?: number; page_size?: number; include_closed?: boolean } = {}): Promise<PaginatedResponse<Job>> => {
     const limit = params.page_size || 50;
     const offset = ((params.page || 1) - 1) * limit;
-    const items = await api.get<Job[]>('/jobs/my', { params: { limit, offset } }).then(r => r.data);
+    const includeClosed = params.include_closed !== false;
+    const items = await api.get<Job[]>('/jobs/my', { params: { limit, offset, include_closed: includeClosed } }).then(r => r.data);
     return {
       items,
       total: items.length,
@@ -285,14 +286,15 @@ export const jobsApi = {
 };
 
 // ============================================================
-// Applications API (Section 14)
+// Applications API
 // ============================================================
 export const applicationsApi = {
-  apply: (jobId: number, coverLetter?: string, attachResume = false) =>
+  apply: (jobId: number, coverLetter?: string, attachResume = false, answers?: string) =>
     api.post<Application>('/applications', {
       job_id: jobId,
       cover_letter: coverLetter || null,
       attach_resume: Boolean(attachResume),
+      answers: answers || null,
     }).then(r => r.data),
 
   myApplications: async (params: { job_id?: number; page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Application>> => {
@@ -330,44 +332,71 @@ export const applicationsApi = {
   updateStatus: (applicationId: number, status: string) =>
     api.put<Application>(`/applications/${applicationId}`, { status }).then(r => r.data),
 
+  updateStage: (applicationId: number, status: string) =>
+    api.post<Application>(`/applications/${applicationId}/stage`, { status }).then(r => r.data),
+
+  inviteToInterview: (
+    applicationId: number,
+    payload: {
+      interview_date: string;
+      interview_type: string;
+      interview_location?: string;
+      interview_message?: string;
+    }
+  ) =>
+    api.post<Application>(`/applications/${applicationId}/invite`, payload).then(r => r.data),
+
+  respondToInterview: (applicationId: number, response: 'accepted' | 'declined') =>
+    api.put<Application>(`/applications/${applicationId}/interview-response`, { response }).then(r => r.data),
+
+  rejectApplication: (
+    applicationId: number,
+    payload: { rejection_template?: string; rejection_message?: string }
+  ) =>
+    api.post<Application>(`/applications/${applicationId}/reject`, payload).then(r => r.data),
+
   withdraw: (applicationId: number) =>
     api.post<Application>(`/applications/${applicationId}/withdraw`).then(r => r.data),
 };
 
 // ============================================================
-// Users / Profile API (Section 14 & 15)
+// Users / Profile API
 // ============================================================
 export const usersApi = {
   getProfile: () =>
     api.get<User>('/users/profile').then(r => r.data),
 
   updateProfile: (payload: Record<string, any>) => {
-    const body: Record<string, any> = {
-      full_name: payload.full_name,
-      phone_number: payload.phone_number || payload.phone,
-      municipality: payload.municipality,
-      barangay: payload.barangay,
-      skills: payload.skills,
-      profile_pic: payload.profile_pic,
-      resume_url: payload.resume_url,
-      bio: payload.bio,
-      education: payload.education,
-      experience_years: payload.experience_years != null ? Number(payload.experience_years) : undefined,
-      company_name: payload.company_name,
-      company_address: payload.company_address || payload.municipality,
-      company_description: payload.company_description,
-      business_type: payload.business_type || payload.industry,
-    };
-    // Strip undefined keys
-    Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
-    return api.put<User>('/users/profile', body).then(r => r.data);
+    return api.put<User>('/users/profile', payload).then(r => r.data);
   },
 
-  candidates: async (params: { q?: string; municipality?: string; island?: string; skill?: string; page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Candidate>> => {
+  employers: (params: { company?: string; industry?: string; municipality?: string; has_vacancies?: boolean; page?: number; page_size?: number } = {}) => {
+    return api.get<Employer[]>('/users/employers', { params }).then(r => r.data);
+  },
+
+  employerProfile: (id: number) =>
+    api.get<Employer>(`/users/employers/${id}`).then(r => r.data),
+
+  followEmployer: (id: number) =>
+    api.post(`/users/follow/${id}`).then(r => r.data),
+
+  unfollowEmployer: (id: number) =>
+    api.delete(`/users/follow/${id}`).then(r => r.data),
+
+  listFollowedEmployers: () =>
+    api.get<FollowedEmployer[]>('/users/followed-employers').then(r => r.data),
+
+  isFollowingEmployer: (id: number) =>
+    api.get<{ is_following: boolean }>(`/users/is-following/${id}`).then(r => r.data),
+
+  candidates: async (params: { q?: string; municipality?: string; island?: string; skill?: string; education?: string; experience_years?: number; desired_employment_type?: string; page?: number; page_size?: number } = {}): Promise<PaginatedResponse<Candidate>> => {
     const queryParams: Record<string, any> = {};
     if (params.municipality) queryParams.municipality = params.municipality;
     if (params.island) queryParams.island = params.island;
     if (params.skill || params.q) queryParams.skill = params.skill || params.q;
+    if (params.education) queryParams.education = params.education;
+    if (params.experience_years !== undefined) queryParams.experience_years = params.experience_years;
+    if (params.desired_employment_type) queryParams.desired_employment_type = params.desired_employment_type;
     const limit = params.page_size || 50;
     queryParams.limit = limit;
     queryParams.offset = ((params.page || 1) - 1) * limit;
@@ -382,6 +411,15 @@ export const usersApi = {
     };
   },
 
+  saveCandidate: (candidateId: number) =>
+    api.post(`/users/candidates/save/${candidateId}`).then(r => r.data),
+
+  removeSavedCandidate: (candidateId: number) =>
+    api.delete(`/users/candidates/save/${candidateId}`).then(r => r.data),
+
+  listSavedCandidates: () =>
+    api.get<SavedCandidate[]>('/users/candidates/saved').then(r => r.data),
+
   recommendations: async (): Promise<Candidate[]> => {
     const res = await api.get<CandidateRankingResponse>('/recommendations/candidates').then(r => r.data);
     const tier1 = (res.tier_1 || []).map(t => t.candidate);
@@ -389,10 +427,31 @@ export const usersApi = {
     return [...tier1, ...tier2];
   },
 
+  changePassword: (current_password: string, new_password: string) =>
+    api.post('/users/change-password', { current_password, new_password }).then(r => r.data),
+
+  deactivateAccount: () =>
+    api.post('/users/deactivate').then(r => r.data),
+
+  reactivateAccount: (email_or_username: string, password: string) =>
+    api.post('/users/reactivate', { email_or_username, password }).then(r => r.data),
+
+  requestDeletion: (password: string) =>
+    api.post('/users/request-deletion', { password }).then(r => r.data),
+
+  setDiscoverability: (is_discoverable: boolean) =>
+    api.patch<{ is_discoverable: boolean }>('/users/discoverability', { is_discoverable }).then(r => r.data),
+
+  setNotificationPreferences: (prefs: Partial<NotificationPreferences>) =>
+    api.patch('/users/notification-preferences', { notification_preferences: prefs }).then(r => r.data),
+
+  submitReport: (target_type: string, target_id: number, reason: string, details?: string) =>
+    api.post('/users/report', { target_type, target_id, reason, details }).then(r => r.data),
+
   uploadResume: (file: File) => {
     const fd = new FormData();
     fd.append('resume', file);
-    return api.post<{ resume_url: string }>('/users/resume', fd, {
+    return api.post<{ resume_url: string; filename: string }>('/users/resume', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
@@ -404,10 +463,18 @@ export const usersApi = {
     const base = API_BASE_URL;
     return seekerId ? `${base}/users/resume/${seekerId}` : `${base}/users/resume`;
   },
+
+  uploadProfilePicture: (file: File) => {
+    const fd = new FormData();
+    fd.append('picture', file);
+    return api.post<{ profile_pic: string }>('/users/profile-picture', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
 };
 
 // ============================================================
-// Saved Jobs API (Section 14 & 7.6)
+// Saved Jobs API
 // ============================================================
 export const savedJobsApi = {
   list: () =>
@@ -421,11 +488,11 @@ export const savedJobsApi = {
 };
 
 // ============================================================
-// Notifications API (Section 14 & 7.4)
+// Notifications API
 // ============================================================
 export const notificationsApi = {
-  list: () =>
-    api.get<Notification[]>('/notifications').then(r => r.data),
+  list: (category?: string) =>
+    api.get<Notification[]>('/notifications', { params: category ? { category } : {} }).then(r => r.data),
 
   markAllRead: () =>
     api.put('/notifications/read').then(r => r.data),
@@ -433,15 +500,20 @@ export const notificationsApi = {
   markRead: (id: number) =>
     api.put(`/notifications/${id}/read`).then(r => r.data),
 
+  delete: (id: number) =>
+    api.delete(`/notifications/${id}`).then(r => r.data),
+
+  bulkDelete: (ids: number[]) =>
+    api.delete('/notifications/bulk', { data: { ids } }).then(r => r.data),
+
   unreadCount: async (): Promise<{ count: number }> => {
-    const notifs = await api.get<Notification[]>('/notifications').then(r => r.data);
-    const count = notifs.filter(n => !n.is_read).length;
-    return { count };
+    const res = await api.get<{ unread_count: number }>('/notifications/unread-count').catch(() => ({ data: { unread_count: 0 } }));
+    return { count: res.data.unread_count };
   },
 };
 
 // ============================================================
-// Meta (Options & Geography) API (Section 14)
+// Meta (Options & Geography) API
 // ============================================================
 export const metaApi = {
   options: () =>

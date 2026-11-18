@@ -67,13 +67,13 @@ Set the Supabase direct connection URL in your terminal and execute:
 cd backend
 npx prisma db push --schema=prisma/schema.prisma
 ```
-Prisma will connect to Supabase, create all 12 tables, apply composite unique constraints, and build all indexes in under 10 seconds.
+Prisma will connect to Supabase, create all 15 tables, apply composite unique constraints, and build all indexes in under 10 seconds.
 
 #### Option 2: Using the Supabase SQL Editor
 1. In the Supabase Dashboard, open **SQL Editor**.
 2. Open [001_initial_schema.sql](./Database/migrations/001_initial_schema.sql) from the repository.
 3. Paste the complete SQL and click **Run**.
-4. Confirm success: 12 tables will appear under **Database -> Tables**.
+4. Confirm success: 15 tables will appear under **Database -> Tables**.
 
 ---
 
@@ -121,6 +121,9 @@ node -e "console.log(require('bcryptjs').hashSync('YourStrongPassword123!', 12))
 | `password_reset_tokens`| `id` (Serial) | `user_id` -> `users(id)` ON DELETE CASCADE | `user_id`, `identifier` | 6-digit bcrypt-hashed OTPs with 15-minute expiry |
 | `error_reports` | `id` (Serial) | None | `timestamp` | Platform error logs with sanitized request data |
 | `audit_logs` | `id` (Serial) | `actor_id` -> `users(id)` ON DELETE SET NULL | `actor_id`, `timestamp` | Security events and administrative audit trail |
+| `followed_employers` | `id` (Serial) | `seeker_id` -> `users(id)`, `employer_id` -> `users(id)` | `seeker_id`, `employer_id`, `(seeker_id, employer_id)` (UQ) | Job seeker following employers |
+| `saved_candidates` | `id` (Serial) | `employer_id` -> `users(id)`, `candidate_id` -> `users(id)` | `employer_id`, `candidate_id`, `(employer_id, candidate_id)` (UQ) | Employer saved candidates |
+| `user_reports` | `id` (Serial) | `reporter_id` -> `users(id)` ON DELETE CASCADE | `reporter_id`, `(target_type, target_id)` | User-submitted content & abuse reports |
 
 ---
 

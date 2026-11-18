@@ -109,6 +109,29 @@ authRouter.post(
   }
 );
 
+// POST /verify-reset-code
+authRouter.post(
+  '/verify-reset-code',
+  resetPasswordLimiter,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email, otp_code } = req.body;
+      if (!email || !otp_code || typeof otp_code !== 'string' || otp_code.length !== 6) {
+        res.status(400).json({ message: 'Valid email and 6-digit code are required.' });
+        return;
+      }
+      const isValid = await AuthService.verifyResetCode(email, otp_code);
+      if (!isValid) {
+        res.status(400).json({ message: 'Invalid or expired verification code.' });
+        return;
+      }
+      res.status(200).json({ valid: true, message: 'Code verified successfully.' });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /reset-password
 authRouter.post(
   '/reset-password',

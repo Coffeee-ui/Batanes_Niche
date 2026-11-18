@@ -47,9 +47,9 @@ Version 2 represents a robust, production-ready release with the following core 
 - **Role Invariant Registration**: Public registration exclusively for `job_seeker` and `employer` accounts. Automatic profile entity creation (`job_seeker_profiles` or `employer_profiles`).
 - **Cryptographic Security**: Password hashing using bcrypt with a work factor of 12.
 - **Stateless/Stateful Token Lifecycle**: Short-lived (15-minute) stateless JWT access tokens paired with 7-day stateful refresh tokens stored as SHA-256 hashes with automatic rotation and token-reuse compromise detection.
-- **Instant Revocation & JTI Blacklisting**: User logout invalidates the active refresh token and blacklists the access token's `jti` in a `revoked_tokens` table.
+- **Instant Revocation & JTI Blacklisting**: User logout invalidates the active refresh token and blacklists the access token's `token_jti` in a `revoked_tokens` table.
 - **Zero-Enumeration OTP Password Recovery**: Cryptographically secure 6-digit numeric OTPs, bcrypt-hashed in `password_reset_tokens`, dispatched via `EmailDeliveryService` with a 15-minute expiration and a strict 5-attempt brute-force limit.
-- **Account Suspension**: Immediate rejection of login and token rotation when `account_status` is set to `suspended`.
+- **Account Suspension & Lifecycle Control**: Immediate rejection of login and token rotation when `account_status` is set to `suspended`. Database schema supports voluntary account deactivation (`deactivated_at`), account deletion requests (`deletion_requested_at`), privacy discoverability toggles (`is_discoverable`), onboarding flags (`onboarding_completed`, `walkthrough_dismissed`), and notification preferences.
 
 ### 4.2 Canonical Batanes Geography
 - **Deterministic Geographic Model**: All user profiles and job postings are validated against the canonical geographic structure:
@@ -63,12 +63,15 @@ Version 2 represents a robust, production-ready release with the following core 
 
 ### 4.4 Job Posting & Discovery
 - **Full Lifecycle Management**: Creation, viewing, updating, and soft-deletion (`deleted_at IS NULL`) of vacancies.
+- **Rich Vacancy Metadata**: Extended fields for work arrangements (on-site, remote, hybrid), street or landmark location, multiple locations, experience levels, salary period and types (range or fixed), benefits, application deadlines, custom screening questions, featured vacancy flags (`is_featured`), and vacancy closure options.
 - **Search & Filtering**: Real-time filtering by search query, municipality, employment type, and salary range.
 - **Saved Jobs**: Job seekers can bookmark listings for subsequent review.
 
-### 4.5 Applications & Transactional Notifications
-- **Application Submission**: Validates active job status, prevents duplicate active applications, and atomically inserts the application while queuing an in-app notification for the employer.
-- **Status State Machine**: Employers can transition applications between `pending`, `accepted`, and `rejected`. Each transition atomically generates a persistent notification for the job seeker.
+### 4.5 Applications & Recruitment Pipeline
+- **Application Submission**: Validates active job status, prevents duplicate active applications, stores applicant screening question answers, and atomically inserts the application while queuing an in-app notification for the employer.
+- **Status State Machine & Pipeline Tracking**: Default initial status is `new`. Supports transition between statuses (`new`, `accepted`, `rejected`) and schema-level recruitment pipeline stages (`stage`).
+- **Interview Scheduling & Rejection Management**: Supports structured interview invitations (date, type, venue/link, instructions, status), rejection templates, and personalized rejection messaging.
+- **Application Withdrawal**: Job seekers can withdraw active applications, recording the `withdrawn_at` timestamp.
 - **Applicant Contact Reveal**: Job seeker contact details (email and phone) are strictly masked until the candidate formally submits an application to the employer's job posting.
 
 ### 4.6 Deterministic Recommendation Engine
@@ -78,7 +81,7 @@ Version 2 represents a robust, production-ready release with the following core 
   - **Tiering**: Candidates with Total Score > 0 are ranked in Tier 1 by Score DESC, then Name/Title ASC; candidates with Score = 0 are placed in Tier 2 sorted alphabetically.
 
 ### 4.7 Dedicated Administrative Portal
-- **Server-Rendered Server-Rendered Admin UI**: Completely isolated under `/admin`, independent of the React client-side bundle.
+- **Server-Rendered Admin UI**: Completely isolated under `/admin`, independent of the React client-side bundle.
 - **Session-Based Security**: Signed HttpOnly cookies (`batanes_admin_session`) and CSRF tokens (`batanes_admin_csrf`) with a 12-hour expiration window.
 - **Moderation Tools**: Search, suspend, and restore users; inspect, disable, and restore job listings; view unhandled 500 error reports; review append-only audit trails.
 
@@ -86,6 +89,13 @@ Version 2 represents a robust, production-ready release with the following core 
 - **Append-Only Audit Logs**: Logs critical administrative and authentication events with automatic secret/password scrubbing.
 - **Sanitized Error Reporting**: Unhandled 500 exceptions are captured in the database with scrubbed request payloads.
 - **Zero-Jargon UI Contract**: System components, libraries, and internal architectural names are strictly forbidden from rendering in user-facing views.
+
+### 4.9 Social Engagement & Shortlisting
+- **Followed Employers**: Job seekers can follow trusted local employers to stay updated on new postings.
+- **Saved Candidates**: Employers can shortlist and save candidate profiles for current or upcoming hiring needs.
+
+### 4.10 Community Safety & Content Reporting
+- **User Reports**: Authenticated users can report inappropriate accounts or job listings with category classification and detail notes for administrative review.
 
 ---
 

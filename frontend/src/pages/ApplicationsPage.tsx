@@ -1,22 +1,39 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Send, Clock, MapPin, Mail, Phone, FileText, CheckCircle,
-  XCircle, AlertCircle, Briefcase, User, ExternalLink, Filter, RotateCcw, ChevronRight
+  Send,
+  Clock,
+  MapPin,
+  Mail,
+  Phone,
+  FileText,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Briefcase,
+  User,
+  Calendar,
+  ChevronRight,
+  Filter,
+  Download,
+  X,
+  MessageSquare,
 } from 'lucide-react';
-import { applicationsApi, jobsApi, extractError } from '../api/client';
+import { applicationsApi, jobsApi, usersApi, extractError } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import type { Application, Job } from '../types';
-import { PageSpinner, EmptyState, ConfirmDialog } from '../components/ui';
+import { PageSpinner, EmptyState, ConfirmDialog, Modal, Spinner } from '../components/ui';
 import { toastSuccess, toastError } from '../components/ui/Toast';
 
-type ModalAction = 'accept' | 'reject' | 'withdraw' | 'reopen';
-
-interface ActionModalState {
-  isOpen: boolean;
-  type: ModalAction;
-  app: Application | null;
-}
+const PIPELINE_STAGES = [
+  { key: 'all', label: 'All Applicants' },
+  { key: 'new', label: 'Submitted' },
+  { key: 'reviewing', label: 'Reviewing' },
+  { key: 'shortlisted', label: 'Shortlisted' },
+  { key: 'interview', label: 'Interview' },
+  { key: 'hired', label: 'Hired' },
+  { key: 'rejected', label: 'Not Selected' },
+];
 
 export default function ApplicationsPage() {
   const { user } = useAuth();
@@ -27,19 +44,34 @@ export default function ApplicationsPage() {
   const [employerJobs, setEmployerJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedStage, setSelectedStage] = useState('all');
 
-  // Selected job for employer filtering
   const jobIdFromUrl = searchParams.get('jobId');
   const [selectedJobId, setSelectedJobId] = useState<string>(jobIdFromUrl || '');
 
-  // Confirmation modal state
-  const [actionModal, setActionModal] = useState<ActionModalState>({
-    isOpen: false,
-    type: 'withdraw',
-    app: null,
-  });
-  const [actionLoading, setActionLoading] = useState(false);
+  // Employer Applicant Drawer / Modal
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+
+  // Interview Invite Modal
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [interviewDate, setInterviewDate] = useState('');
+  const [interviewType, setInterviewType] = useState('in-person');
+  const [interviewLocation, setInterviewLocation] = useState('');
+  const [interviewMessage, setInterviewMessage] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  // Reject Modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionTemplate, setRejectionTemplate] = useState('standard');
+  const [rejectionMessage, setRejectionMessage] = useState('');
+  const [rejecting, setRejecting] = useState(false);
+
+  // Withdraw Modal
+  const [withdrawApp, setWithdrawApp] = useState<Application | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  // Response to interview (Job Seeker)
+  const [respondingAppId, setRespondingAppId] = useState<number | null>(null);
 
   // Load employer's jobs for filtering
   useEffect(() => {
@@ -50,7 +82,6 @@ export default function ApplicationsPage() {
     }
   }, [isEmployer]);
 
-  // Load applications
   const loadApplications = async (jobId?: number) => {
     setLoading(true);
     setError('');
@@ -73,7 +104,6 @@ export default function ApplicationsPage() {
     loadApplications(isNaN(jId as number) ? undefined : jId);
   }, [selectedJobId, isEmployer]);
 
-  // Handle job filter change
   const handleJobFilterChange = (newJobId: string) => {
     setSelectedJobId(newJobId);
     if (newJobId) {
@@ -83,246 +113,184 @@ export default function ApplicationsPage() {
     }
   };
 
-  // Open confirmation modal
-  const openActionModal = (app: Application, type: ModalAction) => {
-    setActionModal({
-      isOpen: true,
-      type,
-      app,
-    });
-  };
-
-  const closeActionModal = () => {
-    if (!actionLoading) {
-      setActionModal({
-        isOpen: false,
-        type: 'withdraw',
-        app: null,
-      });
+  // Pipeline stage update
+  const handleUpdateStage = async (appId: number, newStage: string) => {
+    try {
+      const updated = await applicationsApi.updateStage(appId, newStage);
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, stage: updated.stage, status: updated.status } : a));
+      if (selectedApp && selectedApp.id === appId) {
+        setSelectedApp(prev => prev ? { ...prev, stage: updated.stage, status: updated.status } : null);
+      }
+      toastSuccess(`Moved applicant to ${newStage}.`);
+    } catch (err) {
+      toastError(extractError(err));
     }
   };
 
-  // Execute confirmed modal action
-  const handleConfirmAction = async () => {
-    const { type, app } = actionModal;
-    if (!app) return;
-
-    setActionLoading(true);
+  // Submit interview invitation
+  const handleSendInterview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedApp) return;
+    setInviting(true);
     try {
-      if (type === 'withdraw') {
-        await applicationsApi.withdraw(app.id);
-        setApplications(prev =>
-          prev.map(a => (a.id === app.id ? { ...a, status: 'withdrawn' } : a))
-        );
-        toastSuccess('Application withdrawn successfully.');
-      } else if (type === 'accept') {
-        await applicationsApi.updateStatus(app.id, 'accepted');
-        setApplications(prev =>
-          prev.map(a => (a.id === app.id ? { ...a, status: 'accepted' } : a))
-        );
-        toastSuccess(`Accepted applicant ${app.applicant?.full_name || 'candidate'}.`);
-      } else if (type === 'reject') {
-        await applicationsApi.updateStatus(app.id, 'rejected');
-        setApplications(prev =>
-          prev.map(a => (a.id === app.id ? { ...a, status: 'rejected' } : a))
-        );
-        toastSuccess('Application marked as rejected.');
-      } else if (type === 'reopen') {
-        await applicationsApi.updateStatus(app.id, 'pending');
-        setApplications(prev =>
-          prev.map(a => (a.id === app.id ? { ...a, status: 'pending' } : a))
-        );
-        toastSuccess('Application status reset to pending.');
-      }
-      closeActionModal();
-    } catch (err: unknown) {
+      const updated = await applicationsApi.inviteToInterview(selectedApp.id, {
+        interview_date: interviewDate,
+        interview_type: interviewType,
+        interview_location: interviewLocation || undefined,
+        interview_message: interviewMessage || undefined,
+      });
+      setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, ...updated } : a));
+      setSelectedApp(prev => prev ? { ...prev, ...updated } : null);
+      setShowInterviewModal(false);
+      toastSuccess('Interview invitation sent to applicant.');
+    } catch (err) {
       toastError(extractError(err));
     } finally {
-      setActionLoading(false);
+      setInviting(false);
     }
   };
 
-  // Filter applications by status
-  const filtered = useMemo(() => {
-    if (!statusFilter) return applications;
-    return applications.filter(a => a.status === statusFilter);
-  }, [applications, statusFilter]);
-
-  // Modal display details following Section H specs & mockups
-  const modalDetails = useMemo(() => {
-    const { type, app } = actionModal;
-    const applicantName = app?.applicant?.full_name || app?.seeker_name || 'the candidate';
-    const jobTitle = app?.job?.title || app?.job_title || 'this position';
-
-    switch (type) {
-      case 'accept':
-        return {
-          title: 'Accept applicant?',
-          message: 'The applicant will be notified that they have been accepted for an interview.',
-          confirmLabel: 'Yes, accept',
-          cancelLabel: 'No, go back',
-          danger: false,
-          summaryCard: { jobTitle, employer: applicantName },
-        };
-      case 'reject':
-        return {
-          title: 'Reject applicant?',
-          message: 'The applicant will be notified that their application was not accepted.',
-          confirmLabel: 'Yes, reject',
-          cancelLabel: 'No, keep it',
-          danger: true,
-          summaryCard: { jobTitle, employer: applicantName },
-        };
-      case 'withdraw':
-        return {
-          title: 'Withdraw application?',
-          message: 'Your application will be withdrawn and the employer will be notified.',
-          confirmLabel: 'Yes, withdraw',
-          cancelLabel: 'No, keep it',
-          danger: true,
-          summaryCard: { jobTitle, employer: app?.company_name || 'Employer' },
-        };
-      case 'reopen':
-        return {
-          title: 'Reset to pending?',
-          message: 'The application status will be reset to pending review.',
-          confirmLabel: 'Yes, reset',
-          cancelLabel: 'No, go back',
-          danger: false,
-          summaryCard: { jobTitle, employer: applicantName },
-        };
+  // Submit rejection
+  const handleSendRejection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedApp) return;
+    setRejecting(true);
+    try {
+      const updated = await applicationsApi.rejectApplication(selectedApp.id, {
+        rejection_template: rejectionTemplate,
+        rejection_message: rejectionMessage || undefined,
+      });
+      setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, ...updated } : a));
+      setSelectedApp(prev => prev ? { ...prev, ...updated } : null);
+      setShowRejectModal(false);
+      toastSuccess('Application marked as not selected.');
+    } catch (err) {
+      toastError(extractError(err));
+    } finally {
+      setRejecting(false);
     }
-  }, [actionModal]);
+  };
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
+  // Withdraw
+  const handleConfirmWithdraw = async () => {
+    if (!withdrawApp) return;
+    setWithdrawing(true);
+    try {
+      await applicationsApi.withdraw(withdrawApp.id);
+      setApplications(prev => prev.filter(a => a.id !== withdrawApp.id));
+      setWithdrawApp(null);
+      toastSuccess('Application withdrawn.');
+    } catch (err) {
+      toastError(extractError(err));
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  // Seeker respond to interview
+  const handleInterviewResponse = async (appId: number, response: 'accepted' | 'declined') => {
+    setRespondingAppId(appId);
+    try {
+      const updated = await applicationsApi.respondToInterview(appId, response);
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, interview_status: updated.interview_status } : a));
+      toastSuccess(response === 'accepted' ? 'Interview invitation accepted!' : 'Interview invitation declined.');
+    } catch (err) {
+      toastError(extractError(err));
+    } finally {
+      setRespondingAppId(null);
+    }
+  };
+
+  // Filtered applications
+  const filtered = useMemo(() => {
+    if (selectedStage === 'all') return applications;
+    return applications.filter(a => {
+      const stage = a.stage || (a.status === 'pending' ? 'new' : a.status);
+      return stage === selectedStage;
+    });
+  }, [applications, selectedStage]);
+
+  const renderStatusBadge = (status: string, stage?: string) => {
+    const s = (stage || status || 'new').toLowerCase();
+    switch (s) {
+      case 'hired':
       case 'accepted':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
-            <CheckCircle className="w-3 h-3" />
-            Accepted
+          <span className="badge badge-success font-bold">
+            <CheckCircle className="w-3 h-3" /> Hired
+          </span>
+        );
+      case 'interview':
+        return (
+          <span className="badge badge-primary font-bold">
+            <Calendar className="w-3 h-3" /> Interview
+          </span>
+        );
+      case 'shortlisted':
+        return (
+          <span className="badge badge-warning font-semibold">
+            Shortlisted
+          </span>
+        );
+      case 'reviewing':
+        return (
+          <span className="badge badge-warning font-semibold">
+            Reviewing
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-danger/15 text-danger border border-danger/30">
-            <XCircle className="w-3 h-3" />
-            Rejected
+          <span className="badge badge-danger font-semibold">
+            <XCircle className="w-3 h-3" /> Not Selected
           </span>
         );
       case 'withdrawn':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-neutral-soft text-muted-foreground border border-border">
+          <span className="badge badge-muted">
             Withdrawn
           </span>
         );
-      case 'pending':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-foreground border border-primary/40">
-            <Clock className="w-3 h-3 text-foreground" />
-            Pending
+          <span className="badge badge-muted font-bold">
+            <Clock className="w-3 h-3" /> Submitted
           </span>
         );
     }
   };
 
-  if (loading && applications.length === 0) {
-    return <div className="container-page py-12"><PageSpinner /></div>;
-  }
-
-  const tabs = [
-    { id: '', label: 'All', count: applications.length },
-    { id: 'pending', label: 'Pending', count: applications.filter(a => a.status === 'pending').length },
-    { id: 'accepted', label: 'Accepted', count: applications.filter(a => a.status === 'accepted').length },
-    { id: 'rejected', label: 'Rejected', count: applications.filter(a => a.status === 'rejected').length },
-    { id: 'withdrawn', label: 'Withdrawn', count: applications.filter(a => a.status === 'withdrawn').length },
-  ];
+  if (loading) return <div className="container-page py-12"><PageSpinner /></div>;
 
   return (
-    <div className="container-page py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="container-page py-8 space-y-6">
+      {/* Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-1 tracking-tight">
-            {isEmployer ? 'Job Applicants' : 'My Applications'}
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+            {isEmployer ? 'Applicants' : 'My Applications'}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {applications.length} total application{applications.length !== 1 ? 's' : ''}
-            {isEmployer && selectedJobId && <span> · Filtered by selected job</span>}
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {isEmployer
+              ? 'Review candidate profiles, schedule interviews, and track your recruitment pipeline.'
+              : 'Track the status of your applications and interview invitations from Batanes employers.'}
           </p>
         </div>
-        <div>
-          {isEmployer ? (
-            <Link
-              to="/jobs/my"
-              id="btn-back-to-my-jobs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-surface text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors shadow-xs min-h-[44px]"
-            >
-              <Briefcase className="w-3.5 h-3.5 text-muted-foreground" /> Manage my job listings
-            </Link>
-          ) : (
-            <Link
-              to="/jobs"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-xs min-h-[44px]"
-            >
-              <Send className="w-3.5 h-3.5" /> Browse open jobs
-            </Link>
-          )}
-        </div>
-      </div>
 
-      {/* Error alert banner */}
-      {error && (
-        <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-6 flex items-center gap-3 text-sm text-danger">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Filters & Status Tabs */}
-      <div className="bg-surface border border-border rounded-2xl p-4 mb-6 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        {/* Status filter tabs: single horizontally swipeable row (AUD-002-UX-09) */}
-        <div className="flex gap-2 overflow-x-auto flex-nowrap no-scrollbar items-center pb-1 -mx-1 px-1">
-          {tabs.map(tab => {
-            const isActive = statusFilter === tab.id;
-            return (
-              <button
-                key={tab.id || 'all'}
-                id={`filter-${tab.id || 'all'}`}
-                type="button"
-                onClick={() => setStatusFilter(tab.id)}
-                className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 min-h-[44px] ${
-                  isActive
-                    ? 'bg-primary text-foreground font-bold shadow-xs'
-                    : 'bg-background text-muted-foreground hover:text-foreground border border-border'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[11px] ${
-                  isActive ? 'bg-foreground/15 text-foreground' : 'bg-neutral-soft text-muted-foreground'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Employer Job selector */}
+        {/* Employer Filter by Vacancy */}
         {isEmployer && employerJobs.length > 0 && (
-          <div className="min-w-[220px]">
-            <label htmlFor="filter-job-select" className="sr-only">Filter by Job</label>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <label htmlFor="filter-vacancy" className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+              Vacancy:
+            </label>
             <select
-              id="filter-job-select"
-              aria-label="Filter applicants by job opening"
-              className="w-full px-4 py-2 rounded-full border border-border bg-background text-foreground text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all min-h-[44px]"
+              id="filter-vacancy"
               value={selectedJobId}
               onChange={e => handleJobFilterChange(e.target.value)}
+              className="input select text-xs py-2 min-w-[200px]"
             >
-              <option value="">All Job Listings ({employerJobs.length})</option>
+              <option value="">All Vacancies ({employerJobs.length})</option>
               {employerJobs.map(j => (
-                <option key={j.id} value={j.id}>
+                <option key={j.id} value={j.id.toString()}>
                   {j.title} ({j.application_count ?? 0})
                 </option>
               ))}
@@ -331,280 +299,497 @@ export default function ApplicationsPage() {
         )}
       </div>
 
-      {/* Applications list */}
+      {/* Pipeline Stage Tabs for Employer */}
+      {isEmployer && (
+        <div className="flex border-b border-border gap-2 overflow-x-auto pb-1">
+          {PIPELINE_STAGES.map(stage => {
+            const count = stage.key === 'all'
+              ? applications.length
+              : applications.filter(a => (a.stage || 'new') === stage.key).length;
+
+            return (
+              <button
+                key={stage.key}
+                type="button"
+                onClick={() => setSelectedStage(stage.key)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedStage === stage.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                }`}
+              >
+                <span>{stage.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  selectedStage === stage.key ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {error && (
+        <div className="card p-4 text-xs text-danger border-danger/30">
+          {error}
+        </div>
+      )}
+
+      {/* Empty State */}
       {filtered.length === 0 ? (
         <EmptyState
-          icon={isEmployer ? <User className="w-8 h-8" /> : <Send className="w-8 h-8" />}
-          title={statusFilter ? `No ${statusFilter} applications` : 'No applications found'}
+          title={isEmployer ? 'No applicants in this stage' : 'No applications yet'}
           description={
             isEmployer
-              ? (statusFilter ? 'Try selecting a different status filter.' : 'No candidates have applied to your active listings yet.')
-              : (statusFilter ? 'Try selecting a different filter.' : 'Start discovering opportunities across the islands of Batanes!')
+              ? 'There are no candidate applications currently in this pipeline stage.'
+              : 'Browse active job vacancies in Batanes and submit your application.'
           }
-          action={!isEmployer && !statusFilter ? (
-            <Link to="/jobs" className="px-6 py-2.5 rounded-full bg-primary text-foreground font-bold text-xs min-h-[44px] inline-flex items-center">
-              Browse Jobs
-            </Link>
-          ) : undefined}
+          action={
+            !isEmployer ? (
+              <Link to="/jobs" className="btn btn-primary text-xs font-bold min-h-[44px] inline-flex items-center gap-1.5">
+                Browse Jobs
+              </Link>
+            ) : undefined
+          }
         />
-      ) : isEmployer ? (
-        /* EMPLOYER VIEW: Full Candidate Profiles */
+      ) : (
         <div className="space-y-4">
           {filtered.map(app => {
             const applicant = app.applicant;
-            const applicantName = applicant?.full_name || app.seeker_name || 'Applicant';
-            const skills = applicant?.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-            const initials = applicantName
-              .split(' ')
-              .map(p => p[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join('')
-              .toUpperCase() || 'A';
+            const job = app.job;
 
             return (
               <div
                 key={app.id}
-                id={`application-${app.id}`}
-                className="bg-surface border border-border rounded-2xl p-6 shadow-sm hover:border-primary/50 transition-all"
+                className="card p-6 rounded-2xl border border-border bg-surface hover:border-primary/40 transition-all space-y-4"
               >
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                  {/* Left: Applicant details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-4 mb-3">
-                      {/* Avatar */}
-                      <div className="w-12 h-12 rounded-full bg-header text-primary border border-border flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
-                        {initials}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h2 className="text-lg font-bold text-foreground truncate">
-                            {applicantName}
-                          </h2>
-                          {renderStatusBadge(app.status)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-                          <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span>Applied for: </span>
-                          <Link
-                            to={`/jobs/${app.job_id}`}
-                            className="font-bold text-foreground hover:underline"
-                          >
-                            {app.job?.title || app.job_title || 'Position'}
-                          </Link>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Authorized Contact info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-4 p-3.5 rounded-xl bg-background border border-border/60 text-xs">
-                      <div className="flex items-center gap-2 text-foreground truncate">
-                        <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{applicant?.email || 'Email not provided'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-foreground">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span>{applicant?.phone_number || 'Phone not provided'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-foreground">
-                        <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span>{applicant?.municipality || 'Batanes'}, {applicant?.island || 'Batan Island'}</span>
-                      </div>
-                    </div>
-
-                    {/* Background details: Experience, Education */}
-                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
-                      {applicant?.experience_years !== undefined && (
-                        <span>
-                          <strong className="text-foreground">Experience:</strong> {applicant.experience_years} year{applicant.experience_years !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                      {applicant?.education && (
-                        <span>
-                          <strong className="text-foreground">Education:</strong> {applicant.education}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Applied {new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {renderStatusBadge(app.status, app.stage)}
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">
+                        Applied {new Date(app.created_at).toLocaleDateString()}
                       </span>
                     </div>
 
-                    {/* Skills */}
-                    {skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {skills.map(s => (
-                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-soft text-foreground border border-border/50">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <h2 className="text-lg font-bold text-foreground">
+                      {isEmployer ? applicant?.full_name || 'Candidate' : job?.title || app.job_title}
+                    </h2>
 
-                    {/* Bio */}
-                    {applicant?.bio && (
-                      <p className="text-xs text-muted-foreground italic mb-3 line-clamp-2">
-                        "{applicant.bio}"
-                      </p>
-                    )}
-
-                    {/* Cover Letter */}
-                    {app.cover_letter && (
-                      <div className="mt-3 p-3.5 rounded-xl bg-neutral-soft/50 border border-border text-xs leading-relaxed">
-                        <p className="font-bold text-foreground mb-1">Cover Note:</p>
-                        <p className="text-muted-foreground whitespace-pre-wrap">{app.cover_letter}</p>
-                      </div>
-                    )}
-
-                    {/* Resume link */}
-                    {(app.resume_url || applicant?.resume_url) && (
-                      <div className="mt-3">
-                        <a
-                          href={app.resume_url || applicant?.resume_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-                        >
-                          <FileText className="w-3.5 h-3.5" /> View resume attachment <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    )}
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="font-semibold text-foreground">
+                        {isEmployer ? job?.title || 'Vacancy' : job?.company_name || app.company_name}
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {isEmployer
+                          ? `${applicant?.municipality || 'Batanes'}, ${applicant?.island || 'Batan Island'}`
+                          : `${job?.municipality || 'Batanes'}, Batanes`}
+                      </span>
+                    </p>
                   </div>
 
-                  {/* Right: Actions */}
-                  <div className="flex flex-row lg:flex-col gap-2 shrink-0 lg:min-w-36 justify-end items-stretch pt-2 lg:pt-0">
-                    {app.status === 'pending' && (
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {isEmployer ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedApp(app)}
+                        className="btn btn-primary text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-1.5"
+                      >
+                        Review Profile & CV <ChevronRight className="w-4 h-4" />
+                      </button>
+                    ) : (
                       <>
-                        <button
-                          id={`btn-accept-applicant-${app.id}`}
-                          type="button"
-                          onClick={() => openActionModal(app, 'accept')}
-                          className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-xs min-h-[44px]"
+                        <Link
+                          to={`/jobs/${app.job_id}`}
+                          className="btn btn-secondary text-xs px-3.5 py-2 font-semibold rounded-xl"
                         >
-                          <CheckCircle className="w-3.5 h-3.5" /> Accept
-                        </button>
-                        <button
-                          id={`btn-reject-applicant-${app.id}`}
-                          type="button"
-                          onClick={() => openActionModal(app, 'reject')}
-                          className="px-4 py-2 rounded-full border border-border bg-surface text-danger font-semibold text-xs hover:bg-danger/10 transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
-                        >
-                          <XCircle className="w-3.5 h-3.5" /> Reject
-                        </button>
+                          View Vacancy
+                        </Link>
+                        {app.stage !== 'hired' && app.status !== 'rejected' && app.status !== 'withdrawn' && (
+                          <button
+                            type="button"
+                            onClick={() => setWithdrawApp(app)}
+                            className="btn btn-secondary text-xs px-3 py-2 text-danger hover:bg-danger/10 border-border rounded-xl"
+                          >
+                            Withdraw
+                          </button>
+                        )}
                       </>
-                    )}
-
-                    {app.status === 'accepted' && (
-                      <button
-                        id={`btn-revert-applicant-${app.id}`}
-                        type="button"
-                        onClick={() => openActionModal(app, 'reopen')}
-                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" /> Re-evaluate
-                      </button>
-                    )}
-
-                    {app.status === 'rejected' && (
-                      <button
-                        id={`btn-reconsider-applicant-${app.id}`}
-                        type="button"
-                        onClick={() => openActionModal(app, 'reopen')}
-                        className="px-4 py-2 rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground font-semibold text-xs hover:bg-neutral-soft transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" /> Reconsider
-                      </button>
-                    )}
-
-                    {app.status === 'withdrawn' && (
-                      <span className="text-xs font-medium text-center py-2 text-muted-foreground">
-                        Withdrawn by applicant
-                      </span>
                     )}
                   </div>
                 </div>
+
+                {/* Interview Scheduled Card (for Job Seeker or Employer) */}
+                {app.interview_date && (
+                  <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4" />
+                        Interview Scheduled: {new Date(app.interview_date).toLocaleString()}
+                      </span>
+                      {app.interview_status && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                          app.interview_status === 'accepted'
+                            ? 'bg-success/20 text-success'
+                            : app.interview_status === 'declined'
+                            ? 'bg-danger/20 text-danger'
+                            : 'bg-primary/20 text-primary'
+                        }`}>
+                          {app.interview_status}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-foreground font-medium">
+                      Type: {app.interview_type === 'in-person' ? 'In-Person Interview' : 'Online / Phone Interview'}
+                      {app.interview_location ? ` · Location: ${app.interview_location}` : ''}
+                    </p>
+                    {app.interview_message && (
+                      <p className="text-xs text-muted-foreground italic">"{app.interview_message}"</p>
+                    )}
+
+                    {/* Job seeker respond action */}
+                    {!isEmployer && app.interview_status === 'pending' && (
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleInterviewResponse(app.id, 'accepted')}
+                          disabled={respondingAppId === app.id}
+                          className="btn btn-primary text-xs font-bold py-1.5 px-3 rounded-lg"
+                        >
+                          Accept Invitation
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInterviewResponse(app.id, 'declined')}
+                          disabled={respondingAppId === app.id}
+                          className="btn btn-secondary text-xs font-semibold py-1.5 px-3 rounded-lg text-danger hover:bg-danger/10"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Rejection Message (if rejected) */}
+                {app.rejection_message && (
+                  <div className="p-3.5 rounded-xl border border-border bg-muted/10 text-xs text-muted-foreground space-y-1">
+                    <p className="font-semibold text-foreground">Employer Feedback:</p>
+                    <p className="italic">"{app.rejection_message}"</p>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-      ) : (
-        /* JOB SEEKER VIEW: Clean Card-Table Hybrid List */
-        <div className="space-y-3">
-          {filtered.map(app => (
-            <div
-              key={app.id}
-              id={`application-${app.id}`}
-              className="bg-surface border border-border rounded-2xl p-5 shadow-sm hover:border-primary/50 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <Link
-                    to={`/jobs/${app.job_id}`}
-                    className="text-base font-bold text-foreground hover:underline truncate"
-                  >
-                    {app.job_title || app.job?.title || 'Job Listing'}
-                  </Link>
-                  {renderStatusBadge(app.status)}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  {app.company_name && (
-                    <span className="font-semibold text-foreground/80">{app.company_name}</span>
-                  )}
-                  {app.job?.municipality && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {app.job.municipality}, {app.job.island}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Applied {new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-
-                {app.cover_letter && (
-                  <p className="text-xs text-muted-foreground italic mt-2 line-clamp-1">
-                    "{app.cover_letter}"
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                {(app.status === 'pending' || app.status === 'accepted') && (
-                  <button
-                    id={`btn-withdraw-${app.id}`}
-                    type="button"
-                    onClick={() => openActionModal(app, 'withdraw')}
-                    className="px-3.5 py-1.5 rounded-full border border-border text-danger hover:bg-danger/10 text-xs font-semibold transition-colors min-h-[44px]"
-                  >
-                    Withdraw
-                  </button>
-                )}
-                <Link
-                  to={`/jobs/${app.job_id}`}
-                  className="px-4 py-2 rounded-full bg-primary text-foreground font-bold text-xs hover:opacity-95 active:scale-95 transition-all inline-flex items-center gap-1 min-h-[44px]"
-                >
-                  View details <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
       )}
 
-      {/* Accessible Reusable Action Modal (H: Confirm Dialog) */}
+      {/* ==================================================== */}
+      {/* EMPLOYER: APPLICANT DETAIL & PIPELINE MODAL */}
+      {/* (Reference: Applicant · Detail, CV and stage.png) */}
+      {/* ==================================================== */}
+      {selectedApp && (
+        <Modal
+          isOpen={selectedApp !== null}
+          onClose={() => setSelectedApp(null)}
+          title={`Applicant: ${selectedApp.applicant?.full_name || 'Candidate'}`}
+          titleId="applicant-modal-title"
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-6">
+            {/* Applicant Summary */}
+            <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl overflow-hidden shrink-0">
+                  {selectedApp.applicant?.profile_pic ? (
+                    <img src={selectedApp.applicant.profile_pic} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    selectedApp.applicant?.full_name?.charAt(0).toUpperCase() || 'A'
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    {selectedApp.applicant?.full_name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {selectedApp.applicant?.municipality}, {selectedApp.applicant?.island}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Applying for: <strong className="text-foreground">{selectedApp.job?.title}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Stage Selector */}
+              <div className="text-right">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+                  Pipeline Stage
+                </label>
+                <select
+                  value={selectedApp.stage || 'new'}
+                  onChange={e => handleUpdateStage(selectedApp.id, e.target.value)}
+                  className="input select text-xs font-bold py-1.5 px-3 min-w-[130px]"
+                >
+                  <option value="new">Submitted</option>
+                  <option value="reviewing">Reviewing</option>
+                  <option value="shortlisted">Shortlisted</option>
+                  <option value="interview">Interview</option>
+                  <option value="hired">Hired</option>
+                  <option value="rejected">Not Selected</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Candidate Bio & Details */}
+            {selectedApp.applicant?.bio && (
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Bio</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {selectedApp.applicant.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Skills */}
+            {selectedApp.applicant?.skills && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Skills</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedApp.applicant.skills.split(',').map(s => s.trim()).filter(Boolean).map(skill => (
+                    <span key={skill} className="badge badge-primary text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cover Note */}
+            {selectedApp.cover_letter && (
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Applicant's Cover Note</h4>
+                <div className="p-3.5 rounded-xl border border-border bg-surface text-xs text-foreground/90 whitespace-pre-line leading-relaxed">
+                  {selectedApp.cover_letter}
+                </div>
+              </div>
+            )}
+
+            {/* Screening Answers */}
+            {selectedApp.answers && (
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Answers to Vacancy Questions</h4>
+                <div className="p-3.5 rounded-xl border border-border bg-surface text-xs text-foreground/90 whitespace-pre-line leading-relaxed">
+                  {selectedApp.answers}
+                </div>
+              </div>
+            )}
+
+            {/* CV Download / View Button */}
+            {selectedApp.applicant?.resume_url && (
+              <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs">
+                  <FileText className="w-5 h-5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-bold text-foreground">Curriculum Vitae / Resume</p>
+                    <p className="text-[11px] text-muted-foreground">PDF / DOCX document uploaded by applicant</p>
+                  </div>
+                </div>
+                <a
+                  href={usersApi.downloadResumeUrl(selectedApp.seeker_id || selectedApp.applicant.seeker_id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" /> Download CV
+                </a>
+              </div>
+            )}
+
+            {/* Contact details */}
+            <div className="grid grid-cols-2 gap-3 text-xs p-3.5 rounded-xl border border-border bg-muted/10">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Email:</span>
+                <span className="font-semibold text-foreground">{selectedApp.applicant?.email}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Phone:</span>
+                <span className="font-semibold text-foreground">{selectedApp.applicant?.phone_number || 'Not provided'}</span>
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex items-center justify-between border-t border-border pt-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(true)}
+                className="btn btn-secondary text-xs px-4 py-2 font-bold text-danger border-border hover:bg-danger/10"
+              >
+                Reject Applicant
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInterviewModal(true)}
+                  className="btn btn-primary text-xs px-5 py-2 font-bold flex items-center gap-1.5"
+                >
+                  <Calendar className="w-4 h-4" /> Schedule Interview
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Interview Invitation Modal */}
+      <Modal
+        isOpen={showInterviewModal}
+        onClose={() => !inviting && setShowInterviewModal(false)}
+        title="Schedule Interview"
+        titleId="interview-modal-title"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleSendInterview} className="space-y-4">
+          <div>
+            <label className="label text-xs">Interview Date & Time *</label>
+            <input
+              type="datetime-local"
+              value={interviewDate}
+              onChange={e => setInterviewDate(e.target.value)}
+              required
+              className="input text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs">Interview Format *</label>
+            <select
+              value={interviewType}
+              onChange={e => setInterviewType(e.target.value)}
+              className="input select text-sm"
+            >
+              <option value="in-person">In-Person in Batanes</option>
+              <option value="online">Online / Phone Call</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label text-xs">
+              {interviewType === 'in-person' ? 'Location / Landmark' : 'Meeting Link / Phone'}
+            </label>
+            <input
+              type="text"
+              placeholder={interviewType === 'in-person' ? 'e.g. Basco Seaside Inn Conference Room' : 'e.g. Google Meet link or 0917-xxx-xxxx'}
+              value={interviewLocation}
+              onChange={e => setInterviewLocation(e.target.value)}
+              className="input text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs">Message / Instructions (Optional)</label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Please bring a valid ID and physical copy of your documents."
+              value={interviewMessage}
+              onChange={e => setInterviewMessage(e.target.value)}
+              className="input text-sm py-2"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowInterviewModal(false)}
+              className="btn btn-secondary text-xs px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={inviting}
+              className="btn btn-primary text-xs font-bold px-5 py-2 flex items-center gap-1.5"
+            >
+              {inviting ? <Spinner size="sm" /> : <>Send Invitation <Send className="w-3.5 h-3.5" /></>}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Rejection Modal */}
+      <Modal
+        isOpen={showRejectModal}
+        onClose={() => !rejecting && setShowRejectModal(false)}
+        title="Reject Candidate"
+        titleId="reject-modal-title"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleSendRejection} className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Select a template or provide feedback. The applicant will be courteously notified.
+          </p>
+
+          <div>
+            <label className="label text-xs">Rejection Template</label>
+            <select
+              value={rejectionTemplate}
+              onChange={e => setRejectionTemplate(e.target.value)}
+              className="input select text-sm"
+            >
+              <option value="standard">Standard Courtesy Notice</option>
+              <option value="volume">High Volume of Applicants</option>
+              <option value="qualifications">Experience & Skill Mismatch</option>
+              <option value="custom">Custom Message</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label text-xs">Additional Feedback (Optional)</label>
+            <textarea
+              rows={3}
+              placeholder="Provide constructive feedback if applicable..."
+              value={rejectionMessage}
+              onChange={e => setRejectionMessage(e.target.value)}
+              className="input text-sm py-2"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowRejectModal(false)}
+              className="btn btn-secondary text-xs px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={rejecting}
+              className="btn btn-danger text-xs font-bold px-4 py-2"
+            >
+              {rejecting ? <Spinner size="sm" /> : 'Confirm Rejection'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Withdraw Confirm Dialog */}
       <ConfirmDialog
-        isOpen={actionModal.isOpen}
-        title={modalDetails.title}
-        message={modalDetails.message}
-        summaryCard={modalDetails.summaryCard}
-        confirmLabel={modalDetails.confirmLabel}
-        cancelLabel={modalDetails.cancelLabel}
-        danger={modalDetails.danger}
-        loading={actionLoading}
-        onConfirm={handleConfirmAction}
-        onCancel={closeActionModal}
+        isOpen={withdrawApp !== null}
+        title="Withdraw application?"
+        message="Your application will be withdrawn. You will be able to reapply if the vacancy remains open."
+        confirmLabel="Yes, withdraw"
+        cancelLabel="Keep application"
+        danger
+        loading={withdrawing}
+        onConfirm={handleConfirmWithdraw}
+        onCancel={() => !withdrawing && setWithdrawApp(null)}
       />
     </div>
   );

@@ -38,7 +38,7 @@ export class RecommendationService {
     targetBarangay?: string | null,
     limit: number = 50
   ): Promise<CandidateRankingResponse> {
-    const candidates = await UserRepository.listJobSeekers(null, null, null, limit * 2, 0);
+    const candidates = await UserRepository.listJobSeekers(null, null, null, null, null, null, limit * 2, 0);
     const tier1: CandidateScoreOut[] = [];
     const tier2: PublicJobSeekerSummary[] = [];
 
@@ -59,6 +59,8 @@ export class RecommendationService {
         experience_years: exp,
         bio,
         profile_pic: candidate.profile_pic,
+        desired_employment_type: candidate.desired_employment_type || null,
+        is_discoverable: candidate.is_discoverable ?? true,
       };
 
       const skillScore = this.calculateSkillScore(neededSkills, candidate.skills || '');

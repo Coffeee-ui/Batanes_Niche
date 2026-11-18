@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import Modal from './Modal';
+import SignInPromptModal from './SignInPromptModal';
 import CategoryIcon, { CategoryTile, CategoryBadge, getCategoryMeta } from './CategoryIcon';
 
-export { Modal, CategoryIcon, CategoryTile, CategoryBadge, getCategoryMeta };
+export { Modal, SignInPromptModal, CategoryIcon, CategoryTile, CategoryBadge, getCategoryMeta };
 export type { ModalProps } from './Modal';
 
 interface SpinnerProps {

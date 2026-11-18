@@ -47,14 +47,20 @@ export class AuthService {
       throw new HttpError(400, "Public registration accepts only 'job_seeker' or 'employer' roles.");
     }
 
-    const locResult = GeographyService.validateLocation(regData.municipality, regData.barangay);
-    if (!locResult.isValid || !locResult.canonicalMunicipality) {
-      throw new HttpError(400, `Invalid Batanes location: '${regData.municipality}', '${regData.barangay}'.`);
+    const muni = regData.municipality?.trim() || 'Basco';
+    const locResult = GeographyService.validateLocation(muni, regData.barangay);
+    const validMunicipality = locResult.isValid && locResult.canonicalMunicipality ? locResult.canonicalMunicipality : 'Basco';
+    const validBarangay = locResult.isValid ? locResult.canonicalBarangay : null;
+
+    let username = regData.username?.trim();
+    if (!username) {
+      const prefix = regData.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+      username = `${prefix}_${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    const existingUsername = await UserRepository.getByUsername(regData.username);
+    const existingUsername = await UserRepository.getByUsername(username);
     if (existingUsername) {
-      throw new HttpError(400, 'Username is already registered.');
+      username = `${username}_${Math.floor(100 + Math.random() * 900)}`;
     }
 
     const existingEmail = await UserRepository.getByEmail(regData.email);
@@ -63,6 +69,7 @@ export class AuthService {
     }
 
     const passwordHash = getPasswordHash(regData.password);
+    const fullName = (regData.full_name || regData.company_name || 'Ivatan User').trim();
 
     let employerProfileData: { company_name: string; company_address: string; company_description?: string; business_type: string } | undefined;
     let jobSeekerProfileData: { bio?: string; education?: string; experience_years: number } | undefined;
@@ -75,8 +82,8 @@ export class AuthService {
       };
     } else if (roleClean === 'employer') {
       employerProfileData = {
-        company_name: (regData.company_name || `${regData.full_name}'s Enterprise`).trim(),
-        company_address: (regData.company_address || `${locResult.canonicalMunicipality}, Batanes`).trim(),
+        company_name: (regData.company_name || `${fullName}'s Enterprise`).trim(),
+        company_address: (regData.company_address || `${validMunicipality}, Batanes`).trim(),
         company_description: regData.company_description?.trim() || undefined,
         business_type: (regData.business_type || 'General Enterprise').trim(),
       };
@@ -84,13 +91,13 @@ export class AuthService {
 
     const user = await UserRepository.create(
       {
-        username: regData.username.trim(),
+        username,
         email: regData.email.trim().toLowerCase(),
         password_hash: passwordHash,
-        full_name: regData.full_name.trim(),
+        full_name: fullName,
         phone_number: regData.phone_number?.trim() || null,
-        municipality: locResult.canonicalMunicipality,
-        barangay: locResult.canonicalBarangay,
+        municipality: validMunicipality,
+        barangay: validBarangay,
         skills: regData.skills?.trim() || null,
         role: roleClean,
         account_status: 'active',
@@ -253,6 +260,28 @@ export class AuthService {
     });
 
     await EmailDeliveryService.sendOtpEmail(user.email, plainOtp);
+  }
+
+  static async verifyResetCode(email: string, otpCode: string): Promise<boolean> {
+    const user = await UserRepository.getByEmail(email);
+    if (!user || user.account_status !== 'active') {
+      return false;
+    }
+
+    const resetToken = await PasswordResetRepository.getLatestActiveByIdentifier(user.email);
+    if (!resetToken) {
+      return false;
+    }
+
+    if (!verifyOtp(otpCode, resetToken.otp_hash)) {
+      const attempts = await PasswordResetRepository.incrementAttempts(resetToken);
+      if (attempts >= 5) {
+        throw new HttpError(400, 'Too many failed attempts. This reset code has been invalidated.');
+      }
+      return false;
+    }
+
+    return true;
   }
 
   static async resetPassword(email: string, otpCode: string, newPassword: string): Promise<void> {

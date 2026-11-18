@@ -4,12 +4,19 @@ import { NotificationOut } from '../schemas/notification';
 
 export class NotificationService {
   static toNotificationOut(n: Notification): NotificationOut {
+    let category = 'account';
+    const typeStr = (n.type || '').toLowerCase();
+    if (typeStr.includes('application')) category = 'applications';
+    else if (typeStr.includes('interview')) category = 'interviews';
+    else if (typeStr.includes('job') || typeStr.includes('vacancy')) category = 'jobs';
+
     return {
       id: n.id,
       user_id: n.user_id,
       title: n.title,
       message: n.message,
       type: n.type,
+      category,
       is_read: n.is_read,
       link: n.link,
       created_at: n.created_at.toISOString(),
@@ -32,9 +39,13 @@ export class NotificationService {
     });
   }
 
-  static async getUserNotifications(userId: number, limit: number = 50): Promise<NotificationOut[]> {
+  static async getUserNotifications(userId: number, category?: string | null, limit: number = 50): Promise<NotificationOut[]> {
     const list = await NotificationRepository.listByUser(userId, limit);
-    return list.map(this.toNotificationOut);
+    let mapped = list.map(this.toNotificationOut);
+    if (category) {
+      mapped = mapped.filter(n => n.category.toLowerCase() === category.toLowerCase());
+    }
+    return mapped;
   }
 
   static async markRead(notificationId: number, userId: number): Promise<boolean> {
@@ -47,5 +58,13 @@ export class NotificationService {
 
   static async getUnreadCount(userId: number): Promise<number> {
     return NotificationRepository.countUnread(userId);
+  }
+
+  static async deleteNotification(notificationId: number, userId: number): Promise<boolean> {
+    return NotificationRepository.delete(notificationId, userId);
+  }
+
+  static async bulkDeleteNotifications(notificationIds: number[], userId: number): Promise<number> {
+    return NotificationRepository.bulkDelete(notificationIds, userId);
   }
 }
