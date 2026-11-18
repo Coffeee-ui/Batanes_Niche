@@ -31,7 +31,7 @@ INSERT INTO users (
 VALUES (
     'admin',
     'admin@batanesniche.ph',
-    '<PASTE_BCRYPT_HASH_HERE>',
+    '$2b$12$NgmW/Y4Hqv2uTj8K2RGSQucRqbCr5Wi7lSuhyNZVLqhq6SO7X7npq',
     'Platform Administrator',
     NULL,
     'Basco',

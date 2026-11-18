@@ -1,0 +1,141 @@
+---
+title: Batanes Niche Job Portal – Database ERD
+---
+erDiagram
+    users {
+        int id PK
+        string username UK
+        string email UK
+        string password_hash
+        string full_name
+        string phone_number
+        string municipality
+        string barangay
+        string skills
+        string profile_pic
+        string resume_url
+        string role
+        string account_status
+        datetime created_at
+    }
+
+    employer_profiles {
+        int user_id PK_FK
+        string company_name
+        string company_address
+        string company_description
+        string business_type
+    }
+
+    job_seeker_profiles {
+        int user_id PK_FK
+        string bio
+        string education
+        int experience_years
+    }
+
+    jobs {
+        int id PK
+        int employer_id FK
+        string title
+        string description
+        string municipality
+        string barangay
+        decimal salary_min
+        decimal salary_max
+        string employment_type
+        string required_skills
+        string status
+        datetime created_at
+        datetime deleted_at
+    }
+
+    applications {
+        int id PK
+        int job_id FK
+        int seeker_id FK
+        string cover_letter
+        string resume_url
+        string status
+        datetime created_at
+    }
+
+    saved_jobs {
+        int id PK
+        int seeker_id FK
+        int job_id FK
+        datetime saved_at
+    }
+
+    notifications {
+        int id PK
+        int user_id FK
+        string title
+        string message
+        string type
+        boolean is_read
+        string link
+        datetime created_at
+    }
+
+    refresh_tokens {
+        int id PK
+        int user_id FK
+        string token_hash UK
+        datetime expires_at
+        boolean revoked
+        datetime created_at
+    }
+
+    revoked_tokens {
+        int id PK
+        string token_jti UK
+        datetime revoked_at
+        datetime expires_at
+    }
+
+    password_reset_tokens {
+        int id PK
+        int user_id FK
+        string identifier
+        string otp_hash
+        datetime expires_at
+        boolean used
+        int attempts_count
+        datetime created_at
+    }
+
+    error_reports {
+        int id PK
+        datetime timestamp
+        string username
+        string endpoint
+        string error_message
+        string stack_trace
+        string request_data
+    }
+
+    audit_logs {
+        int id PK
+        datetime timestamp
+        int actor_id FK
+        string actor_role
+        string ip_address
+        string action
+        string target_type
+        int target_id
+        string details
+    }
+
+    users ||--o| employer_profiles : "has one"
+    users ||--o| job_seeker_profiles : "has one"
+    users ||--o{ jobs : "posts"
+    users ||--o{ applications : "submits"
+    users ||--o{ saved_jobs : "bookmarks"
+    users ||--o{ notifications : "receives"
+    users ||--o{ refresh_tokens : "holds"
+    users ||--o{ password_reset_tokens : "requests"
+    users ||--o{ audit_logs : "generates"
+
+    jobs ||--o{ applications : "receives"
+    jobs ||--o{ saved_jobs : "bookmarked by"

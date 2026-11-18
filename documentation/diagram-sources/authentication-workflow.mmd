@@ -1,0 +1,56 @@
+---
+title: Batanes Niche – Authentication Workflow (JWT + OTP)
+---
+sequenceDiagram
+    actor User as User (Browser)
+    participant SPA as React SPA<br/>(AuthContext)
+    participant API as Express.js<br/>/api/v1/auth
+    participant AUS as AuthService
+    participant DB as Database
+    participant SMTP as SMTP Server
+
+    Note over User,SMTP: === Standard Login Flow ===
+    User->>SPA: Enter username + password
+    SPA->>API: POST /auth/login (loginLimiter: 5 req/60s)
+    API->>AUS: authenticateUser(credentials)
+    AUS->>DB: SELECT user WHERE username=? AND status=active
+    DB-->>AUS: User record
+    AUS->>AUS: bcrypt.compare(password, password_hash)
+    AUS->>DB: INSERT refresh_token (SHA-256 hash, 7d TTL)
+    AUS-->>API: { access_token (JWT 15min), refresh_token }
+    API-->>SPA: 200 { access_token, refresh_token }
+    SPA->>SPA: Store access_token in memory<br/>Store refresh_token (HttpOnly-like)
+
+    Note over User,SMTP: === Silent Token Refresh (Axios Interceptor) ===
+    SPA->>API: Any API call with expired access token
+    API-->>SPA: 401 Unauthorized
+    SPA->>API: POST /auth/refresh { refresh_token }
+    API->>AUS: rotateRefreshToken(refresh_token)
+    AUS->>DB: SELECT refresh_token WHERE hash=? AND NOT revoked
+    AUS->>DB: UPDATE old token → revoked=true
+    AUS->>DB: INSERT new refresh_token (rotation)
+    AUS-->>API: { new access_token, new refresh_token }
+    API-->>SPA: 200 { access_token, refresh_token }
+    SPA->>SPA: Update in-memory token, retry original request
+
+    Note over User,SMTP: === OTP Password Reset Flow ===
+    User->>SPA: Request password reset (email)
+    SPA->>API: POST /auth/forgot-password (3 req/60s limit)
+    API->>AUS: requestPasswordReset(email)
+    AUS->>DB: SELECT user WHERE email=?
+    AUS->>AUS: crypto.randomInt(100000,1000000) → 6-digit OTP
+    AUS->>AUS: bcrypt.hash(otp, 10) → otp_hash
+    AUS->>DB: INSERT password_reset_tokens (otp_hash, 15min TTL)
+    AUS->>SMTP: sendOtpEmail(email, otp_code)
+    SMTP-->>User: Email with 6-digit OTP
+    API-->>SPA: 200 { message: "If account exists..." }
+    User->>SPA: Enter OTP + new password
+    SPA->>API: POST /auth/reset-password { email, otp_code, new_password }
+    API->>AUS: resetPassword(email, otp, new_password)
+    AUS->>DB: SELECT token WHERE identifier=email AND NOT used
+    AUS->>AUS: bcrypt.compare(otp, otp_hash) + check expiry + attempts
+    AUS->>AUS: bcrypt.hash(new_password, 12)
+    AUS->>DB: UPDATE user password_hash
+    AUS->>DB: UPDATE reset_token used=true
+    AUS->>DB: Revoke all refresh_tokens for user
+    API-->>SPA: 200 { message: "Password reset successful" }

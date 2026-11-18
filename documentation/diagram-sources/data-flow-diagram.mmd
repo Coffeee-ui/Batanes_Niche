@@ -1,0 +1,38 @@
+---
+title: Batanes Niche – Data Flow Diagram (Application Submission)
+---
+sequenceDiagram
+    actor Seeker as Job Seeker (Browser)
+    participant SPA as React SPA<br/>(Frontend)
+    participant AX as Axios Client<br/>(Auth Interceptor)
+    participant API as Express.js<br/>/api/v1
+    participant MW as Middleware<br/>(Auth + RateLimit)
+    participant SVC as ApplicationService
+    participant NS as NotificationService
+    participant REPO as Repository Layer
+    participant DB as PostgreSQL / SQLite
+
+    Seeker->>SPA: Click "Apply" on JobDetailPage
+    SPA->>SPA: Open ApplicationModal
+    Seeker->>SPA: Enter cover letter, attach resume URL
+    SPA->>AX: POST /api/v1/applications { job_id, cover_letter, resume_url }
+    AX->>AX: Attach Bearer JWT access token
+    AX->>API: POST /api/v1/applications
+    API->>MW: requireAuthenticated → verify JWT
+    MW->>MW: requireJobSeekerContext → role check
+    API->>SVC: submitApplication(seeker, appData)
+    SVC->>REPO: applicationRepository.create(...)
+    REPO->>DB: INSERT INTO applications (job_id, seeker_id, ...)
+    DB-->>REPO: Application record
+    REPO-->>SVC: Application created
+    SVC->>NS: createNotification(employer, "New Application")
+    NS->>REPO: notificationRepository.create(...)
+    REPO->>DB: INSERT INTO notifications
+    DB-->>REPO: Notification created
+    SVC->>NS: createNotification(seeker, "Application Submitted")
+    NS->>REPO: notificationRepository.create(...)
+    REPO->>DB: INSERT INTO notifications
+    SVC-->>API: { application object }
+    API-->>AX: 201 Created { id, status:"pending", ... }
+    AX-->>SPA: Response data
+    SPA->>Seeker: Show success toast / update UI

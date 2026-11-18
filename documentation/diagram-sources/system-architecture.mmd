@@ -1,0 +1,93 @@
+---
+title: Batanes Niche Job Portal – System Architecture
+---
+flowchart TB
+    subgraph CLIENT["👤 Client Layer"]
+        BROWSER["Web Browser\n(Desktop / Mobile)"]
+    end
+
+    subgraph FRONTEND["🖥 Frontend – Vercel CDN"]
+        SPA["React 18 SPA\nVite + TypeScript\nTailwind CSS\nAxios"]
+    end
+
+    subgraph BACKEND["⚙ Backend – Render (Node.js 20)"]
+        direction TB
+        ENTRY["Express.js Application\nEntry Point: main.ts\nPort: 8000"]
+
+        subgraph MIDDLEWARE_LAYER["Middleware Stack"]
+            HELMET["Helmet\n(Security Headers)"]
+            CORS_MW["CORS\n(Origin Whitelist)"]
+            RATE_MW["Rate Limiter\n(express-rate-limit)"]
+            BODY["Body Parser\nCookie Parser"]
+            LOG["Structured Logger\n(Morgan)"]
+            ERR["Global Error Handler\n(errorHandler.ts)"]
+        end
+
+        subgraph API_LAYER["REST API  /api/v1"]
+            AUTH_RT["/auth\nRegister/Login/Refresh\nForgotPW/ResetPW/Demo"]
+            USERS_RT["/users\nProfile/Resume"]
+            JOBS_RT["/jobs\nCRUD + Preview"]
+            APPS_RT["/applications\nSubmit/Update/Withdraw"]
+            SAVED_RT["/saved-jobs\nBookmark CRUD"]
+            RECS_RT["/recommendations\nCandidates/Jobs-Ranked"]
+            NOTIF_RT["/notifications\nList/Mark-Read"]
+            META_RT["/meta\nOptions/Geography"]
+        end
+
+        subgraph ADMIN_LAYER["Admin SSR  /admin"]
+            NJK["Nunjucks Templates\n(login/dashboard/users\njobs/errors/audit_logs)"]
+            ADMIN_AUTH["HMAC-SHA256\nSigned Session Cookie\n+ CSRF Token"]
+        end
+
+        subgraph SERVICE_LAYER["Domain Services"]
+            AUTH_SVC["AuthService\n(JWT + OTP)"]
+            USER_SVC["UserService"]
+            JOB_SVC["JobService"]
+            APP_SVC["ApplicationService"]
+            NOTIF_SVC["NotificationService"]
+            REC_SVC["RecommendationService\n(70pt Skill + 30pt Geo)"]
+            GEO_SVC["GeographyService\n(3 Islands / 6 Municipalities\n/ 29 Barangays)"]
+            AUDIT_SVC["AuditService"]
+            EMAIL_SVC["EmailDeliveryService\n(Nodemailer SMTP)"]
+            ERR_SVC["ErrorLoggingService"]
+        end
+
+        subgraph REPO_LAYER["Repository Layer (Prisma ORM)"]
+            USER_REPO["UserRepository"]
+            JOB_REPO["JobRepository"]
+            APP_REPO["ApplicationRepository"]
+            TOKEN_REPO["TokenRepository"]
+            NOTIF_REPO["NotificationRepository"]
+            AUDIT_REPO["AuditLogRepository"]
+            SAVED_REPO["SavedJobRepository"]
+            PW_REPO["PasswordResetRepository"]
+            ERR_REPO["ErrorReportRepository"]
+        end
+    end
+
+    subgraph DB["🗄 Database – Supabase / PostgreSQL 16"]
+        PG["PostgreSQL 16\n12 Tables\nPrisma Schema"]
+        SQLITE["SQLite\n(Local Dev)"]
+    end
+
+    subgraph EXTERNAL["🌐 External Services"]
+        SMTP["SMTP Server\n(Gmail / SendGrid)\nOTP Email Delivery"]
+    end
+
+    BROWSER -->|"HTTPS + Bearer JWT\nREST calls"| SPA
+    SPA -->|"REST API /api/v1\nBearer JWT Auth"| ENTRY
+    BROWSER -->|"HTTPS Form Posts\nSession Cookie"| ENTRY
+
+    ENTRY --> MIDDLEWARE_LAYER
+    MIDDLEWARE_LAYER --> API_LAYER
+    MIDDLEWARE_LAYER --> ADMIN_LAYER
+    ADMIN_LAYER --> ADMIN_AUTH
+
+    API_LAYER --> SERVICE_LAYER
+    ADMIN_LAYER --> SERVICE_LAYER
+    SERVICE_LAYER --> REPO_LAYER
+    REPO_LAYER -->|"Prisma Client\nParameterized Queries"| PG
+    REPO_LAYER -.->|"Dev / Test"| SQLITE
+
+    EMAIL_SVC -->|"STARTTLS / TLS"| SMTP
+    AUTH_SVC --> EMAIL_SVC

@@ -1,0 +1,79 @@
+---
+title: Batanes Niche – Component Diagram
+---
+flowchart LR
+    subgraph FRONTEND["Frontend SPA (React 18 + Vite)"]
+        direction TB
+        ROUTER["React Router v6\nClient-side Routing"]
+        AUTH_CTX["AuthContext\nIn-memory JWT Storage\nSilent Token Refresh"]
+        PAGES["Pages\n• JobListPage\n• JobDetailPage\n• SeekerDashboard\n• EmployerDashboard\n• ProfilePage\n• ApplicationsPage\n• NotificationsPage\n• AuthPages (Login/Register)"]
+        COMPONENTS["UI Components\n• BottomNav (mobile)\n• NotificationBadge\n• JobCard\n• ApplicationModal\n• ProfileGauge\n• ToastNotifications\n• ConfirmDialogs"]
+        API_CLIENT["Axios API Client\n(client.ts)\n• Auth Interceptor\n• Silent Refresh 401\n• Bearer Token Header"]
+    end
+
+    subgraph BACKEND_CORE["Backend – Express.js (TypeScript)"]
+        direction TB
+        subgraph ROUTES["Route Layer"]
+            R_AUTH["/api/v1/auth"]
+            R_USERS["/api/v1/users"]
+            R_JOBS["/api/v1/jobs"]
+            R_APPS["/api/v1/applications"]
+            R_SAVED["/api/v1/saved-jobs"]
+            R_RECS["/api/v1/recommendations"]
+            R_NOTIF["/api/v1/notifications"]
+            R_META["/api/v1/meta"]
+            R_ADMIN["/admin (SSR)"]
+        end
+
+        subgraph SERVICES["Domain Services"]
+            SVC_AUTH["AuthService\n• registerUser()\n• authenticateUser()\n• rotateRefreshToken()\n• demoAuthenticate()\n• requestPasswordReset()\n• resetPassword()\n• logout()"]
+            SVC_USER["UserService\n• getPrivateProfile()\n• updateProfile()\n• searchJobSeekers()"]
+            SVC_JOB["JobService\n• createJob()\n• listActiveJobs()\n• getJobById()\n• updateJob()\n• softDeleteJob()\n• saveJob()"]
+            SVC_APP["ApplicationService\n• submitApplication()\n• listApplications()\n• updateApplicationStatus()\n• withdrawApplication()"]
+            SVC_REC["RecommendationService\n• calculateSkillScore()\n  (0–70 pts)\n• scoreDistance()\n  (0–30 pts)\n• rankCandidates()\n• rankJobsForSeeker()"]
+            SVC_GEO["GeographyService\n• 3 Islands\n• 6 Municipalities\n• 29 Barangays\n• validateLocation()\n• resolveIsland()"]
+            SVC_NOTIF["NotificationService\n• getUserNotifications()\n• markAllRead()\n• markRead()"]
+            SVC_AUDIT["AuditService\n• logEvent()"]
+            SVC_EMAIL["EmailDeliveryService\n• sendOtpEmail()\n  (Nodemailer SMTP)"]
+        end
+
+        subgraph REPOS["Repository Layer"]
+            REPO_USER["UserRepository"]
+            REPO_JOB["JobRepository"]
+            REPO_APP["ApplicationRepository"]
+            REPO_TOKEN["TokenRepository"]
+            REPO_NOTIF["NotificationRepository"]
+            REPO_AUDIT["AuditLogRepository"]
+            REPO_SAVED["SavedJobRepository"]
+            REPO_PW["PasswordResetRepository"]
+            REPO_ERR["ErrorReportRepository"]
+        end
+
+        subgraph CORE["Core Utilities"]
+            CFG["config.ts\n(Settings / .env)"]
+            SEC["security.ts\n(JWT, bcrypt, HMAC)"]
+            GEO_DATA["geography.ts\n(Canonical Data)"]
+            CONST["constants.ts\n(Skills/Types)"]
+            ERRORS["errors.ts\n(HttpError)"]
+        end
+    end
+
+    subgraph DB_LAYER["Persistence"]
+        PRISMA["Prisma ORM 5.15\nschema.prisma"]
+        PG["PostgreSQL 16\n(Production/Supabase)"]
+        SQLITE["SQLite\n(Local Dev)"]
+    end
+
+    ROUTER --> PAGES
+    PAGES --> AUTH_CTX
+    PAGES --> COMPONENTS
+    PAGES --> API_CLIENT
+
+    API_CLIENT -->|REST HTTP| ROUTES
+
+    ROUTES --> SERVICES
+    SERVICES --> REPOS
+    SERVICES --> CORE
+    REPOS --> PRISMA
+    PRISMA --> PG
+    PRISMA -.-> SQLITE

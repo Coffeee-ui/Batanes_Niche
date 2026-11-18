@@ -1,4 +1,3 @@
-import nodemailer from 'nodemailer';
 import { settings } from '../core/config';
 
 export class EmailDeliveryService {
@@ -11,7 +10,10 @@ export class EmailDeliveryService {
       `This code will expire in 15 minutes. If you did not request this, please ignore this email.\n\n` +
       `Sincerely,\n${settings.APP_NAME} Support Team`;
 
-    if (!settings.MAIL_USERNAME || !settings.MAIL_PASSWORD) {
+    const apiKey = process.env.RESEND_API_KEY;
+    const fromEmail = settings.MAIL_FROM || 'onboarding@resend.dev';
+
+    if (!apiKey) {
       console.log(
         `[EMAIL_SIMULATION] Password reset OTP sent to ${toEmail}. OTP Code: ${otpCode} (Simulation mode)`
       );
@@ -19,22 +21,25 @@ export class EmailDeliveryService {
     }
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: settings.MAIL_HOST,
-        port: settings.MAIL_PORT,
-        secure: settings.MAIL_SSL_TLS,
-        auth: {
-          user: settings.MAIL_USERNAME,
-          pass: settings.MAIL_PASSWORD,
+      const response = await fetch('https://resend.com', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          from: `${settings.MAIL_FROM_NAME} <${fromEmail}>`,
+          to: [toEmail],
+          subject,
+          text: bodyText,
+        }),
       });
 
-      await transporter.sendMail({
-        from: `"${settings.MAIL_FROM_NAME}" <${settings.MAIL_FROM}>`,
-        to: toEmail,
-        subject,
-        text: bodyText,
-      });
+      if (!response.ok) {
+        const errorDetails = await response.text();
+        console.error(`Failed to dispatch OTP email to ${toEmail}:`, errorDetails);
+        return false;
+      }
 
       console.log(`Successfully sent OTP email to ${toEmail}`);
       return true;

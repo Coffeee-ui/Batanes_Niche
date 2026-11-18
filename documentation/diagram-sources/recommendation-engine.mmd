@@ -1,0 +1,47 @@
+---
+title: Batanes Niche – Recommendation Engine Score Flow
+---
+flowchart TD
+    INPUT["Input:\nRequired Skills (Job)\n+ Seeker Location\n+ Candidate Pool"]
+
+    subgraph SKILL_SCORE["Skill Score (0–70 points)"]
+        S1["Tokenize job required_skills\n(split, normalize, lowercase)"]
+        S2["Tokenize candidate skills\n(split, normalize, lowercase)"]
+        S3["Count matched tokens\n(intersection)"]
+        S4["score = (matched / total_required) × 70"]
+    end
+
+    subgraph GEO_SCORE["Geographic Score (0–30 points)"]
+        G1["Validate location via\nCanonical Geography"]
+        G2{{"Same Municipality\n& Barangay?"}}
+        G3["30 pts\n(Same barangay)"]
+        G4["25 pts\n(Same municipality)"]
+        G5{{"Same Island?"}}
+        G6["15 pts\n(Same island)"]
+        G7["5 pts\n(Different islands,\nboth in Batanes)"]
+    end
+
+    TIER{"Total Score > 0?"}
+    TIER1["Tier 1: Ranked Candidates\n(total_score DESC,\nname ASC tiebreak)"]
+    TIER2["Tier 2: Unranked Pool\n(alphabetical,\nno score match)"]
+
+    INPUT --> SKILL_SCORE
+    INPUT --> GEO_SCORE
+    S1 --> S3
+    S2 --> S3
+    S3 --> S4
+    G1 --> G2
+    G2 -->|Yes| G3
+    G2 -->|No| G4
+    G4 --> G5
+    G5 -->|Yes| G6
+    G5 -->|No| G7
+
+    S4 -->|skill_score| TIER
+    G3 -->|geo_score| TIER
+    G4 -->|geo_score| TIER
+    G6 -->|geo_score| TIER
+    G7 -->|geo_score| TIER
+
+    TIER -->|Yes| TIER1
+    TIER -->|No| TIER2

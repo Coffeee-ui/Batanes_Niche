@@ -1,0 +1,49 @@
+---
+title: Batanes Niche – System Integration / Communication Diagram
+---
+flowchart LR
+    subgraph CDN["☁ Vercel CDN\n(Global Edge)"]
+        SPA_HOST["React 18 SPA\nStatic Assets\n(HTML/JS/CSS)"]
+    end
+
+    subgraph RENDER["☁ Render.com\n(Singapore Region)"]
+        subgraph NODE["Node.js 20 Process\n(Port 8000)"]
+            REST["REST API\n/api/v1\n(Bearer JWT)"]
+            ADMIN_SSR["Admin SSR\n/admin\n(Session Cookie)"]
+        end
+    end
+
+    subgraph SUPABASE["☁ Supabase\n(ap-southeast-1)"]
+        POOLER["Transaction Pooler\nPort 6543\nPgBouncer"]
+        DIRECT["Direct Connection\nPort 5432\n(Schema Push)"]
+        PG_DB[("PostgreSQL 16\nManaged Database")]
+        POOLER --> PG_DB
+        DIRECT --> PG_DB
+    end
+
+    subgraph SMTP_EXT["📧 SMTP Provider\n(Gmail / Postmark)"]
+        SMTP_SRV["SMTP Server\nPort 587 (STARTTLS)\nOTP Delivery"]
+    end
+
+    subgraph USER_AGENTS["Users"]
+        SEEKER["👤 Job Seeker\n(Browser)"]
+        EMPLOYER["🏢 Employer\n(Browser)"]
+        ADMIN_UA["🔑 Administrator\n(Browser)"]
+    end
+
+    SEEKER -->|"HTTPS"| SPA_HOST
+    EMPLOYER -->|"HTTPS"| SPA_HOST
+    ADMIN_UA -->|"HTTPS Form Posts"| ADMIN_SSR
+
+    SPA_HOST -->|"HTTPS REST\nBearer JWT\nCORS Protected"| REST
+
+    REST -->|"Prisma ORM\nParameterized SQL\nTCP Port 6543"| POOLER
+    ADMIN_SSR -->|"Prisma ORM\nTCP Port 6543"| POOLER
+
+    REST -->|"STARTTLS\nPort 587"| SMTP_SRV
+    SMTP_SRV -->|"OTP Code"| SEEKER
+
+    style CDN fill:#e8f4fd,stroke:#2196F3
+    style RENDER fill:#e8f5e9,stroke:#4CAF50
+    style SUPABASE fill:#f3e5f5,stroke:#9C27B0
+    style SMTP_EXT fill:#fff3e0,stroke:#FF9800
