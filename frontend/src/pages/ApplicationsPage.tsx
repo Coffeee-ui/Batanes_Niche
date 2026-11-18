@@ -32,7 +32,7 @@ const PIPELINE_STAGES = [
   { key: 'shortlisted', label: 'Shortlisted' },
   { key: 'interview', label: 'Interview' },
   { key: 'hired', label: 'Hired' },
-  { key: 'rejected', label: 'Not Selected' },
+  { key: 'rejected', label: 'Rejected' },
 ];
 
 export default function ApplicationsPage() {
@@ -163,7 +163,7 @@ export default function ApplicationsPage() {
       setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, ...updated } : a));
       setSelectedApp(prev => prev ? { ...prev, ...updated } : null);
       setShowRejectModal(false);
-      toastSuccess('Application marked as not selected.');
+      toastSuccess('Application rejected.');
     } catch (err) {
       toastError(extractError(err));
     } finally {
@@ -241,7 +241,7 @@ export default function ApplicationsPage() {
       case 'rejected':
         return (
           <span className="badge badge-danger font-semibold">
-            <XCircle className="w-3 h-3" /> Not Selected
+            <XCircle className="w-3 h-3" /> Rejected
           </span>
         );
       case 'withdrawn':

@@ -111,17 +111,12 @@ Under the **Environment** tab, click **Add Environment Variable** for each of th
 | `ALLOWED_ORIGINS` | `["https://batanes-niche.vercel.app"]` | Your Vercel frontend URL(s) as JSON array |
 | `DEBUG` | `false` | Disables verbose debug logging |
 | `DEMO_MODE` | `false` | Strictly disables 1-click test credentials |
-| `MAIL_HOST` | `smtp.gmail.com` | SMTP Server (or SendGrid/Postmark) |
-| `MAIL_PORT` | `587` | SMTP Port |
-| `MAIL_USERNAME` | `notifications@yourdomain.ph` | SMTP Username |
-| `MAIL_PASSWORD` | `your-smtp-app-password` | SMTP App Password |
-| `MAIL_FROM` | `noreply@yourdomain.ph` | Outgoing email address |
-| `MAIL_FROM_NAME` | `Batanes Niche Job Portal` | Outgoing sender display name |
-| `MAIL_STARTTLS` | `true` | Enable STARTTLS |
-| `MAIL_SSL_TLS` | `false` | Set true only if port 465 is used |
+| `RESEND_API_KEY` | `re_xxxxxxxxxxxxxxxxxxxx` | **Required for live email.** API key from [resend.com](https://resend.com). Without this, OTPs are only logged to the server console (simulation mode). |
+| `RESEND_FROM_EMAIL` | `noreply@yourdomain.ph` | Verified sender address in your Resend account. Must be a domain verified in Resend. |
+| `MAIL_FROM_NAME` | `Batanes Niche Job Portal` | Outgoing sender display name used in OTP emails. |
 
 ### Step 2.3: Health Check Configuration
-1. In Render, scroll down to **Advance Settings** -> **Health Check Path**.
+1. In Render, scroll down to **Advanced Settings** → **Health Check Path**.
 2. Enter `/health`.
 3. Click **Create Web Service**.
 4. Monitor the deployment logs. When deployment completes, verify:
@@ -129,6 +124,9 @@ Under the **Environment** tab, click **Add Environment Variable** for each of th
    curl -f https://your-backend.onrender.com/health
    # Response: {"status":"healthy","timestamp":"...","app":"Batanes Niche Job Portal","version":"2.0.0"}
    ```
+
+> [!NOTE]
+> **Email delivery**: The application uses the **Resend HTTP API** for OTP email delivery — not SMTP. Set `RESEND_API_KEY` to enable live email. Without it, OTP codes are logged to the Render service logs only (simulation mode). To test live email, use the Forgot Password flow after deployment.
 
 ---
 

@@ -186,13 +186,9 @@ pnpm build
 | `ALLOWED_ORIGINS` | `["https://your-app.vercel.app"]` |
 | `DEMO_MODE` | `false` |
 | `DEBUG` | `false` |
-| `MAIL_HOST` | SMTP hostname |
-| `MAIL_PORT` | `587` |
-| `MAIL_USERNAME` | SMTP username |
-| `MAIL_PASSWORD` | SMTP app password |
-| `MAIL_FROM` | Sender email address |
+| `RESEND_API_KEY` | `re_...` (Resend API Key for live OTP emails) |
+| `RESEND_FROM_EMAIL` | `noreply@yourdomain.ph` (Verified Resend sender) |
 | `MAIL_FROM_NAME` | `Batanes Niche Job Portal` |
-| `MAIL_STARTTLS` | `true` |
 
 > ⚠️ **Never commit secrets to the repository.** Generate all secrets using `openssl rand -hex 32`.
 
@@ -247,6 +243,6 @@ docker-compose down
 | Admin login fails after DB switch | Re-run `pnpm db:setup` to restore seed admin account in the new database. |
 | Vitest tests fail | Run `pnpm typecheck` first to identify TypeScript errors. |
 | Resume files lost on Render | Known limitation — ephemeral filesystem. Migrate to Supabase Storage or S3. |
-| OTP emails not sending | Verify `MAIL_HOST`, `MAIL_USERNAME`, and `MAIL_PASSWORD`. Check SMTP app-password configuration. |
+| OTP emails not sending | Verify `RESEND_API_KEY` is set on Render. Without it, OTP codes are logged to backend console (simulation mode). |
 
 For additional troubleshooting guidance, refer to: [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)

@@ -141,13 +141,16 @@ This guide diagnoses and resolves common operational, build, runtime, and deploy
 
 ### Issue 4.2: Password Reset OTP Not Arriving in User Inbox
 - **Symptom**: User clicks "Forgot Password", but no email arrives.
-- **Root Cause**: `MAIL_USERNAME` and `MAIL_PASSWORD` are empty.
+- **Root Cause**: `RESEND_API_KEY` is not configured, or domain verification in Resend is incomplete.
 - **Resolution**:
-  When SMTP credentials are empty, the backend runs in **Email Simulation Mode** to prevent application crashes. The 6-digit OTP is output directly to the backend logs in Render:
+  When `RESEND_API_KEY` is empty, the backend runs in **Email Simulation Mode** to prevent application crashes. The 6-digit OTP is output directly to the backend logs in Render:
   ```text
   [EMAIL_SIMULATION] Password reset OTP sent to user@example.com. OTP Code: 123456 (Simulation mode)
   ```
-  To enable live email delivery, configure valid SMTP credentials (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`) in Render.
+  To enable live email delivery:
+  1. Obtain an API key from [Resend](https://resend.com).
+  2. Set `RESEND_API_KEY` in the Render service environment variables.
+  3. Ensure `RESEND_FROM_EMAIL` matches a verified domain in your Resend account (or defaults to `onboarding@resend.dev` for testing).
 
 ---
 

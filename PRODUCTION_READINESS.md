@@ -98,4 +98,4 @@ This document presents the complete production readiness analysis and implementa
 | **Backend** | Render | **READY** | Host binding `0.0.0.0`, health checks ready, assets bundled into `dist/`, `render.yaml` created. |
 | **Database** | Supabase | **PARTIALLY READY** | Migration scripts and Prisma configuration complete; requires user to supply project credentials. |
 | **File Storage** | Render / Local | **PARTIALLY READY** | Fully functional with local directory/Render persistent disk. Object storage recommended for high volume. |
-| **Email Relay** | SMTP Relay | **PARTIALLY READY** | Operational with console simulation fallback; requires SMTP credentials for live email delivery. |
+| **Email Delivery** | Resend API | **PARTIALLY READY** | Operational with console simulation fallback; requires `RESEND_API_KEY` for live email delivery. |

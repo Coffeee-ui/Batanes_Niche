@@ -45,16 +45,17 @@ These variables must be populated in the **Render Dashboard -> Web Service -> En
 | `REFRESH_TOKEN_EXPIRE_DAYS` | No | `7` | Render | Lifespan of rotating refresh tokens in days (default: 7 days). |
 | `ADMIN_SESSION_SECRET` | **CRITICAL** | Dev placeholder | Render | HMAC-SHA256 secret key for signing administrative session cookies. Process fails startup if default placeholder is detected in production. |
 | `ALLOWED_ORIGINS` | Yes | Localhost array | Render | JSON array or comma-separated list of allowed frontend origins for CORS. Example: `["https://batanes-niche.vercel.app"]`. |
-| `MAIL_HOST` | Conditional | `smtp.gmail.com` | Render | SMTP server hostname for 6-digit password reset OTP delivery. |
-| `MAIL_PORT` | Conditional | `587` | Render | SMTP server port (`587` for STARTTLS, `465` for SSL/TLS). |
-| `MAIL_USERNAME` | Conditional | Empty | Render | SMTP authentication username / email. If left empty, OTPs are safely logged to console (simulation mode). |
-| `MAIL_PASSWORD` | Conditional | Empty | Render | SMTP authentication password or App Password. |
-| `MAIL_FROM` | Conditional | `noreply@batanesniche.ph` | Render | Outgoing sender email address. |
-| `MAIL_FROM_NAME` | No | `Batanes Niche Job Portal` | Render | Outgoing sender display name. |
-| `MAIL_STARTTLS` | No | `true` | Render | Enable STARTTLS encryption (recommended for port 587). |
-| `MAIL_SSL_TLS` | No | `false` | Render | Enable direct SSL/TLS encryption (required if port 465 is used). |
+| `RESEND_API_KEY` | **Required for live email** | Empty (simulation mode) | Render | API key from [resend.com](https://resend.com). **When set**, the application delivers OTP emails via the Resend HTTP API. **When absent**, OTPs are safely logged to the server console only (simulation mode — no email is sent). Obtain from your Resend dashboard. |
+| `RESEND_FROM_EMAIL` | Conditional | `onboarding@resend.dev` | Render | Verified sender address configured in your Resend account. Example: `noreply@batanesniche.ph`. Must match a domain verified in Resend. If absent, falls back to `MAIL_FROM` or Resend's default onboarding address. |
+| `MAIL_FROM` | No | `noreply@batanesniche.ph` | Render | Fallback sender address used in email subjects and display names when `RESEND_FROM_EMAIL` is not set. |
+| `MAIL_FROM_NAME` | No | `Batanes Niche Job Portal` | Render | Outgoing sender display name used in OTP email headers. |
 | `ADMIN_INITIAL_EMAIL` | No | `admin@batanesniche.ph` | Render / Seed | Email used when seeding the initial platform administrator. |
 | `ADMIN_INITIAL_PASSWORD` | Conditional | Empty | Render / Seed | Plaintext password used when seeding the initial platform administrator. Required when running seeding in production. |
+
+> [!NOTE]
+> **Email delivery mechanism**: The application uses the **Resend HTTP API** (`https://api.resend.com/emails`) for OTP email delivery — not SMTP/nodemailer. The variables `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_STARTTLS`, and `MAIL_SSL_TLS` are defined in `backend/src/core/config.ts` for future use but are **not currently read by the email delivery service**. Do not configure SMTP credentials expecting them to send OTP emails — set `RESEND_API_KEY` instead.
+>
+> **Simulation mode**: If `RESEND_API_KEY` is not set, the OTP code is logged to the backend server console (`[EMAIL_SIMULATION] Password reset OTP sent to <email>. OTP Code: <code>`). This is acceptable for local development but must not be used in production.
 
 ---
 

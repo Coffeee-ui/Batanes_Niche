@@ -76,7 +76,7 @@ The system is built as a **Modular Monolith** with four strictly decoupled tiers
                      v                            v                            v
           +--------------------+        +--------------------+        +--------------------+
           |  Domain Services   |        |  Core Middleware   |        | External Services  |
-          |  (Business Logic)  |        |  (CORS, Helmet,    |        | (SMTP Email OTP    |
+          |  (Business Logic)  |        |  (CORS, Helmet,    |        | (Resend Email OTP  |
           |                    |        |   RateLimit, CSRF) |        |  Delivery)         |
           +--------------------+        +--------------------+        +--------------------+
                      |

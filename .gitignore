@@ -71,9 +71,9 @@ logs/
 # Build artifacts
 *.tsbuildinfo
 
-# UI Components 
+# UI Components (Reference design screenshots — preserved on disk, excluded from git tracking to avoid binary bloat)
+# All reference UI subdirectories are excluded by the wildcard below.
 Reference-UI/*
-Reference-UI/New-Ui/
 
 # Backend uploads (ephemeral on Render)
 uploads/
