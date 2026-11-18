@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { settings } from '../core/config';
-import { schemaSyncStatus } from './ensureSchema';
 
 // Ensure database configuration is valid
 settings.validateDatabaseConfig();
@@ -48,36 +47,16 @@ export async function checkDatabaseHealth(): Promise<{
   provider: string;
   latencyMs: number;
   error?: string;
-  schemaSync?: typeof schemaSyncStatus;
-  testQuery?: { success: boolean; error?: string };
 }> {
   const start = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
     const latencyMs = Date.now() - start;
-
-    let testQuery: { success: boolean; error?: string } = { success: true };
-    try {
-      await prisma.job.findMany({
-        where: { status: { in: ['published', 'active'] }, deleted_at: null },
-        include: {
-          employer: { include: { employer_profile: true } },
-          applications: true,
-        },
-        take: 1,
-      });
-    } catch (jobErr) {
-      const rawJobMsg = jobErr instanceof Error ? jobErr.message : String(jobErr);
-      testQuery = { success: false, error: sanitizeDatabaseError(rawJobMsg) };
-    }
-
     return {
       status: 'ready',
       database: 'connected',
       provider: settings.DB_PROVIDER,
       latencyMs,
-      schemaSync: schemaSyncStatus,
-      testQuery,
     };
   } catch (exc) {
     const rawMsg = exc instanceof Error ? exc.message : String(exc);

@@ -51,14 +51,22 @@ export async function errorHandler(
   res: Response,
   _next: NextFunction
 ): Promise<void> {
-  if (err instanceof HttpError) {
-    res.status(err.status).json({ detail: err.detail });
+  if (
+    err instanceof HttpError ||
+    (err && typeof err === 'object' && typeof (err as any).status === 'number' && 'detail' in (err as any))
+  ) {
+    const httpErr = err as { status: number; detail: any };
+    res.status(httpErr.status).json({ detail: httpErr.detail });
     return;
   }
 
-  if (err instanceof ZodError) {
-    const detail = err.issues.map(issue => ({
-      loc: ['body', ...issue.path.map(String)],
+  if (
+    err instanceof ZodError ||
+    (err && typeof err === 'object' && (err as any).name === 'ZodError' && Array.isArray((err as any).issues))
+  ) {
+    const issues = ((err as any).issues || []) as any[];
+    const detail = issues.map(issue => ({
+      loc: ['body', ...(issue.path || []).map(String)],
       msg: issue.message,
       type: issue.code,
     }));
