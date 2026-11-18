@@ -79,6 +79,14 @@ export class Settings {
   public readonly ADMIN_SESSION_SECRET: string =
     process.env.ADMIN_SESSION_SECRET || 'batanes-niche-admin-session-local-secret-super-secure-high-entropy-64chars';
 
+  // File Upload Configuration (Customizable for Render Persistent Disk)
+  public readonly UPLOAD_DIR: string =
+    process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : path.resolve(process.cwd(), 'uploads', 'resumes');
+
+  // Baseline Admin Account Initialization Credentials
+  public readonly ADMIN_INITIAL_EMAIL: string = process.env.ADMIN_INITIAL_EMAIL || 'admin@batanesniche.ph';
+  public readonly ADMIN_INITIAL_PASSWORD: string | undefined = process.env.ADMIN_INITIAL_PASSWORD;
+
   public get is_demo_mode_active(): boolean {
     const isDev = ['development', 'dev', 'local', 'test', 'testing'].includes(this.ENVIRONMENT.toLowerCase());
     return isDev && Boolean(this.DEMO_MODE);
@@ -99,7 +107,32 @@ export class Settings {
       }
     }
   }
+
+  /**
+   * Validates that production environments do not start with placeholder/development secrets.
+   * Call this at startup — it throws immediately so the process never boots with unsafe config.
+   */
+  public validateProductionSecrets(): void {
+    const DEV_JWT_PLACEHOLDER = 'batanes-niche-local-development-secret-key-super-secure-high-entropy-64chars-minimum';
+    const DEV_SESSION_PLACEHOLDER = 'batanes-niche-admin-session-local-secret-super-secure-high-entropy-64chars';
+
+    if (this.ENVIRONMENT.toLowerCase() === 'production') {
+      if (this.JWT_SECRET_KEY === DEV_JWT_PLACEHOLDER || this.JWT_SECRET_KEY.startsWith('batanes-niche-local')) {
+        throw new Error(
+          '[Config Error] FATAL: JWT_SECRET_KEY is a development placeholder. ' +
+          'Set a strong, randomly-generated secret in the Render Environment Variables dashboard.'
+        );
+      }
+      if (this.ADMIN_SESSION_SECRET === DEV_SESSION_PLACEHOLDER || this.ADMIN_SESSION_SECRET.startsWith('batanes-niche-admin-session-local')) {
+        throw new Error(
+          '[Config Error] FATAL: ADMIN_SESSION_SECRET is a development placeholder. ' +
+          'Set a strong, randomly-generated secret in the Render Environment Variables dashboard.'
+        );
+      }
+    }
+  }
 }
 
 export const settings = new Settings();
 settings.validateDatabaseConfig();
+settings.validateProductionSecrets();

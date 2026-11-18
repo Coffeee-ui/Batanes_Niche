@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: batanes-niche-backend
+    runtime: node
+    region: singapore
+    # Monorepo root — build command handles subpackage targeting
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter batanes-niche-backend exec prisma generate && pnpm --filter batanes-niche-backend run build:render
+    startCommand: node backend/dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_PROVIDER
+        value: postgres
+      # Set these in the Render dashboard (marked sync:false = not synced from render.yaml)
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ADMIN_SESSION_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: DEBUG
+        value: false
+      - key: DEMO_MODE
+        value: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: "Batanes Niche Job Portal"
+      - key: MAIL_STARTTLS
+        value: true
+      - key: MAIL_SSL_TLS
+        value: false
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 15
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7

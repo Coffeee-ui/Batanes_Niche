@@ -62,8 +62,22 @@ usersRouter.get(
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../../database/client';
+import { settings } from '../../core/config';
 
-const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads', 'resumes');
+// ARCHITECTURAL NOTE: Resume files are stored on the local filesystem under
+// `uploads/resumes/`. On Render's free tier the filesystem is ephemeral —
+// files are permanently lost on each redeploy. For production resilience,
+// migrate to object storage (e.g., Supabase Storage, S3, Cloudflare R2).
+// Until then, a warning is emitted at startup when running in production mode.
+const UPLOAD_DIR = settings.UPLOAD_DIR;
+
+if (settings.DB_PROVIDER === 'postgresql' || settings.ENVIRONMENT.toLowerCase() === 'production') {
+  console.warn(
+    '[Resume Upload] WARNING: Resume files are stored on the local filesystem. ' +
+    'On Render (and most cloud platforms) the filesystem is ephemeral — uploaded ' +
+    'files will be lost on every redeploy. Migrate to object storage for production.'
+  );
+}
 
 function parseMultipartFile(buffer: Buffer, boundary: string): { filename: string; contentType: string; data: Buffer } | null {
   const boundaryBuffer = Buffer.from(`--${boundary}`);

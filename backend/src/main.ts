@@ -2,6 +2,7 @@ import path from 'path';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { settings } from './core/config';
 import { checkDatabaseHealth, disconnectDatabase } from './database/client';
 import { structuredLoggingMiddleware } from './middleware/logging';
@@ -14,13 +15,28 @@ const app = express();
 // Trust proxy for IP headers
 app.set('trust proxy', 1);
 
+// Security headers via Helmet (with CSP configured for admin portal compatibility)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
 // CORS configuration matching FastAPI
 app.use(
   cors({
     origin: settings.ALLOWED_ORIGINS,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['*'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-ID', 'Accept'],
   })
 );
 
@@ -78,7 +94,7 @@ app.use(errorHandler);
 // Start server
 let server: any = null;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(settings.PORT, () => {
+  server = app.listen(settings.PORT, '0.0.0.0', () => {
     console.log(`[Batanes Niche] TypeScript Server running on port ${settings.PORT}`);
     console.log(`[Batanes Niche] Provider: ${settings.DB_PROVIDER.toUpperCase()}, Environment: ${settings.ENVIRONMENT}, Debug: ${settings.DEBUG}`);
     console.log(`[Batanes Niche] Demo Mode: ${settings.is_demo_mode_active ? 'ACTIVE' : 'DISABLED'}`);

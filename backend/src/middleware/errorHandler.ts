@@ -4,6 +4,40 @@ import { ZodError } from 'zod';
 import { HttpError } from '../core/errors';
 import { ErrorLoggingService } from '../services/errorLoggingService';
 
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'password_hash',
+  'new_password',
+  'confirm_password',
+  'old_password',
+  'otp_code',
+  'token',
+  'refresh_token',
+  'authorization',
+  'secret',
+]);
+
+function sanitizeRequestBody(body: unknown): string | null {
+  if (!body || typeof body !== 'object') return null;
+  try {
+    const cloned = JSON.parse(JSON.stringify(body));
+    const mask = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return;
+      for (const key of Object.keys(obj)) {
+        if (SENSITIVE_KEYS.has(key.toLowerCase())) {
+          obj[key] = '[REDACTED]';
+        } else if (typeof obj[key] === 'object') {
+          mask(obj[key]);
+        }
+      }
+    };
+    mask(cloned);
+    return JSON.stringify(cloned);
+  } catch {
+    return '[Unserializable Request Body]';
+  }
+}
+
 export async function errorHandler(
   err: unknown,
   req: Request,
@@ -38,7 +72,7 @@ export async function errorHandler(
       req.originalUrl,
       username,
       stackTrace || null,
-      req.body ? JSON.stringify(req.body) : null
+      sanitizeRequestBody(req.body)
     );
   } catch (logErr) {
     console.error('Failed to record incident to error_reports:', logErr);

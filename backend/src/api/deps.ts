@@ -11,10 +11,14 @@ export interface AuthenticatedRequest extends Request {
 
 export function extractBearerToken(req: Request): string | null {
   const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
   }
-  return authHeader.slice(7).trim();
+  // Allow query parameter token for direct browser downloads (e.g., resume downloads in new tab)
+  if (req.query && typeof req.query.token === 'string' && req.query.token.trim()) {
+    return req.query.token.trim();
+  }
+  return null;
 }
 
 export async function authenticateOptional(

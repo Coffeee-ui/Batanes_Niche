@@ -305,12 +305,22 @@ The administrative portal is hosted directly on the Express.js backend under `/a
 
 ## 9. Production Deployment Overview
 
-Production deployment uses **Docker Compose** fronted by **Nginx**:
-- **Nginx**: Terminates SSL, proxies `/api/` and `/admin` to the Express.js backend, serves static React SPA assets with long-term caching, and handles SPA client-side fallback routing.
-- **Express.js Backend**: Multi-stage Node 20 Alpine container (`docker/backend.Dockerfile`) running under an unprivileged user `appuser` (UID 1001).
-- **PostgreSQL 16**: Containerized enterprise relational database with automated volume backups.
+The platform is optimized for modern cloud infrastructure:
 
-For the full 19-step production deployment manual, refer to [`development/setup/PRODUCTION_SETUP.md`](./development/setup/PRODUCTION_SETUP.md).
+- **Frontend**: Hosted on [**Vercel**](https://vercel.com) (React 18 SPA via Vite with client-side SPA rewrites via `vercel.json`).
+- **Backend API**: Hosted on [**Render**](https://render.com) (Node.js 20+ / Express.js REST API and Nunjucks Admin SSR).
+- **Database**: Managed on [**Supabase**](https://supabase.com) (PostgreSQL 15+ with transaction connection pooling on port 6543).
+
+### Dedicated Production Documentation
+
+For complete, step-by-step production operations, refer to:
+- [**DEPLOYMENT.md**](./DEPLOYMENT.md): Step-by-step deployment guide for Vercel, Render, and Supabase.
+- [**PRODUCTION_READINESS.md**](./PRODUCTION_READINESS.md): Production audit findings, implemented fixes, and verification checklist.
+- [**ENVIRONMENT_VARIABLES.md**](./ENVIRONMENT_VARIABLES.md): Complete reference of all frontend and backend configuration variables.
+- [**DATABASE_SETUP.md**](./DATABASE_SETUP.md): Supabase connection pooling, migrations, indexing, and backup procedures.
+- [**SECURITY.md**](./SECURITY.md): Security architecture, authentication, rate limiting, and threat mitigations.
+- [**TROUBLESHOOTING.md**](./TROUBLESHOOTING.md): Diagnosis and resolution runbook for common production issues.
+- [**Database Migrations**](./Database/README.md): Raw PostgreSQL schema and admin bootstrap SQL scripts.
 
 ---
 

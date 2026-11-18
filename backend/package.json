@@ -10,7 +10,9 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "ts-node src/database/syncProvider.ts && ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "ts-node src/database/syncProvider.ts && tsc",
+    "build": "ts-node src/database/syncProvider.ts && tsc && pnpm run copy-assets",
+    "build:render": "prisma generate && tsc && pnpm run copy-assets",
+    "copy-assets": "node -e \"const fs = require('fs'); fs.cpSync('src/templates', 'dist/templates', {recursive: true, force: true}); fs.cpSync('src/static', 'dist/static', {recursive: true, force: true});\"",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "db:sync": "ts-node src/database/syncProvider.ts",

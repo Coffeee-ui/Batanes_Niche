@@ -104,10 +104,32 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
   console.log(' [Batanes Niche] SQLite Database Setup & Seeder');
   console.log('================================================================================');
 
-  // 1. Resolve Target Database Path
-  const { filePath, prismaUrl, isCustom } = resolveSqlitePaths(options.dbPath);
-  console.log(`[DB Setup] Target Database File: ${filePath}`);
-  console.log(`[DB Setup] Resolved Prisma URL:   ${prismaUrl}`);
+  // 1. Detect Database Provider & Target URL
+  const rawUrl = process.env.DATABASE_URL || '';
+  const isPostgres =
+    rawUrl.startsWith('postgres://') ||
+    rawUrl.startsWith('postgresql://') ||
+    (process.env.DB_PROVIDER || '').toLowerCase() === 'postgres' ||
+    (process.env.DB_PROVIDER || '').toLowerCase() === 'postgresql';
+
+  let filePath = '';
+  let prismaUrl = '';
+  let isCustom = false;
+
+  if (isPostgres) {
+    // For PostgreSQL/Supabase, use DIRECT_URL for migrations/push if available
+    prismaUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
+    filePath = 'Supabase / PostgreSQL Cloud Database';
+    console.log(`[DB Setup] Target Database: PostgreSQL`);
+    console.log(`[DB Setup] Resolved Connection: ${prismaUrl.replace(/:[^:@]+@/, ':****@')}`);
+  } else {
+    const sqlitePaths = resolveSqlitePaths(options.dbPath);
+    filePath = sqlitePaths.filePath;
+    prismaUrl = sqlitePaths.prismaUrl;
+    isCustom = sqlitePaths.isCustom;
+    console.log(`[DB Setup] Target Database File: ${filePath}`);
+    console.log(`[DB Setup] Resolved Prisma URL:   ${prismaUrl}`);
+  }
 
   // 2. Production Safety Checks
   const env = (process.env.ENVIRONMENT || process.env.NODE_ENV || 'development').toLowerCase();
@@ -119,20 +141,14 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
     );
   }
 
-  const rawUrl = process.env.DATABASE_URL || '';
-  const isPostgres =
-    rawUrl.startsWith('postgres://') ||
-    rawUrl.startsWith('postgresql://') ||
-    (process.env.DB_PROVIDER || '').toLowerCase() === 'postgres';
-
   if (options.reset && isPostgres) {
     throw new Error(
       '[CRITICAL ERROR] --reset was invoked against a PostgreSQL/remote database. Use Prisma migrations for remote schemas. Aborting.'
     );
   }
 
-  // 3. Handle --reset: Safely remove existing SQLite file and companion files
-  if (options.reset) {
+  // 3. Handle --reset (SQLite only)
+  if (options.reset && !isPostgres) {
     console.log('\n[DB Setup] --reset requested: Removing existing database files...');
     const filesToRemove = [
       filePath,
@@ -148,8 +164,10 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
     }
   }
 
-  // 4. Ensure Parent Directory Exists
-  ensureParentDirectory(filePath);
+  // 4. Ensure Parent Directory Exists (SQLite only)
+  if (!isPostgres) {
+    ensureParentDirectory(filePath);
+  }
 
   // 5. Schema Push (Single Source of Truth: backend/prisma/schema.prisma)
   if (!options.seedOnly) {
@@ -163,7 +181,7 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
           const syncEnv = {
             ...process.env,
             DATABASE_URL: prismaUrl,
-            DB_PROVIDER: 'sqlite',
+            DB_PROVIDER: isPostgres ? 'postgres' : 'sqlite',
           };
           try {
             execSync(`pnpm exec ts-node "${syncScript}"`, {
@@ -222,8 +240,10 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
   });
 
   try {
-    // 7. Enforce SQLite Foreign Keys
-    await enableSqliteForeignKeys(prisma);
+    // 7. Enforce SQLite Foreign Keys (SQLite only)
+    if (!isPostgres) {
+      await enableSqliteForeignKeys(prisma);
+    }
 
     // 8. Transactional Seeding
     if (!options.noSeed) {
@@ -235,11 +255,15 @@ export async function initializeDatabase(options: CliOptions): Promise<void> {
           const baseline = await seedBaselineData(tx);
           console.log(`  Baseline complete (${baseline.inserted} inserted, ${baseline.skipped} preserved).`);
 
-          console.log('\n[2/2] Seeding Sample Development Data (Demo accounts, jobs, applications):');
-          const sample = await seedSampleData(tx);
-          console.log(
-            `  Sample complete (${sample.employers} employers, ${sample.jobSeekers} seekers, ${sample.jobs} jobs, ${sample.applications} apps, ${sample.savedJobs} bookmarks, ${sample.notifications} notifs).`
-          );
+          if (!isProduction) {
+            console.log('\n[2/2] Seeding Sample Development Data (Demo accounts, jobs, applications):');
+            const sample = await seedSampleData(tx);
+            console.log(
+              `  Sample complete (${sample.employers} employers, ${sample.jobSeekers} seekers, ${sample.jobs} jobs, ${sample.applications} apps, ${sample.savedJobs} bookmarks, ${sample.notifications} notifs).`
+            );
+          } else {
+            console.log('\n[2/2] Production mode detected: Skipping sample development data seeding.');
+          }
         },
         {
           maxWait: 10000,

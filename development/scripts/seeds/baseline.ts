@@ -16,18 +16,29 @@ export async function seedBaselineData(
   let inserted = 0;
   let skipped = 0;
 
+  const env = (process.env.ENVIRONMENT || process.env.NODE_ENV || 'development').toLowerCase();
+  const isProduction = env === 'production' || env === 'prod';
+  const adminEmail = process.env.ADMIN_INITIAL_EMAIL?.trim() || 'admin@batanesniche.ph';
+  const plainPassword = process.env.ADMIN_INITIAL_PASSWORD?.trim() || (isProduction ? null : 'AdminSecure123!');
+
   const existingAdmin = await prisma.user.findFirst({
     where: {
-      OR: [{ username: 'admin' }, { email: 'admin@batanesniche.ph' }],
+      OR: [{ username: 'admin' }, { email: adminEmail }],
     },
   });
 
   if (!existingAdmin) {
-    const passwordHash = await hashPassword('AdminSecure123!');
+    if (!plainPassword) {
+      throw new Error(
+        '[DB Seed Error] In production, ADMIN_INITIAL_PASSWORD must be provided in environment variables to create the administrator account.'
+      );
+    }
+
+    const passwordHash = await hashPassword(plainPassword);
     const adminUser = await prisma.user.create({
       data: {
         username: 'admin',
-        email: 'admin@batanesniche.ph',
+        email: adminEmail,
         password_hash: passwordHash,
         full_name: 'Platform Administrator',
         municipality: 'Basco',

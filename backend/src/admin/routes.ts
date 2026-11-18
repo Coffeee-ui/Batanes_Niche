@@ -17,8 +17,10 @@ import { TokenRepository } from '../repositories/tokenRepository';
 import { AuditService } from '../services/auditService';
 import { verifyPassword } from '../core/security';
 import { HttpError } from '../core/errors';
+import { loginLimiter } from '../middleware/rateLimiter';
 
 import fs from 'fs';
+import { settings } from '../core/config';
 
 export const adminRouter = Router();
 
@@ -79,7 +81,7 @@ adminRouter.get('/login', async (req: Request, res: Response): Promise<void> => 
 });
 
 // POST /admin/login
-adminRouter.post('/login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+adminRouter.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { username, password } = req.body;
     const user = await UserRepository.getByUsernameOrEmail(username || '');
@@ -129,13 +131,13 @@ adminRouter.post('/login', async (req: Request, res: Response, next: NextFunctio
 
     res.cookie(ADMIN_COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: false,
+      secure: settings.ENVIRONMENT.toLowerCase() === 'production',
       sameSite: 'lax',
       maxAge: 43200 * 1000,
     });
     res.cookie(CSRF_COOKIE_NAME, csrfToken, {
       httpOnly: false,
-      secure: false,
+      secure: settings.ENVIRONMENT.toLowerCase() === 'production',
       sameSite: 'lax',
       maxAge: 43200 * 1000,
     });

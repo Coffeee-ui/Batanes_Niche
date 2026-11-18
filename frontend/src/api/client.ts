@@ -11,8 +11,14 @@ import type {
 // Axios Client Configuration
 // ============================================================
 
+// In production (Vercel), VITE_API_BASE_URL must be set to the Render backend URL
+// e.g. https://batanes-niche-backend.onrender.com
+// In development, falls back to '/api/v1' so the Vite dev-server proxy still works.
+const rawBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE_URL = rawBase ? `${rawBase}/api/v1` : '/api/v1';
+
 const api: AxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 15000,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
@@ -94,7 +100,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post<Token>('/api/v1/auth/refresh', {
+        const { data } = await axios.post<Token>(`${API_BASE_URL}/auth/refresh`, {
           refresh_token: storedRefreshToken,
         });
         setAccessToken(data.access_token);
@@ -394,8 +400,10 @@ export const usersApi = {
   deleteResume: () =>
     api.delete('/users/resume').then(r => r.data),
 
-  downloadResumeUrl: (seekerId?: number) =>
-    seekerId ? `/api/v1/users/resume/${seekerId}` : '/api/v1/users/resume',
+  downloadResumeUrl: (seekerId?: number) => {
+    const base = API_BASE_URL;
+    return seekerId ? `${base}/users/resume/${seekerId}` : `${base}/users/resume`;
+  },
 };
 
 // ============================================================

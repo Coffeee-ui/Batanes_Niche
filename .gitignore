@@ -73,3 +73,14 @@ logs/
 
 # UI Components
 Reference-UI/
+
+# Backend uploads (ephemeral on Render)
+uploads/
+backend/uploads/
+
+# Frontend production env
+frontend/.env
+frontend/.env.local
+
+# Vercel
+.vercel/
